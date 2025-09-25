@@ -1,0 +1,31 @@
+.modal-button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    height: 70px;
+    width: 300px;
+    text-decoration: none;
+    background: red;
+    border-radius: 10px;
+    transition: all 0.5s;
+}
+.modal-button:hover {
+    background: red;
+}
+
+.modal-button-error {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    height: 70px;
+    width: 300px;
+    text-decoration: none;
+    background: #E4572E;
+    border-radius: 10px;
+    transition: all 0.5s;
+}
+.modal-button-error:hover {
+    background: #a23c1f;
+}

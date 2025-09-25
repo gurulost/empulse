@@ -1,0 +1,207 @@
+.resetPasswordButton {
+    height: 56px;
+    width: 324px;
+    background: grey;
+    color: white;
+    border: 0px solid grey;
+    backdrop-filter: blur(10px);
+    border-radius: 10px;
+}
+
+.userEmail {
+    height: 56px;
+    width: 324px;
+    padding: 19px;
+    background: #FFFFFF;
+    backdrop-filter: blur(10px);
+    border-radius: 10px;
+    display: flex;
+    justify-content: left;
+    align-items: center;
+}
+a {
+    text-decoration: none;
+}
+.content-main {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 90vh;
+    width: 100%;
+}
+.content-title {
+    position: relative;
+    left: 0.9vh;
+    top: 0.1vh;
+    width: 36vh;
+    height: 11.7vh;
+
+    font-family: 'Proxima Nova', sans-serif;
+    font-style: normal;
+    font-weight: 700;
+    font-size: 3.2vh;
+    text-align: center;
+
+    color: #000000;
+}
+.content-auth {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    top: 6vh;
+    left: 11vh;
+    width: 50%;
+    /*position: relative;*/
+    /*right: -90px;*/
+    border-left: 0.1vh solid rgba(255, 255, 255, 0.63);
+    max-width: 53.2vh;
+    height: 34.5vh;
+}
+.cont-auth-title {
+    margin: 0 0 4.677vh;
+    height: 5vh;
+}
+.auth-title {
+    position: relative;
+    top: 1vh;
+    font-family: 'Proxima Nova', sans-serif;
+    font-style: normal;
+    font-weight: 700;
+    font-size: 3.6vh;
+    text-align: center;
+    color: #FFFFFF;
+}
+.content-logo {
+    width: 50%;
+    position: relative;
+    left: 3.7vh;
+    top: 4.6vh;
+}
+.content-logo-block {
+    max-width: 37.9vh;
+    height: 5.5vh;
+    margin: 0 0 5.4vh;
+}
+.cont-log {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    top: 1vh;
+    margin: 0 0 1.79vh;
+    text-align: center;
+    height: 7vh;
+}
+.c-log-btn {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    height: 7vh;
+    max-width: 30vh;
+    padding: 2.55vh 11.95vh;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 1vh;
+
+    transition: background-color .3s;
+}
+.c-log-btn:hover {
+    background-color: rgba(0, 0, 0, 1);
+}
+.c-log-btn span {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Proxima Nova', sans-serif;
+    text-decoration: none;
+    font-style: normal;
+    font-weight: 700;
+    font-size: 1.6vh;
+    text-align: center;
+    text-transform: uppercase;
+    color: #FFFFFF;
+}
+.cont-sing {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    top: 1vh;
+    margin: 0 0 6vh;
+    text-align: center;
+    height: 7vh;
+}
+.c-sing-btn {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    height: 7vh;
+    max-width: 30vh;
+    padding: 2.55vh 11.5vh;
+    background: #F1C82D;
+    border-radius: 1vh;
+
+    transition: background .3s;
+}
+.c-sing-btn:hover {
+    background: #ffde5f;
+}
+.c-sing-btn span {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Proxima Nova', sans-serif;
+    text-decoration: none;
+    font-style: normal;
+    font-weight: 700;
+    font-size: 1.6vh;
+    text-align: center;
+    text-transform: uppercase;
+    color: #000000;
+}
+.cont-referal {
+    font-family: 'Proxima Nova', sans-serif;
+    font-style: normal;
+    font-weight: 700;
+    font-size: 2vh;
+    text-align: center;
+    text-decoration-line: none;
+
+}
+.cont-referal a {
+    color: #FFFFFF;
+    border-bottom: 0.1vh solid rgba(255, 255, 255, 0.63);
+}
+.content-main-logo {
+    height: 5vh;
+    margin-bottom: 3vh;
+}
+/*ADAPTIVE WELCOME PAGE*/
+@media (min-width: 2560px) {
+    .navbar-link {
+        font-size: 40px;
+    }
+    .f-list {
+        display: flex;
+        justify-content: left;
+        align-items: center;
+        width: 100%;
+    }
+    .f-text {
+        font-size: 40px;
+        margin-right: 70px;
+    }
+    .f-sub-text {
+        font-size: 30px;
+    }
+}
+@media (min-width: 3840px) {
+
+}

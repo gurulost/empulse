@@ -1,0 +1,293 @@
+.formEditPasswordBlock {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/*button[name=editPassword] {*/
+/*    margin-top: 7px;*/
+/*}*/
+
+
+.profile-main {
+    position: fixed;
+    left: 0;
+    z-index: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    min-height: 100vh;
+    height: 100vh;
+    min-width: 100vw;
+    background: #E1E1E1;
+    margin: 0px;
+}
+
+.profile-content {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    padding: 30px 0 0px;
+    position: relative;
+}
+.profile-card {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    width: 600px;
+    background: white;
+    border-radius: 10px;
+    padding: 40px;
+    box-shadow: 0 .125rem .25rem rgba(0,0,0,.075)!important;
+    margin: 15px 15px 15px 150px;
+    height: 450px;
+}
+.profile-card-img {
+
+}
+.profile-card-buttons {
+    margin: 30px 0 0;
+    width: 100%;
+    display: flex;
+    justify-content: space-evenly;
+}
+.prof-btn-add {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    height: 56px;
+    width: 195px;
+    background: #F1C82D;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    transition: background .3s;
+
+    font-family: 'Proxima Nova', sans-serif;
+    font-style: normal;
+    font-weight: 700;
+    font-size: 14px;
+    text-align: center;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: #000000;
+    transition: background .3s;
+}
+.prof-btn-add:hover {
+    background: #ffde5f;
+    color: #000000;
+}
+
+.prof-btn-delete {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    height: 56px;
+    width: 195px;
+    background: #b93131;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    transition: background .3s;
+
+    font-family: 'Proxima Nova', sans-serif;
+    font-style: normal;
+    font-weight: 700;
+    font-size: 14px;
+    text-align: center;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: #000000;
+    transition: background .3s;
+}
+.prof-btn-delete:hover {
+    background: #ff0000;
+    color: #000000;
+}
+/*CHANGE-PASSWORD*/
+.profile-change-password-card {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    width: 600px;
+    height: 450px;
+    margin: 15px;
+    background: white;
+    border-radius: 10px;
+    padding: 40px;
+    box-shadow: 0 .125rem .25rem rgba(0,0,0,.075)!important;
+}
+.form-editPassword {
+}
+.form-password-title {
+    font-size: 34px;
+}
+.form-confirm-pass-btn {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 40px;
+    width: 170px;
+    background: #a1a1a1;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    font-family: 'Proxima Nova', sans-serif;
+    font-style: normal;
+    font-weight: 700;
+    font-size: 14px;
+    text-align: center;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: #ffffff;
+    margin-top: 20px;
+
+    transition: all .3s;
+}
+.form-confirm-pass-btn:hover {
+    background: #bbbbbb;
+}
+/*AVATAR*/
+.avatar-main {
+    position: fixed;
+    left: 0;
+    z-index: 1;
+    display: flex;
+    justify-content: space-around;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    background: #E1E1E1;
+    margin: 5rem !important;
+}
+.avatar-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    position: relative;
+    bottom: 100px;
+}
+.avatar-card {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    flex-direction: column;
+    width: 800px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 .125rem .25rem rgba(0,0,0,.075)!important;
+}
+.avatar-header-title {
+    width: 100%;
+    border-bottom: 1px solid #e3e3e3;
+}
+.avatar-title {
+    font-family: 'Proxima Nova', sans-serif;
+    font-style: normal;
+    font-weight: 700;
+    font-size: 20px;
+    padding: 20px;
+}
+.avatar-content {
+    width: 100%;
+    padding: 24px;
+}
+.avatar-adder-image {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.avatar-title-img {
+    font-family: 'Proxima Nova', sans-serif;
+    font-style: normal;
+    font-weight: 400;
+    font-size: 16px;
+}
+.avatar-input {
+    width: 80%;
+}
+.avatar-update-btn {
+    margin: 30px 0 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    height: 56px;
+    width: 195px;
+    background: #F1C82D;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    transition: background .3s;
+
+    font-family: 'Proxima Nova', sans-serif;
+    font-style: normal;
+    font-weight: 700;
+    font-size: 14px;
+    text-align: center;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: #000000;
+    transition: background .3s;
+}
+.avatar-update-btn:hover {
+    background: #ffde5f;
+    color: #000000;
+}
+@media (min-width: 1980px) {
+
+}
+@media (min-width: 2560px) {
+
+}
+@media (min-width: 3840px) {
+
+}
+
+@media (max-width: 1980px) {
+    .profile-content {
+        transform: scale(1);
+    }
+}
+@media (max-width: 1800px) {
+    .profile-content {
+        transform: scale(0.9);
+    }
+}
+@media (max-width: 1600px) {
+    .profile-content {
+        transform: scale(0.8);
+    }
+}
+@media (max-width: 1401px) {
+    .profile-content {
+        transform: scale(0.7);
+        position: relative;
+        right: 80px;
+    }
+}
+@media (max-width: 1201px) {
+    .profile-content {
+        transform: scale(0.6);
+        position: relative;
+        right: 170px;
+    }
+}
+@media (max-width: 1100px) {
+    .profile-content {
+        transform: scale(0.5);
+        position: relative;
+        right: 183px;
+    }
+}
+@media (max-width: 991px) {}
+@media (max-width: 901px) {}
+@media (max-width: 767px) {}
+@media (max-width: 579px) {}

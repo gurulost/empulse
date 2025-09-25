@@ -1,0 +1,31 @@
+main {
+    margin-left: 0px !important;
+}
+
+.card-body {
+}
+
+.row {
+    margin: 100px 0px 0px 160px;
+}
+
+.list-unstyled {
+}
+.payment-main {
+    width: 100%;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center;
+    margin: 0;
+    min-height: 100vh;
+}
+.payment-card {
+    height: 300px !important;
+}
+.card-body {
+    display: flex !important;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+}
+

@@ -1,0 +1,148 @@
+.navbar-main-dashboard, .footer-dashboard-main {
+    display: none !important;
+}
+
+.modal {
+    display: flex !important; /* Hidden by default */
+    justify-content: center !important;
+    align-items: center !important;
+    position: fixed !important; /* Stay in place */
+    z-index: 1 !important; /* Sit on top */
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important; /* Full width */
+    height: 100% !important; /* Full height */
+    overflow: auto !important; /* Enable scroll if needed */
+    background-color: rgb(0,0,0) !important; /* Fallback color */
+    background-color: rgba(0,0,0,0.4) !important; /* Black w/ opacity */
+}
+/* Modal Content/Box */
+.modal-content {
+    height: 422.34px !important;
+    width: 385.9px !important;
+    padding: 15px !important;
+    background: #FFFFFF !important;
+    border: 1px solid #D1D1D1 !important;
+    border-radius: 10px !important;
+}
+.close {
+    display: flex !important;
+    justify-content: right !important;
+    align-items: center !important;
+    margin: 0 0 30px !important;
+}
+.close svg {
+    cursor: pointer !important;
+}
+.modal-content-text {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    flex-direction: column !important;
+}
+.modal-content-check {
+    margin: 0 0 45px !important;
+}
+.modal-text {
+    margin: 0 0 40px !important;
+}
+.modal-t {
+    width: 225px !important;
+    height: 29px !important;
+
+    font-family: 'Proxima Nova', sans-serif !important;
+    font-style: normal !important;
+    font-weight: 400 !important;
+    font-size: 24px !important;
+    line-height: 29px !important;
+    text-align: center !important;
+
+    color: #000000 !important;
+
+}
+.modal-button {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+
+    height: 70px !important;
+    width: 300px !important;
+    text-decoration: none !important;
+    background: #59D876 !important;
+    border-radius: 10px !important;
+    transition: all 0.5s !important;
+}
+.modal-button:hover {
+    background: #42a457 !important;
+}
+.modal-btn {
+    width: 50px !important;
+    height: 19px !important;
+
+    font-family: 'Proxima Nova', sans-serif !important;
+    font-style: normal !important;
+    font-weight: 700 !important;
+    font-size: 16px !important;
+    line-height: 19px !important;
+    text-align: center !important;
+    letter-spacing: 0.11em !important;
+    text-transform: uppercase !important;
+    color: #FFFFFF !important;
+
+    mix-blend-mode: normal !important;
+}
+
+/*Error*/
+.modal-content-text-error {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    flex-direction: column !important;
+}
+.modal-text-error {
+    margin: 0 0 40px !important;
+}
+.modal-t-err {
+    width: 225px !important;
+    height: 29px !important;
+
+    font-family: 'Proxima Nova', sans-serif !important;
+    font-style: normal !important;
+    font-weight: 400 !important;
+    font-size: 24px !important;
+    line-height: 29px !important;
+    text-align: center !important;
+
+    color: #000000 !important;
+}
+.modal-button-error {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+
+    height: 70px !important;
+    width: 300px !important;
+    text-decoration: none !important;
+    background: #E4572E !important;
+    border-radius: 10px !important;
+    transition: all 0.5s !important;
+}
+.modal-button-error:hover {
+    background: #a23c1f !important;
+}
+.modal-btn-err {
+    width: 110px !important;
+    height: 19px !important;
+
+    font-family: 'Proxima Nova', sans-serif !important;
+    font-style: normal !important;
+    font-weight: 700 !important;
+    font-size: 16px !important;
+    line-height: 19px !important;
+    text-align: center !important;
+    letter-spacing: 0.11em !important;
+    text-transform: uppercase !important;
+    color: #FFFFFF !important;
+
+    mix-blend-mode: normal !important;
+}

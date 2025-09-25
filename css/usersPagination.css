@@ -1,0 +1,13 @@
+#app {
+    background: white;
+}
+
+.action-buttons {
+    margin-left: 20px !important;
+}
+
+#users-table {
+    min-height: 445px;
+    max-height: 445px;
+    width: 100%;
+}

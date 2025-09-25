@@ -1,0 +1,16 @@
+body {
+    background: #6C757D;
+}
+#app {
+    background: none;
+}
+#modalSignin {
+    padding-top: 100px !important;
+}
+.modal {
+    min-height: 100vh;
+}
+
+.modal-dialog {
+    pointer-events: auto !important;
+}

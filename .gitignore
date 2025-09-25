@@ -1,0 +1,29 @@
+# Laravel defaults
+/.env
+/.env.*
+/vendor/
+/node_modules/
+/public/storage
+/storage/*.key
+/storage/app/*
+!/storage/app/public/
+/storage/framework/cache/data/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/logs/*
+/bootstrap/cache/*
+!bootstrap/cache/.gitignore
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Logs
+npm-debug.log*
+yarn-error.log*
+
+# Project-specific
+/upload/
+/temp/
