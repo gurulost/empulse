@@ -39,7 +39,7 @@ class HomeController extends Controller
         $companyTitle = Auth::user()->company_title;
         $companyId = Auth::user()->company_id;
 
-        if($userRole !== 0 && $userPassword !== 'user') {
+        if($userRole !== 0 && $userPassword !== 'user' && $companyId) {
             $model = new User();
             $qualtrics = $model->qualtricsFunc($userName, $userEmail, $userRole, $userPassword, $companyTitle);
             $exist_departments = DB::table($this->companyDepartments)->where('company_id', $companyId)->pluck('title')->toArray();

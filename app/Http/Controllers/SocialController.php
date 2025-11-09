@@ -37,12 +37,13 @@ class SocialController extends Controller
 
             else
             {
+                // Create a basic account without elevating privileges; onboarding will attach company later
                 $createUser = User::create([
                     'name' => $user->name,
                     'email' => $user->email,
                     'google_id' => $user->id,
-                    'role' => 1,
-                    'company' => 1,
+                    'role' => 4,
+                    'company' => null,
                     'password' => null,
                 ]);
 

@@ -29,49 +29,4 @@ class PaymentController extends Controller
     public function payment_error() {
         return view('responses_error');
     }
-
-    public function stripe(Request $request)
-    {
-
-        $curl = curl_init();
-
-        curl_setopt_array($curl, array(
-            CURLOPT_URL => 'https://api.stripe.com/v1/charges',
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => '',
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 0,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => 'GET',
-            CURLOPT_HTTPHEADER => array(
-                'Authorization: Bearer '.env('STRIPE_SECRET')
-            ),
-        ));
-
-        $response = curl_exec($curl);
-        $result = json_decode($response, true);
-        curl_close($curl);
-        $amount = $result['data'][0]['amount'];
-
-        try
-        {
-            if($amount == 19900 || $amount == 89900)
-            {
-                DB::table("users")->where("company_title", \Auth::user()->company_title)->update(["tariff" => 1]);
-                return redirect('/home/response');
-            }
-
-            else
-            {
-                return redirect('/home/response_error');
-            }
-        }
-
-        catch(\Exception $e)
-        {
-            return $e->getMessage();
-        }
-
-    }
 }

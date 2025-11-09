@@ -5,14 +5,19 @@
         <table class="table table-striped table-bordered table-sm bg-white">
             <thead>
             <tr>
-                <th scope="col">Name</th>
-                <th scope="col">Email</th>
-                <th scope="col" style="width: 12%">Role</th>
-                <th scope="col" style="width: 30%">Department</th>
+                <th scope="col"><a href="#" class="text-decoration-none js-sort" data-sort="name">Name</a></th>
+                <th scope="col"><a href="#" class="text-decoration-none js-sort" data-sort="email">Email</a></th>
+                <th scope="col" style="width: 12%"><a href="#" class="text-decoration-none js-sort" data-sort="role">Role</a></th>
+                <th scope="col" style="width: 30%"><a href="#" class="text-decoration-none js-sort" data-sort="department">Department</a></th>
                 <th scope="col" style="width: 12%">Actions</th>
             </tr>
             </thead>
             <tbody>
+            @if($users->isEmpty())
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-4">No users found for the current filters.</td>
+                </tr>
+            @endif
             @foreach($users as $user)
 {{--                @if($user->email !== Auth::user()->email)--}}
                     <tr>
@@ -22,7 +27,23 @@
                             </form>
 
                             <form class="currentyName-{{$user->id}} mt-4" style="display: block;">
-                                <p class="fw-bold p-name">{{$user->name}}</p>
+                                <p class="fw-bold p-name mb-0">{{$user->name}}
+                                    @if(isset($head) && $user->email == $head)
+                                        <span class="badge bg-dark ms-2">Owner</span>
+                                    @endif
+                                </p>
+                                <div class="mt-1">
+                                    @php
+                                        $roleLabel = $user->role == 1 ? 'Manager' : ($user->role == 2 ? 'Chief' : ($user->role == 3 ? 'Teamlead' : ($user->role == 4 ? 'Employee' : '')));
+                                        $roleColor = $user->role == 1 ? 'primary' : ($user->role == 2 ? 'info' : ($user->role == 3 ? 'warning text-dark' : 'secondary'));
+                                    @endphp
+                                    <span class="badge bg-{{$roleColor}}">{{$roleLabel}}</span>
+                                    @if($user->department)
+                                        <span class="badge bg-success ms-1">{{$user->department}}</span>
+                                    @else
+                                        <span class="badge bg-secondary ms-1">None</span>
+                                    @endif
+                                </div>
                             </form>
                         </td>
                         <td class="email-{{$user->id}}" style="">
@@ -337,9 +358,9 @@
         <table class="table table-striped table-bordered table-sm bg-white">
             <thead>
             <tr>
-                <th scope="col">Name</th>
-                <th scope="col">Email</th>
-                <th scope="col">Role</th>
+                <th scope="col"><a href="#" class="text-decoration-none js-sort" data-sort="name">Name</a></th>
+                <th scope="col"><a href="#" class="text-decoration-none js-sort" data-sort="email">Email</a></th>
+                <th scope="col"><a href="#" class="text-decoration-none js-sort" data-sort="role">Role</a></th>
                 <th scope="col">Action</th>
             </tr>
             </thead>
@@ -353,7 +374,19 @@
                             </form>
 
                             <form class="currentyName-{{$user->id}} mt-4" style="display: block;">
-                                <p class="fw-bold p-name">{{$user->name}}</p>
+                                <p class="fw-bold p-name mb-0">{{$user->name}}</p>
+                                <div class="mt-1">
+                                    @php
+                                        $roleLabel = $user->role == 3 ? 'Teamlead' : ($user->role == 4 ? 'Employee' : '');
+                                        $roleColor = $user->role == 3 ? 'warning text-dark' : 'secondary';
+                                    @endphp
+                                    @if($roleLabel)
+                                        <span class="badge bg-{{$roleColor}}">{{$roleLabel}}</span>
+                                    @endif
+                                    @if($user->department)
+                                        <span class="badge bg-success ms-1">{{$user->department}}</span>
+                                    @endif
+                                </div>
                             </form>
                         </td>
                         <td class="email-{{$user->id}}" style="">
@@ -588,8 +621,8 @@
         <table class="table table-striped table-bordered table-sm bg-white">
             <thead>
             <tr>
-                <th scope="col">Name</th>
-                <th scope="col">Email</th>
+                <th scope="col"><a href="#" class="text-decoration-none js-sort" data-sort="name">Name</a></th>
+                <th scope="col"><a href="#" class="text-decoration-none js-sort" data-sort="email">Email</a></th>
                 <th scope="col">Action</th>
             </tr>
             </thead>
@@ -603,7 +636,13 @@
                             </form>
 
                             <form class="currentyName-{{$user->id}} mt-2" style="display: block;">
-                                <p class="fw-bold p-name">{{$user->name}}</p>
+                                <p class="fw-bold p-name mb-0">{{$user->name}}</p>
+                                <div class="mt-1">
+                                    <span class="badge bg-secondary">Employee</span>
+                                    @if($user->department)
+                                        <span class="badge bg-success ms-1">{{$user->department}}</span>
+                                    @endif
+                                </div>
                             </form>
                         </td>
                         <td class="email-{{$user->id}}" style="">
@@ -785,7 +824,17 @@
     </div>
 @endif
 
-<div class="mt-2">{{ $users->links('vendor.pagination.bootstrap-5') }}</div>
+<div class="d-flex justify-content-between align-items-center mt-2">
+    <div class="text-muted small">
+        @if($users->total() > 0)
+            Showing {{ $users->firstItem() }}–{{ $users->lastItem() }} of {{ $users->total() }}
+        @else
+            No results
+        @endif
+    </div>
+    <div>{{ $users->links('vendor.pagination.bootstrap-5') }}</div>
+    
+</div>
 
 @section('script')
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>

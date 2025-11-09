@@ -103,7 +103,7 @@ class FacebookController extends Controller
             }
         }
 
-        catch(Exceprion $e) {
+        catch(\Exception $e) {
             $session = \Session::put('facebook_auth_error', "Now you can't auth via facebook!");
             return response()->back()->with($session);
         }

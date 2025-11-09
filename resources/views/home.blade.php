@@ -6,6 +6,16 @@
 
 @section('content')
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.css" />
+    @if((int)Auth::user()->role === 1 && (int)Auth::user()->company === 1 && (int)Auth::user()->tariff !== 1)
+        <div class="container mt-3">
+            <div class="alert alert-warning d-flex justify-content-between align-items-center" role="alert">
+                <div>
+                    Your subscription is inactive. Unlock full analytics for your company.
+                </div>
+                <a href="{{ route('plans.index') }}" class="btn btn-sm btn-primary">Upgrade now</a>
+            </div>
+        </div>
+    @endif
     @if(Auth::user()->role !== 0)
         <div class="dropdown-departments-modal-iTemperature">
             <div class="dropdown-departments-content-iTemperature" style="width: 30%; height: 60vh;"><br />

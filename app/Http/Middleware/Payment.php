@@ -16,7 +16,8 @@ class Payment
      */
     public function handle(Request $request, Closure $next)
     {
-        if(\Auth::user()->tariff === "1" || \Auth::user()->company !== 1) {
+        // Only unpaid company owners should access payment pages
+        if ((int)\Auth::user()->tariff === 1 || (int)\Auth::user()->company !== 1) {
             return redirect()->route('home');
         }
 

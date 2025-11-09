@@ -9,6 +9,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use App\Models\Companies;
+use Illuminate\Support\Facades\Gate;
+use App\Models\CompanyWorker;
+use App\Services\UserService;
+use App\Services\DepartmentService;
 use App\Mail\CoworkersMsg;
 use App\Mail\AdminMsg;
 use Illuminate\Support\Facades\Mail;
@@ -20,6 +24,15 @@ class AdminController extends Controller
 {
     public $companyDepartmentTable = 'company_department';
     public $companyWorkerTable = 'company_worker';
+
+    protected UserService $userService;
+    protected DepartmentService $departmentService;
+
+    public function __construct(UserService $userService, DepartmentService $departmentService)
+    {
+        $this->userService = $userService;
+        $this->departmentService = $departmentService;
+    }
 
     public function send_letter($email, $name, $subject, $content) {
         try {
@@ -79,18 +92,58 @@ class AdminController extends Controller
             $companyId = \Auth::user()->company_id;
             $company = \Auth::user()->company_title;
             try {
-                $model = new User();
-                $upload_coworkers = $model->uploadCoworkers($name, $email, $companyId, $company, $this->companyDepartmentTable, $this->companyWorkerTable);
+                $q = trim((string)$request->get('q', ''));
+                $filterRole = $request->get('role');
+                $filterDepartment = $request->get('department');
 
-                $users = $upload_coworkers["users"];
-                $departments = $upload_coworkers["departments"];
-                $manager = $upload_coworkers["manager"];
-                $department = $upload_coworkers["chief_department"];
-                $chief = $upload_coworkers["chief"];
-                $teamlead_department = $upload_coworkers["teamlead_department"];
-                $head = $upload_coworkers["head"];
+                $departments = DB::table($this->companyDepartmentTable)->where('company_id', $companyId)->get();
+                $head = User::where([['company', 1], ['company_id', $companyId]])->value('email');
+                $manager = null; $department = null; $chief = null; $teamlead_department = null;
 
-                return view('roles.usersPagination', ['users' => $users, 'departments' => $departments, "manager" => $manager, "chief_department" => $department,  "chief" => $chief, "teamlead_department" => $teamlead_department, 'head' => $head])->render();
+                $authRole = \Auth::user()->role;
+                $qb = DB::table($this->companyWorkerTable)->select('*')->where('company_id', $companyId);
+
+                if ($authRole == 1) { // manager view: managers + chiefs
+                    if ($filterRole) {
+                        $qb->where('role', (int)$filterRole);
+                    } else {
+                        $qb->whereIn('role', [1,2]);
+                    }
+                    if ($filterDepartment) {
+                        $qb->where('department', $filterDepartment);
+                    }
+                } elseif ($authRole == 2) { // chief view: teamleads + employees in own department
+                    $department = DB::table($this->companyWorkerTable)->where(['company_id' => $companyId, 'email' => $email])->value('department');
+                    $manager = DB::table($this->companyWorkerTable)->where(['company_id' => $companyId, 'role' => 1])->value('name');
+                    $qb->where('department', $department);
+                    if ($filterRole) { $qb->where('role', (int)$filterRole); } else { $qb->whereIn('role', [3,4]); }
+                } elseif ($authRole == 3) { // teamlead view: supervised employees
+                    $teamlead_department = DB::table($this->companyWorkerTable)->where(['company_id' => $companyId, 'email' => $email])->value('department');
+                    $chief = DB::table($this->companyWorkerTable)->where(['company_id' => $companyId, 'role' => 2, 'department' => $teamlead_department])->value('name');
+                    $qb->where(['role' => 4, 'supervisor' => $name]);
+                }
+
+                if ($q !== '') {
+                    $qb->where(function($qq) use ($q) {
+                        $qq->where('name', 'LIKE', "%$q%")
+                           ->orWhere('email', 'LIKE', "%$q%");
+                    });
+                }
+
+                $sort = $request->get('sort');
+                $dir = strtolower((string)$request->get('dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+                $sortable = ['name','email','role','department'];
+                if (!in_array($sort, $sortable)) { $sort = 'name'; }
+
+                $users = $qb->orderBy($sort, $dir)->paginate(5)->appends([
+                    'q' => $q,
+                    'role' => $filterRole,
+                    'department' => $filterDepartment,
+                    'sort' => $sort,
+                    'dir' => $dir,
+                ]);
+
+                return view('roles.usersPagination', compact('users', 'departments', 'manager', 'department', 'chief', 'teamlead_department', 'head'))->render();
             } catch(\Exception $e) {
                 return view('roles.usersPagination', ['users' => null, 'departments' => null, "manager" => null, "chief_department" => null,  "chief" => null, "teamlead_department" => null, "head" => null, 'error' => $e->getMessage()])->render();
             }
@@ -103,8 +156,12 @@ class AdminController extends Controller
         $company = \Auth::user()->company_title;
 
         try {
-            $model = new User();
-            $deleteUser = $model->deleteUser($email, $companyId, $company, $this->companyDepartmentTable, $this->companyWorkerTable);
+            $uUsers = User::where('email', $email)->first();
+            $uWorkers = CompanyWorker::where(['company_id' => $companyId, 'email' => $email])->first();
+            if ($uUsers) { $this->authorize('delete', $uUsers); }
+            elseif ($uWorkers) { $this->authorize('delete', $uWorkers); }
+            else { return response()->json(['status' => 404, 'message' => 'User not found']); }
+            $deleteUser = $this->userService->deleteByEmail($email, $companyId, $company, $this->companyDepartmentTable, $this->companyWorkerTable);
 
             if($deleteUser) {
                 return response()->json(['status' => 200]);
@@ -116,7 +173,7 @@ class AdminController extends Controller
         }
     }
 
-    public function updateUser(Request $request, $email) {
+    public function updateUser(\App\Http\Requests\Admin\UpdateUserRequest $request, $email) {
         try {
             $request->validate([
                 'new_name' => 'required|string',
@@ -137,7 +194,11 @@ class AdminController extends Controller
             $authUserRole = \Auth::user()->role;
             $authUserName = \Auth::user()->name;
 
-            $updateUserFunc = User::updateUserFunc($email, $companyId, $company, $new_name,
+            if ($userFromUsers) { $this->authorize('update', $userFromUsers); }
+            elseif ($userFromCompanyWorkers) { $this->authorize('update', new CompanyWorker((array)$userFromCompanyWorkers)); }
+            else { return response()->json(['status' => 404, 'message' => 'User not found']); }
+
+            $updateUserFunc = $this->userService->updateUser($email, $companyId, $company, $new_name,
                 $new_email, $new_role, $new_department, $userFromUsers, $userFromCompanies, $userFromCompanyWorkers, $authUserRole, $authUserName);
 
             if($updateUserFunc['status'] === 500) {
@@ -162,14 +223,8 @@ class AdminController extends Controller
         return $password;
     }
 
-    public function add_worker(Request $request) {
+    public function add_worker(\App\Http\Requests\Admin\AddWorkerRequest $request) {
         try {
-            $request->validate([
-                'name' => 'min:5|required|string',
-                'email' => 'required|email',
-                'role' => 'required|integer'
-            ]);
-
             $companyId = \Auth::user()->company_id;
             $company = \Auth::user()->company_title;
             $tariff = \Auth::user()->tariff;
@@ -194,7 +249,7 @@ class AdminController extends Controller
 
             $companyWorkerTable = $this->companyWorkerTable;
 
-            $createNewUser = User::createNewUserFunc($companyId, $company, $tariff, $authUserName,
+            $createNewUser = $this->userService->createUser($companyId, $company, $tariff, $authUserName,
                 $authUserRole, $name, $email, $password, $role, $status, $link, $test, $department, $teamlead, $companyWorkerTable);
 
             if($createNewUser['status'] === 500) {
@@ -213,28 +268,13 @@ class AdminController extends Controller
         $company = \Auth::user()->company_title;
 
         try {
-            if ($companyId) {
-                DB::table('users')
-                    ->where('email', $r->email)
-                    ->update(['role' => 1, "tariff" => (\Auth::user()->tariff === 1) ? 1 : 0,]);
-
-                DB::table($this->companyWorkerTable)
-                    ->where(['company_id' => $companyId, 'email' => $r->email])
-                    ->update(['role' => 1, "department" => ""]);
-            } else {
-                DB::table('users')
-                    ->where('email', $r->email)
-                    ->update(['role' => 1, "tariff" => (\Auth::user()->tariff === 1) ? 1 : 0,]);
-            }
-
-            $newChiefName = User::where("email", $r->email)->value("name");
-            DB::table('companies')->updateOrInsert([
-                "title" => $company,
-                "manager" => $newChiefName,
-                "manager_email" => $r->email,
-            ]);
-
-            return response()->json(['status' => 200]);
+            $uUsers = User::where('email', $r->email)->first();
+            $uWorkers = CompanyWorker::where(['company_id' => $companyId, 'email' => $r->email])->first();
+            if ($uUsers) { $this->authorize('update', $uUsers); }
+            elseif ($uWorkers) { $this->authorize('update', $uWorkers); }
+            else { return response()->json(['status' => 404, 'message' => 'User not found']); }
+            $res = $this->userService->setManager($companyId, $company, $r->email, (int)\Auth::user()->tariff);
+            return response()->json(['status' => $res['status'], 'message' => $res['status'] === 200 ? 'OK' : ($res['message'] ?? 'Error')]);
         } catch(\Exception $e) {
             return response()->json(['status' => 500, 'message' => $e->getMessage()]);
         }
@@ -245,29 +285,14 @@ class AdminController extends Controller
         $companyId = \Auth::user()->company_id;
         $company = \Auth::user()->company_title;
 
-        if($companyId) {
-            DB::table('users')
-                ->where('email', $r->email)
-                ->update(['role' => 3, "tariff" => (\Auth::user()->tariff === 1) ? 1:0,]);
+        $uUsers = User::where('email', $r->email)->first();
+        $uWorkers = CompanyWorker::where(['company_id' => $companyId, 'email' => $r->email])->first();
+        if ($uUsers) { $this->authorize('update', $uUsers); }
+        elseif ($uWorkers) { $this->authorize('update', $uWorkers); }
+        else { return response()->json(['status' => 404, 'message' => 'User not found']); }
 
-            DB::table($this->companyWorkerTable)
-                ->where(['company_id' => $companyId, 'email' => $r->email])
-                ->update(['role' => 3]);
-        } else {
-            DB::table('users')
-                ->where('email', $r->email)
-                ->update(['role' => 3, "tariff" => (\Auth::user()->tariff === 1) ? 1:0,]);
-        }
-
-        $chief = Companies::where("manager_email", $email)->first();
-        if($chief)
-        {
-            Companies::where("manager_email", $email)->delete();
-            $maxCompanies = DB::table("companies")->max("id") + 1;
-            DB::statement("ALTER TABLE companies AUTO_INCREMENT = $maxCompanies");
-        }
-
-        return response()->json(['success' => 'success']);
+        $res = $this->userService->setTeamlead($companyId, $r->email, (int)\Auth::user()->tariff);
+        return response()->json(['status' => $res['status'], 'message' => $res['status'] === 200 ? 'OK' : ($res['message'] ?? 'Error')]);
     }
 
     public function chief_status(Request $r, $email)
@@ -276,29 +301,13 @@ class AdminController extends Controller
         $company = \Auth::user()->company_title;
 
         try {
-            if($companyId) {
-                DB::table('users')
-                    ->where('email', $r->email)
-                    ->update(['role' => 2, "tariff" => (\Auth::user()->tariff === 1) ? 1:0,]);
-
-                DB::table($this->companyWorkerTable)
-                    ->where(['company_id' => $companyId, 'email' => $r->email])
-                    ->update(['role' => 2]);
-            } else {
-                DB::table('users')
-                    ->where('email', $r->email)
-                    ->update(['role' => 2, "tariff" => (\Auth::user()->tariff === 1) ? 1:0,]);
-            }
-
-            $chief = Companies::where("manager_email", $email)->first();
-            if($chief)
-            {
-                $maxCompanies = DB::table("companies")->max("id") + 1;
-                Companies::where("manager_email", $email)->delete();
-                DB::statement("ALTER TABLE companies AUTO_INCREMENT = $maxCompanies");
-            }
-
-            return response()->json(['success' => 'success']);
+            $uUsers = User::where('email', $r->email)->first();
+            $uWorkers = CompanyWorker::where(['company_id' => $companyId, 'email' => $r->email])->first();
+            if ($uUsers) { $this->authorize('update', $uUsers); }
+            elseif ($uWorkers) { $this->authorize('update', $uWorkers); }
+            else { return response()->json(['status' => 404, 'message' => 'User not found']); }
+            $res = $this->userService->setChief($companyId, $company, $r->email, (int)\Auth::user()->tariff);
+            return response()->json(['status' => $res['status'], 'message' => $res['status'] === 200 ? 'OK' : ($res['message'] ?? 'Error')]);
         } catch(\Exception $e) {
             return response()->json(['status' => 500, 'message' => $e->getMessage()]);
         }
@@ -309,59 +318,43 @@ class AdminController extends Controller
         $companyId = \Auth::user()->company_id;
         $company = \Auth::user()->company_title;
 
-        if($companyId) {
-            DB::table('users')
-                ->where('email', $r->email)
-                ->update(['role' => 4, "tariff" => 0]);
-            DB::table($this->companyWorkerTable)
-                ->where(['company_id' => $companyId, 'email' => $r->email])
-                ->update(['role' => 4]);
-        } else {
-            DB::table('users')
-                ->where('email', $r->email)
-                ->update(['role' => 4, "tariff" => 0]);
-        }
+        Gate::authorize('manage-email', $email);
+        $uUsers = User::where('email', $r->email)->first();
+        $uWorkers = CompanyWorker::where(['company_id' => $companyId, 'email' => $r->email])->first();
+        if ($uUsers) { $this->authorize('update', $uUsers); }
+        elseif ($uWorkers) { $this->authorize('update', $uWorkers); }
+        else { return response()->json(['status' => 404, 'message' => 'User not found']); }
 
-        $chief = Companies::where("manager_email", $email)->first();
-        if($chief)
-        {
-            return response()->json(['message' => 'tyt']);
-            Companies::where("manager_email", $email)->delete();
-            $maxCompanies = DB::table("companies")->max("id") + 1;
-            DB::statement("ALTER TABLE companies AUTO_INCREMENT = $maxCompanies");
-        }
-
-        return response()->json(['success' => 'success']);
+        $res = $this->userService->setEmployee($companyId, $company, $r->email);
+        return response()->json(['status' => $res['status'], 'message' => $res['status'] === 200 ? 'OK' : ($res['message'] ?? 'Error')]);
     }
 
     public function departments(Request $request)
     {
         $companyId = \Auth::user()->company_id;
-        $departments = DB::table($this->companyDepartmentTable)->where(['company_id' => $companyId])->select("id", "title")->orderBy("id", "asc")->paginate(8);
+        $departments = $this->departmentService->list($companyId, 8);
 
         return view("roles.departments", ["departments" => $departments]);
     }
 
     public function departments_list(Request $request) {
         $companyId = \Auth::user()->company_id;
-        $departments = DB::table($this->companyDepartmentTable)->where(['company_id' => $companyId])->select("id", "title")->orderBy("id", "asc")->paginate(8);
+        $departments = $this->departmentService->list($companyId, 8);
 
         if($request->ajax()) {
             return view("roles.departments_table", ["departments" => $departments])->render();
         }
     }
 
-    public function addDepartment(Request $request) {
+    public function addDepartment(\App\Http\Requests\Admin\AddDepartmentRequest $request) {
         $email = \Auth::user()->email;
         $name = \Auth::user()->name;
         $companyId = \Auth::user()->company_id;
-        $companyTitle = \Auth::user()->comoany_title;
+        $companyTitle = \Auth::user()->company_title;
         $title = $request->input("title");
-        $companyDepartmentTable = $this->companyDepartmentTable;
 
         try {
-            $model = new User();
-            $addDepartment = $model->addDepartmentFunc($email, $name, $companyId, $companyTitle, $title, $companyDepartmentTable);
+            $addDepartment = $this->departmentService->add($companyId, $title);
 
             if($addDepartment['status'] === 500) {
                 return response()->json(['status' => 500, 'message' => $addDepartment['message']]);
@@ -376,62 +369,54 @@ class AdminController extends Controller
     public function deleteDepartment($title)
     {
         $companyId = \Auth::user()->company_id;
-        $workers = DB::table($this->companyWorkerTable)
-            ->where('department', $title)
-            ->count('email');
-        if($workers > 0) {
-            \Session::put("deleteDepartment_error_user_exist", "You can not delete department, if it has workers!");
-        } else {
-            DB::table($this->companyDepartmentTable)->where(['company_id' => $companyId, "title" => $title])->delete();
-            DB::table($this->companyWorkerTable)->where(['company_id' => $companyId, "department" => $title])->update(["department" => ""]);
+        $res = $this->departmentService->delete($companyId, $title);
+        if ($res['status'] !== 200) {
+            \Session::put('deleteDepartment_error_user_exist', $res['message'] ?? 'Unable to delete department');
         }
-
         return back();
     }
 
-    public function updateDepartment(Request $request, $title) {
+    public function updateDepartment(\App\Http\Requests\Admin\UpdateDepartmentRequest $request, $title) {
         $companyId = \Auth::user()->company_id;
         $newTitle = $request->newTitle;
 
         try {
-            if(strlen($newTitle) > 0 && strlen($newTitle) <= 50) {
-                $departments = DB::table($this->companyDepartmentTable)->where('company_id', $companyId)->get();
-                $departments_array = [];
-                foreach ($departments as $department) {
-                    $departments_array[] = $department->title;
-                }
-
-                if(in_array($title, $departments_array)) {
-                    return ['status' => 500, 'message' => 'The department exists!'];
-                }
-                
-                DB::table($this->companyDepartmentTable)->where(['company_id' => $companyId, "title" => $title])->update(["title" => $newTitle]);
-                return response()->json(['status' => 200, 'title' => $newTitle]);
+            $res = $this->departmentService->update($companyId, $title, $newTitle);
+            if ($res['status'] !== 200) {
+                return response()->json(['status' => 500, 'title' => $res['title'] ?? $title, 'message' => $res['message'] ?? 'Unable to update']);
             }
-
-            else {
-                return response()->json(['status' => 500, 'title' => $title, 'message' => 'Max. symbols count equals 50 and min. symbols count equals 1!']);
-            }
+            return response()->json(['status' => 200, 'title' => $res['title']]);
         } catch(\Exception $e) {
             return response()->json(['status' => 500, 'title' => $title, 'message' => $e->getMessage()]);
         }
     }
 
-    public function changeName_chief(Request $request, $name)
+    public function changeName_chief(\App\Http\Requests\Admin\ChangeNameRequest $request, $name)
     {
         $companyId = \Auth::user()->company_id;
         $newName = $request->name;
+        $worker = CompanyWorker::where(['company_id' => $companyId, 'name' => $name])->first();
+        if (!$worker) {
+            return response()->json(['status' => 403, 'message' => 'Forbidden']);
+        }
+        $this->authorize('update', $worker);
         DB::table($this->companyWorkerTable)->where(['company_id' => $companyId, "name" => $name])->update(["name" => $newName]);
-        DB::table("users")->where("name", $name)->update(["name" => $newName]);
+        DB::table("users")->where(["name" => $name, 'company_id' => $companyId])->update(["name" => $newName]);
 
         return response()->json(["success" => "$name is $newName now!"]);
     }
 
-    public function changeEmail_chief(Request $request, $email)
+    public function changeEmail_chief(\App\Http\Requests\Admin\ChangeEmailRequest $request, $email)
     {
         $companyId = \Auth::user()->company_id;
-
         $newEmail = $request->email;
+        $worker = CompanyWorker::where(['company_id' => $companyId, 'email' => $email])->first();
+        if ($worker) { $this->authorize('update', $worker); }
+        else {
+            $u = User::where(['company_id' => $companyId, 'email' => $email])->first();
+            if ($u) { $this->authorize('update', $u); }
+            else { return response()->json(['status' => 404, 'message' => 'User not found']); }
+        }
         DB::table($this->companyWorkerTable)->where(['company_id' => $companyId, "email" => $email])->update(["email" => $newEmail]);
         DB::table("users")->where("email", $email)->update(["email" => $newEmail]);
 

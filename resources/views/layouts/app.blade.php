@@ -48,7 +48,7 @@
         <script src="{{asset('/js/adminPanel.js')}}"></script>
     @endif
 
-    @if(Route::currentRouteName() !== 'login' || Route::currentRouteName() !== 'register' || Route::currentRouteName() !== 'welcome')
+    @if(Route::currentRouteName() !== 'login' && Route::currentRouteName() !== 'register' && Route::currentRouteName() !== 'welcome')
         <script src="{{asset('/js/theme.js')}}"></script>
     @endif
 
@@ -230,6 +230,17 @@
                                 <a href="{{ route('admin.company.list') }}" style="background: #F1C82D; color: black; border-radius: 5px; padding: 5px 7px; text-decoration: none; font-size: 14px; margin-right: 20px;">Go to Admin Panel</a>
                             </div>
                         @endif
+                        @if ((int)auth()->user()->company === 1)
+                            <div style="margin-right: 16px; display: flex; align-items: center; gap: 8px;">
+                                @php $isActive = (int)auth()->user()->tariff === 1; @endphp
+                                <span class="badge {{ $isActive ? 'bg-success' : 'bg-danger' }}">
+                                    {{ $isActive ? 'Subscription: Active' : 'Subscription: Not active' }}
+                                </span>
+                                @if(!$isActive && (int)auth()->user()->role === 1)
+                                    <a href="{{ route('plans.index') }}" class="btn btn-sm btn-primary">Upgrade</a>
+                                @endif
+                            </div>
+                        @endif
                         <div class="nav-d-theme">
                             <div class="nav-d-text-theme-w">White theme</div>
                             <div class="nav-d-change-theme">
@@ -270,6 +281,9 @@
                                     <a class="dropdown-item" href="{{ route('profile') }}">
                                         {{ __('Profile') }}
                                     </a>
+                                    @if((int)Auth::user()->role === 1 && (int)Auth::user()->company === 1)
+                                        <a class="dropdown-item" href="{{ route('billing.index') }}">Account & Billing</a>
+                                    @endif
                                     @if(Auth::user()->role == 1 || Auth::user()->role == 2 || Auth::user()->role == 3 || Auth::user()->role == 0)
                                         <a class="dropdown-item" href="/users" id="update-coworkers" style="cursor:pointer;">
                                             @if(Auth::user()->role == 1 || Auth::user()->role == 2 || Auth::user()->role == 3){{ __('Сompany staff') }}@elseif(Auth::user()->role == 0){{ __('Admin panel') }}@endif
@@ -277,7 +291,9 @@
                                     @endif
                                     @if(Auth::user()->role == 0)<a class="dropdown-item" href="/companies">Companies</a>@endif
                                     @if(Auth::user()->role == 1 && Auth::user()->company_title !== null)<a class="dropdown-item" href="/departments">Departments</a>@endif
-                                    @if(Auth::user()->tariff !== "1" && Auth::user()->company == 1)<a class="dropdown-item" href="/payment">Our offers</a>@endif
+                                    @if((int)Auth::user()->company === 1 && (int)Auth::user()->role === 1 && (int)Auth::user()->tariff !== 1)
+                                        <a class="dropdown-item" href="{{ route('plans.index') }}">Upgrade plan</a>
+                                    @endif
                                     <a class="dropdown-item" href="{{ route('logout') }}"
                                        onclick="event.preventDefault();
                                                              document.getElementById('logout-form').submit();">
@@ -293,7 +309,9 @@
                         </div>
 
                         <div class="nav-menu-dots" style="display: none">
-                            @if(Auth::user()->tariff !== "1" && Auth::user()->company == 1)<a class="btn btn-primary" href="/payment" style="margin-right: 30px">Our offers</a>@endif
+                            @if((int)Auth::user()->company === 1 && (int)Auth::user()->role === 1 && (int)Auth::user()->tariff !== 1)
+                                <a class="btn btn-primary" href="{{ route('plans.index') }}" style="margin-right: 30px">Upgrade plan</a>
+                            @endif
                             <a>
                                 <svg version="1.1"
                                      id="Capa_1"
@@ -376,7 +394,7 @@
     const currentYear = new Date().getFullYear().toString();
     setYear.textContent = currentYear;
 </script>
-@if(Route::currentRouteName() !== 'login' || Route::currentRouteName() !== 'register' || Route::currentRouteName() !== 'welcome')
+@if(Route::currentRouteName() !== 'login' && Route::currentRouteName() !== 'register' && Route::currentRouteName() !== 'welcome')
     <script src="{{asset('/js/theme.js')}}"></script>
 @endif
 </body>

@@ -16,7 +16,8 @@ class WorkfitAdmin
      */
     public function handle(Request $request, Closure $next)
     {
-        if (!\Auth::check() || !\Auth::user()->is_admin == 1) {
+        // Allow only authenticated users with is_admin === 1
+        if (!\Auth::check() || (int)\Auth::user()->is_admin !== 1) {
             return redirect('/home');
         }
 

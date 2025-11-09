@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Laravel\Cashier\Billable;
 use App\Models\Companies;
 use DB;
 use Hash;
@@ -14,7 +15,7 @@ use Hash;
 class User extends Authenticatable
 {
     public $timestamps = false;
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, Billable;
 
     /**
      * The attributes that are mass assignable.
@@ -208,7 +209,6 @@ class User extends Authenticatable
 
     public function deleteUser($email, $companyId, $company, $companyDepartmentTable, $companyWorkerTable) {
         $maxUsers = DB::table("users")->max("id") + 1;
-        $maxCompanies = DB::table("companies")->max("id") + 1;
 
         if($company) {
             $max = DB::table($companyWorkerTable)->max("id") + 1;
@@ -216,9 +216,7 @@ class User extends Authenticatable
             DB::table($companyWorkerTable)->where(['company_id' => $companyId, "email" => $email])->delete();
             DB::table('users')->where("email", $email)->delete();
             DB::table('companies')->where(['id' => $companyId, "manager_email" => $email])->delete();
-            DB::statement("ALTER TABLE users AUTO_INCREMENT = $maxUsers");
-            DB::statement("ALTER TABLE companies AUTO_INCREMENT = $maxCompanies");
-            DB::statement("ALTER TABLE " . $companyWorkerTable . " AUTO_INCREMENT = $max");
+            // Avoid resetting AUTO_INCREMENT; unnecessary and error-prone
 
             return true;
         }
@@ -281,7 +279,10 @@ class User extends Authenticatable
 
             $img = $avatarImage->image;
             if ($img != NULL) {
-                unlink('upload/' . $img);
+                $path = public_path('upload/' . $img);
+                if (file_exists($path)) {
+                    @unlink($path);
+                }
             }
 
             User::where('id', $id)->update(

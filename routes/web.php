@@ -19,6 +19,9 @@ use App\Http\Controllers\CompanyMainPageController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ContuctUsController;
 use App\Http\Controllers\WorkfitAdminController;
+use App\Http\Controllers\PlanController;
+use App\Http\Controllers\StripeWebhookController;
+use App\Http\Controllers\BillingController;
 
 /*
 |--------------------------------------------------------------------------
@@ -45,25 +48,25 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('/', [HomeController::class, 'index'])->name('home');
         Route::post('/updatePassword/{email}', [HomeController::class, 'updatePassword']);
         Route::get('/response_error', [PaymentController::class, 'responses_error']);
-    });
+});
+
+// Stripe webhook endpoint (Cashier)
+Route::post('/stripe/webhook', [StripeWebhookController::class, 'handleWebhook']);
 
     Route::group(['prefix' => 'users', 'middleware' => 'admin'], function () {
         Route::get('/', [AdminController::class, 'upload_coworkers'])->name("company_staff");
         Route::post('/', [AdminController::class, 'add_worker']);
         Route::post('/import', [UserController::class, 'importUsers']);
         Route::get('/export/{role}', [UserController::class, 'exportTable']);
-        Route::get('/delete/{email}', [AdminController::class, 'delete']);
-        Route::put('/{email}', [AdminController::class, 'updateUser'])->name('udpateUser');
-        Route::post('/manager_status/{email}', [AdminController::class, 'manager_status']);
-        Route::post('/teamlead_status/{email}', [AdminController::class, 'teamlead_status']);
-        Route::post('/chief_status/{email}', [AdminController::class, 'chief_status']);
-        Route::post('/employee_status/{email}', [AdminController::class, 'employee_status']);
+        Route::get('/delete/{email}', [AdminController::class, 'delete'])->middleware('tenant.email');
+        Route::put('/{email}', [AdminController::class, 'updateUser'])->name('udpateUser')->middleware('tenant.email');
+        Route::post('/manager_status/{email}', [AdminController::class, 'manager_status'])->middleware('tenant.email');
+        Route::post('/teamlead_status/{email}', [AdminController::class, 'teamlead_status'])->middleware('tenant.email');
+        Route::post('/chief_status/{email}', [AdminController::class, 'chief_status'])->middleware('tenant.email');
+        Route::post('/employee_status/{email}', [AdminController::class, 'employee_status'])->middleware('tenant.email');
         Route::get('/list', [AdminController::class, 'usersPagination'])->name("company_staff_list");;
         Route::post("/changeName_chief/{name}", [AdminController::class, "changeName_chief"]);
         Route::post("/changeEmail_chief/{email}", [AdminController::class, "changeEmail_chief"]);
-        Route::get("/resetPassword/{email}", [UserController::class, 'resetPassword'])->name('resetPassword');
-        Route::get("/reset/{email}/{token}", [UserController::class, 'resetPage'])->name('resetPage');
-        Route::post("/resetPassword/confirm", [UserController::class, 'confirmResetPassword'])->name('confirmResetPassword');
         Route::put('/coworker/update/{param}/{currenty}/{new}', [HomeController::class, 'update_coworker_name'])->name('update_coworker_name');
         Route::put('/coworker/{email}/department/{department}', [HomeController::class, 'update_coworker_department'])->name('update_coworker_department');
     });
@@ -86,6 +89,22 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('/', [PaymentController::class, 'payment'])->name('payment')->middleware('payment');
         Route::get('/payment-success', [PaymentController::class, 'payment_success'])->name('payment-success');
         Route::get('/error', [PaymentController::class, 'payment_error'])->name('payment_error');
+    });
+
+    // Stripe subscription (Laravel Cashier) routes
+    Route::group(['middleware' => 'admin'], function () {
+        Route::get('/plans', [PlanController::class, 'stripePay'])->name('plans.index');
+        Route::get('/plans/{plan}', [PlanController::class, 'show'])->name('plans.show');
+        Route::post('/subscription', [PlanController::class, 'subscription'])->name('subscription.create');
+
+        // Account & Billing
+        Route::prefix('/account')->group(function () {
+            Route::get('/billing', [BillingController::class, 'index'])->name('billing.index');
+            Route::post('/billing/payment-method', [BillingController::class, 'updatePaymentMethod'])->name('billing.payment_method');
+            Route::post('/billing/cancel', [BillingController::class, 'cancel'])->name('billing.cancel');
+            Route::post('/billing/resume', [BillingController::class, 'resume'])->name('billing.resume');
+            Route::post('/billing/portal', [BillingController::class, 'portal'])->name('billing.portal');
+        });
     });
 
     Route::group(['middleware' => 'admin'], function() {
@@ -113,4 +132,3 @@ Route::group(['middleware' => 'auth'], function () {
         });
     });
 });
-

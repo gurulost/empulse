@@ -44,6 +44,6 @@ class WorkfitAdminController extends Controller
     }
 
     public function getUsersList(){
-        var_dump('hio');
+        abort(404);
     }
 }

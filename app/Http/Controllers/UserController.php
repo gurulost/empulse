@@ -72,14 +72,15 @@ class UserController extends Controller
 
             $img = $avatarImage->image;
             if ($img !== null) {
-                if(file_exists(public_path("/upload/$img")))  {
-                    unlink(public_path("/upload/$img"));
+                $path = public_path("/upload/$img");
+                if (file_exists($path))  {
+                    @unlink($path);
                 }
             }
 
             $image = $request->file('image');
             $name_gen = hexdec(uniqid()) . '.' . $image->getClientOriginalExtension();
-            Image::make($image)->resize(250, 250)->save('upload/' . $name_gen);
+            Image::make($image)->resize(250, 250)->save(public_path('upload/' . $name_gen));
             User::where('id', $id)->update(
                 ['image' => $name_gen]
             );
@@ -154,57 +155,7 @@ class UserController extends Controller
         }
     }
 
-    public function generateToken() {
-        $str = '';
-        $alphabet = 'ABCDEFGHIGabcdefghig1234567890';
-        while(strlen($str) < 16) {
-            $l = $alphabet[rand(0, strlen($alphabet) - 1)];
-            $str .= $l;
-        }
-
-        return $str;
-    }
-
-    public function resetPassword($email) {
-        $user = User::where("email", $email)->first();
-        if($user) {
-            $name = $user->name;
-            $token = $this->generateToken();
-            $sendLetter = $this->sendLetter($email, $name, $token);
-
-            if($sendLetter === true) {
-                return response()->json(["status" => 200]);
-            } else {
-                return response()->json(["status" => 500, 'message' => $sendLetter]);
-            }
-        } else {
-            return response()->json(["status" => 500, 'message' => "User is not found!"]);
-        }
-    }
-
-    public function resetPage($email) {
-        $token = $this->generateToken();
-        return view('auth.passwords.reset', ['token' => $token, 'email' => $email]);
-    }
-
-    public function confirmResetPassword(Request $request) {
-        $data = $request->all();
-        $email = $data["email"];
-        $password = $data["password"];
-
-        try {
-            $user = User::where("email", $email)->first();
-            if($user) {
-                $user->password = \Hash::make($password);
-                $user->save();
-                return response()->json(["status" => 200]);
-            } else {
-                return response()->json(["status" => 500, 'message' => "User is not found!"]);
-            }
-        } catch(\Exception $e) {
-            return response()->json(["status" => 500, 'message' => $e->getMessage()]);
-        }
-    }
+    // Removed custom password reset methods (using Laravel's Password Broker)
 
     public function importUsers(Request $request) {
         try {

@@ -72,5 +72,6 @@ class Kernel extends HttpKernel
         'workfit_admin' => \App\Http\Middleware\WorkfitAdmin::class,
         'welcome' => \App\Http\Middleware\Welcome::class,
         'payment' => \App\Http\Middleware\Payment::class,
+        'tenant.email' => \App\Http\Middleware\EnsureEmailBelongsToCompany::class,
     ];
 }

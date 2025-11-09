@@ -42,6 +42,54 @@
         @if(Auth::user()->role == 0)@endif
 
         <div class="row table-main-block user-table">
+            @if(Auth::user()->role != 0)
+                <div class="container mb-3">
+                    <div class="card">
+                        <div class="card-body d-flex flex-wrap gap-2 align-items-end">
+                            <div class="me-2">
+                                <label class="form-label mb-1">Search</label>
+                                <input type="text" id="filter-q" class="form-control" placeholder="Name or email">
+                            </div>
+                            @if(Auth::user()->role == 1)
+                                <div class="me-2">
+                                    <label class="form-label mb-1">Role</label>
+                                    <select id="filter-role" class="form-select">
+                                        <option value="">All</option>
+                                        <option value="1">Manager</option>
+                                        <option value="2">Chief</option>
+                                    </select>
+                                </div>
+                                <div class="me-2">
+                                    <label class="form-label mb-1">Department</label>
+                                    <select id="filter-department" class="form-select">
+                                        <option value="">All</option>
+                                        @if(isset($departments))
+                                            @foreach($departments as $d)
+                                                <option value="{{ $d->title }}">{{ $d->title }}</option>
+                                            @endforeach
+                                        @endif
+                                    </select>
+                                </div>
+                            @elseif(Auth::user()->role == 2)
+                                <div class="me-2">
+                                    <label class="form-label mb-1">Role</label>
+                                    <select id="filter-role" class="form-select">
+                                        <option value="">All</option>
+                                        <option value="3">Teamlead</option>
+                                        <option value="4">Employee</option>
+                                    </select>
+                                </div>
+                            @endif
+                            <div class="ms-auto d-flex align-items-center gap-2">
+                                <div id="users-loading" class="spinner-border spinner-border-sm text-secondary d-none" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <button id="filter-clear" class="btn btn-outline-secondary">Clear</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
             <div class="pricing-header p-3 pb-md-4 mx-auto text-center">
                 <section>
                     <div class="table-responsive d-none">
@@ -431,5 +479,100 @@
         }
         form_validation();
     </script>
-@endsection
+    <script>
+        // Filters: fetch via AJAX and replace the table
+        const $tableWrapper = document.querySelector('.table-responsive');
+        const $q = document.getElementById('filter-q');
+        const $role = document.getElementById('filter-role');
+        const $dep = document.getElementById('filter-department');
+        const $clear = document.getElementById('filter-clear');
 
+        let sortKey = 'name';
+        let sortDir = 'asc';
+
+        function currentParams() {
+            const params = new URLSearchParams();
+            if ($q && $q.value.trim() !== '') params.set('q', $q.value.trim());
+            if ($role && $role.value) params.set('role', $role.value);
+            if ($dep && $dep.value) params.set('department', $dep.value);
+            if (sortKey) params.set('sort', sortKey);
+            if (sortDir) params.set('dir', sortDir);
+            return params;
+        }
+
+        async function fetchList(url = null) {
+            try {
+                const base = url || ('/users/list');
+                const params = currentParams();
+                const full = params.toString() ? `${base}?${params.toString()}` : base;
+                // show loading
+                const loading = document.getElementById('users-loading');
+                if (loading) loading.classList.remove('d-none');
+                const res = await fetch(full, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                const html = await res.text();
+                $tableWrapper.innerHTML = html;
+                $tableWrapper.classList.remove('d-none');
+                $tableWrapper.classList.add('d-block');
+                if (loading) loading.classList.add('d-none');
+                // highlight matches
+                const term = ($q && $q.value) ? $q.value.trim() : '';
+                if (term) {
+                    const re = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'ig');
+                    document.querySelectorAll('.p-name, .p-email').forEach(el => {
+                        const text = el.textContent;
+                        el.innerHTML = text.replace(re, (m) => `<mark>${m}</mark>`);
+                    });
+                }
+                // update sort indicators
+                document.querySelectorAll('.js-sort').forEach(a => {
+                    // remove previous indicator
+                    a.querySelectorAll('.sort-indicator').forEach(n => n.remove());
+                    const key = a.getAttribute('data-sort');
+                    if (key === sortKey) {
+                        const s = document.createElement('span');
+                        s.className = 'sort-indicator';
+                        s.textContent = sortDir === 'asc' ? ' ▲' : ' ▼';
+                        a.appendChild(s);
+                    }
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        function debounce(fn, ms) {
+            let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+        }
+
+        if ($q) $q.addEventListener('input', debounce(() => fetchList(), 300));
+        if ($role) $role.addEventListener('change', () => fetchList());
+        if ($dep) $dep.addEventListener('change', () => fetchList());
+        if ($clear) $clear.addEventListener('click', () => {
+            if ($q) $q.value = '';
+            if ($role) $role.value = '';
+            if ($dep) $dep.value = '';
+            fetchList();
+        });
+
+        // Intercept pagination clicks inside table wrapper and preserve filters
+        document.addEventListener('click', function(e) {
+            const a = e.target.closest('.pagination a');
+            if (a && $tableWrapper.contains(a)) {
+                e.preventDefault();
+                const url = new URL(a.href, window.location.origin);
+                fetchList(url.pathname + url.search);
+            }
+            const sorter = e.target.closest('.js-sort');
+            if (sorter) {
+                e.preventDefault();
+                const key = sorter.getAttribute('data-sort');
+                if (!key) return;
+                if (sortKey === key) {
+                    sortDir = (sortDir === 'asc') ? 'desc' : 'asc';
+                } else {
+                    sortKey = key;
+                    sortDir = 'asc';
+                }
+                fetchList();
+            }
+        });
+    </script>
+@endsection
