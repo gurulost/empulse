@@ -9,6 +9,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Laravel\Cashier\Billable;
 use App\Models\Companies;
+use App\Services\SurveyAnalyticsService;
 use DB;
 use Hash;
 
@@ -224,51 +225,46 @@ class User extends Authenticatable
         return false;
     }
 
-    public function qualtricsFunc($userName, $userEmail, $userRole, $userPassword, $companyTitle) {
-        $qualtrics_table = 'qualtrics';
+    public function qualtricsFunc($userName, $userEmail, $userRole, $userPassword, $companyTitle, ?array $dataset = null) {
         $qualtrics = new \stdClass();
         $qualtrics->data = [];
         $qualtrics->time = null;
 
-        $qualtrics_data = \DB::table($qualtrics_table)->get();
+        if ($dataset === null) {
+            $analyticsService = app(SurveyAnalyticsService::class);
+            $dataset = $analyticsService->datasetForCompany($this->company_id);
+        }
+
+        $qualtrics->time = $dataset['time'] ?? now()->valueOf();
+        $entries = $dataset['data'] ?? [];
         $allUsers = \DB::table('company_worker')->pluck('email')->toArray();
-        foreach ($qualtrics_data as $i) {
-            if($i) {
-                $qualtrics->time = $i->date;
-                if($i->data !== null) {
-                    $json = json_decode($i->data, true);
-                    foreach ($json as $el) {
-                        if ($userRole == 1) {
-                            if (isset($el["values"]["QID101_TEXT"])) {
-                                if ($el["values"]["QID101_TEXT"] == $companyTitle) {
-                                    if(in_array($el["values"]['QID62_TEXT'], $allUsers)) {
-                                        $qualtrics->data[] = json_encode($el);
-                                    }
-                                }
-                            }
-                        } else if ($userRole == 2) {
-                            $department = \DB::table('company_worker')->where('email', $userEmail)->value('department');
-                            if (isset($el["values"]["QID101_TEXT"]) && isset($el["values"]["QID63_TEXT"])) {
-                                if ($el["values"]["QID101_TEXT"] == $companyTitle && $el["values"]["QID63_TEXT"] == $department) {
-                                    if(in_array($el["values"]['QID62_TEXT'], $allUsers)) {
-                                        $qualtrics->data[] = json_encode($el);
-                                    }
-                                }
-                            }
-                        } else if ($userRole == 3) {
-                            if (isset($el["values"]["QID101_TEXT"]) && isset($el["values"]["QID103_TEXT"])) {
-                                if ($el["values"]["QID101_TEXT"] == $companyTitle && $el["values"]["QID103_TEXT"] == $userName) {
-                                    if(in_array($el["values"]['QID62_TEXT'], $allUsers)) {
-                                        $qualtrics->data[] = json_encode($el);
-                                    }
-                                }
-                            }
-                        }
-                    }
+        $userDepartment = \DB::table('company_worker')->where('email', $userEmail)->value('department');
+
+        foreach ($entries as $payload) {
+            $decoded = is_array($payload) ? $payload : json_decode($payload, true);
+            if (!$decoded || !isset($decoded['values'])) {
+                continue;
+            }
+
+            $values = $decoded['values'];
+            $companyMatches = isset($values['QID101_TEXT']) && $values['QID101_TEXT'] === $companyTitle;
+            $emailAllowed = isset($values['QID62_TEXT']) && in_array($values['QID62_TEXT'], $allUsers);
+            if (!$companyMatches || !$emailAllowed) {
+                continue;
+            }
+
+            if ($userRole == 1) {
+                $qualtrics->data[] = json_encode($decoded);
+            } elseif ($userRole == 2) {
+                if (isset($values['QID63_TEXT']) && $values['QID63_TEXT'] === $userDepartment) {
+                    $qualtrics->data[] = json_encode($decoded);
+                }
+            } elseif ($userRole == 3) {
+                if (isset($values['QID103_TEXT']) && $values['QID103_TEXT'] === $userName) {
+                    $qualtrics->data[] = json_encode($decoded);
                 }
             }
         }
-
 
         return $qualtrics;
     }
@@ -358,6 +354,11 @@ class User extends Authenticatable
 
             return ["status" => 400, 'message' => "No fields were updated."];
         }
+    }
+
+    public function surveyLink(): ?string
+    {
+        return app(SurveyService::class)->assignmentLink($this);
     }
 
     public function updateUserPasswordFunc($name, $email, $companyTitle, $password) {

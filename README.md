@@ -6,7 +6,7 @@ Overview
 Key Features
 - Company and department management, CSV/XLSX import/export
 - Role-based dashboards and a Workfit Admin area
-- Qualtrics responses fetch (via API)
+- Built-in survey engine (Qualtrics fully replaced)
 - Stripe subscriptions powered by Laravel Cashier
 
 Quick Start
@@ -14,6 +14,12 @@ Quick Start
 - cp .env.example .env and configure DB, Redis, Mail (Brevo), Socialite, Stripe
 - composer install && php artisan key:generate && php artisan migrate --seed
 - npm install && npm run dev
+
+Internal Surveys
+- Run `php artisan migrate` to create the placeholder survey schema/assignments.
+- Employees receive secure links (via email or `/surveys/manage`) served from `/survey/{token}`.
+- Dashboard data now reads from the internal survey responses; no Qualtrics configuration is required.
+- Import the master instrument via `php artisan survey:import storage/app/instruments/org_culture_work_content_v1.json --activate`.
 
 Stripe Subscriptions
 - Manage plans in DB table `plans` (name, slug, stripe_plan, price)

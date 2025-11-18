@@ -1,0 +1,91 @@
+<?php
+
+return [
+    'work_content_attributes' => [
+        'WCA_REL' => ['label' => 'Building relationships with other people.', 'indicator' => 'relationships'],
+        'WCA_TRAIN' => ['label' => 'Receiving training in valuable new skills.', 'indicator' => 'growth'],
+        'WCA_LEARN' => ['label' => 'Learning valuable new knowledge.', 'indicator' => 'growth'],
+        'WCA_BETTER' => ['label' => 'Doing things that help me be a better person.', 'indicator' => 'purpose'],
+        'WCA_PAY' => ['label' => 'Pay and benefits.', 'indicator' => 'rewards'],
+        'WCA_SCHED' => ['label' => 'Schedule or working location.', 'indicator' => 'flexibility'],
+        'WCA_DREAM' => ['label' => 'Working toward my dream role or position.', 'indicator' => 'progression'],
+        'WCA_CLIENTS' => ['label' => 'Having a direct impact on helping clients/customers.', 'indicator' => 'impact'],
+        'WCA_PROGRESS' => ['label' => 'Making a direct contribution to our organization.', 'indicator' => 'impact'],
+        'WCA_TEAM' => ['label' => 'Being part of a close-knit team.', 'indicator' => 'relationships'],
+        'WCA_TASKS' => ['label' => 'Completing tasks that I find meaningful.', 'indicator' => 'purpose'],
+        'WCA_PROJECTS' => ['label' => 'Making important contributions to meaningful projects.', 'indicator' => 'purpose'],
+    ],
+
+    'indicators' => [
+        'relationships' => [
+            'label' => 'Relationships & Team',
+            'attributes' => ['WCA_REL', 'WCA_TEAM'],
+        ],
+        'growth' => [
+            'label' => 'Learning & Growth',
+            'attributes' => ['WCA_TRAIN', 'WCA_LEARN'],
+        ],
+        'purpose' => [
+            'label' => 'Purpose & Meaning',
+            'attributes' => ['WCA_BETTER', 'WCA_TASKS', 'WCA_PROJECTS'],
+        ],
+        'rewards' => [
+            'label' => 'Rewards',
+            'attributes' => ['WCA_PAY'],
+        ],
+        'flexibility' => [
+            'label' => 'Flexibility',
+            'attributes' => ['WCA_SCHED'],
+        ],
+        'progression' => [
+            'label' => 'Progression',
+            'attributes' => ['WCA_DREAM'],
+        ],
+        'impact' => [
+            'label' => 'Impact',
+            'attributes' => ['WCA_CLIENTS', 'WCA_PROGRESS'],
+        ],
+    ],
+
+    'team_culture' => [
+        'positive' => [
+            'TC_01',
+            'TC_02',
+            'TC_03',
+            'TC_PS_05',
+            'TC_PS_06',
+            'TC_PS_08',
+            'TC_PS_11',
+            'WEL_01',
+            'WEL_02',
+            'WEL_03',
+            'WEL_TCE_04',
+            'WEL_TCE_05',
+        ],
+        'negative' => [
+            'TC_04',
+            'TC_PS_07',
+            'TC_PS_09',
+            'TC_PS_10',
+            'TC_ADD_12',
+            'TC_ADD_13',
+            'TC_ADD_14',
+            'WEL_TCE_06',
+        ],
+    ],
+
+    'impact_series' => [
+        'positive' => [
+            'IMPACT_PN_01',
+            'IMPACT_SIZE_04',
+        ],
+        'importance' => [
+            'IMPACT_PN_02',
+            'IMPACT_SIZE_05',
+        ],
+        'desire' => [
+            'IMPACT_PN_03',
+            'IMPACT_SIZE_06',
+        ],
+    ],
+];

@@ -25,10 +25,10 @@ class AdminMsg extends Mailable
     public $password;
     public $status;
     public $company;
-    public $test;
+    public $surveyLink;
     public $department;
 
-    public function __construct($name, $link, $email, $password, $company, $status, $test, $department)
+    public function __construct($name, $link, $email, $password, $company, $status, $surveyLink, $department)
     {
         $this->name = $name;
         $this->link = $link;
@@ -36,7 +36,7 @@ class AdminMsg extends Mailable
         $this->email = $email;
         $this->status = $status;
         $this->company = $company;
-        $this->test = $test;
+        $this->surveyLink = $surveyLink;
         $this->department = $department;
     }
 
@@ -50,8 +50,8 @@ class AdminMsg extends Mailable
                 "password" => $this->password,
                 "status" => $this->status,
                 "company" => $this->company,
-                "test" => $this->test,
-                "department" => $this->department
+                "department" => $this->department,
+                "surveyLink" => $this->surveyLink,
             ]);
     }
 

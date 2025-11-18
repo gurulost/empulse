@@ -1,0 +1,692 @@
+{
+  "instrument_id": "org_culture_work_content_v1",
+  "title": "Organizational Culture & Work Content Survey",
+  "version": "1.0.0",
+  "created_utc": "2025-11-17",
+  "source_note": "Cleaned and standardized from Qualtrics scrape; placeholder and duplicate questions removed; anchors normalized where implied.",
+  "scale_presets": {
+    "SLIDER_1_10_AGREE": {
+      "type": "slider",
+      "min": 1,
+      "max": 10,
+      "step": 1,
+      "left_label": "Strongly Disagree",
+      "right_label": "Strongly Agree"
+    },
+    "SLIDER_1_10_EFFECTIVENESS": {
+      "type": "slider",
+      "min": 1,
+      "max": 10,
+      "step": 1,
+      "left_label": "Not effective at all",
+      "right_label": "Extremely effective"
+    },
+    "SLIDER_1_10_POS_NEG": {
+      "type": "slider",
+      "min": 1,
+      "max": 10,
+      "step": 1,
+      "left_label": "Very Negative",
+      "right_label": "Very Positive"
+    },
+    "SLIDER_1_10_IMPORTANCE": {
+      "type": "slider",
+      "min": 1,
+      "max": 10,
+      "step": 1,
+      "left_label": "Not at all important",
+      "right_label": "Very important"
+    },
+    "SLIDER_1_10_PART_OF_JOB": {
+      "type": "slider",
+      "min": 1,
+      "max": 10,
+      "step": 1,
+      "left_label": "Not at All",
+      "right_label": "A Huge Part"
+    },
+    "SLIDER_1_9_AGREE": {
+      "type": "slider",
+      "min": 1,
+      "max": 9,
+      "step": 1,
+      "left_label": "Strongly Disagree",
+      "mid_label": "Neutral",
+      "mid_value": 5,
+      "right_label": "Strongly Agree"
+    },
+    "SLIDER_1_9_FREQ_INTERVALS": {
+      "type": "slider",
+      "min": 1,
+      "max": 9,
+      "step": 1,
+      "interval_labels": {
+        "1-3": "Never to Rarely",
+        "4-6": "Sometimes",
+        "7-9": "Always"
+      }
+    },
+    "SLIDER_1_9_DEFAULT": {
+      "type": "slider",
+      "min": 1,
+      "max": 9,
+      "step": 1,
+      "left_label": "Never / Not at All",
+      "right_label": "Always / Extremely"
+    }
+  },
+  "pages": [
+    {
+      "page_id": "contact",
+      "title": "Contact Information",
+      "items": [
+        {
+          "qid": "CONTACT_EMAIL",
+          "type": "text_short",
+          "question": "Email Address",
+          "response": { "format_hint": "email" }
+        },
+        {
+          "qid": "CONTACT_ORG",
+          "type": "text_short",
+          "question": "Your company or organization name"
+        },
+        {
+          "qid": "CONTACT_DEPT",
+          "type": "text_short",
+          "question": "Your department name"
+        },
+        {
+          "qid": "CONTACT_SUPERVISOR",
+          "type": "text_short",
+          "question": "Your supervisor or manager’s name"
+        }
+      ]
+    },
+
+    {
+      "page_id": "org_culture",
+      "title": "Organizational Culture: Means, Ends, Innovation & Ethics",
+      "sections": [
+        {
+          "section_id": "means_ends",
+          "title": "Means and Ends",
+          "items": [
+            {
+              "qid": "OC_ME_01",
+              "type": "slider",
+              "scale": "SLIDER_1_10_AGREE",
+              "question": "In your organization, the means (moral values) that guide employees are more important than the ends (financial results, profits, growth)."
+            },
+            {
+              "qid": "OC_ME_02",
+              "type": "slider",
+              "scale": "SLIDER_1_10_AGREE",
+              "question": "In your organization, employees are rewarded more for achieving financial results than for achieving moral goods.",
+              "coding_hint": { "polarity": "negative_toward_means" }
+            },
+            {
+              "qid": "OC_ME_03",
+              "type": "slider",
+              "scale": "SLIDER_1_10_AGREE",
+              "question": "In your organization, moral behaviour is recognized and rewarded."
+            },
+            {
+              "qid": "OC_ME_04",
+              "type": "slider",
+              "scale": "SLIDER_1_10_AGREE",
+              "question": "Employees are expected to act ethically at all times."
+            },
+            {
+              "qid": "OC_ME_05",
+              "type": "slider",
+              "scale": "SLIDER_1_10_AGREE",
+              "question": "Leadership communicates a moral vision for the organization and acts ethically themselves."
+            }
+          ]
+        },
+        {
+          "section_id": "innovation",
+          "title": "Innovation",
+          "items": [
+            {
+              "qid": "OC_INNOV_01",
+              "type": "slider",
+              "scale": "SLIDER_1_10_AGREE",
+              "question": "Our organization is successful because we stay in tune with what is going on in our customers’ lives."
+            },
+            {
+              "qid": "OC_INNOV_02",
+              "type": "slider",
+              "scale": "SLIDER_1_10_AGREE",
+              "question": "Our organization is not afraid of failing at some things if it helps us move forward with new ideas."
+            },
+            {
+              "qid": "OC_INNOV_03",
+              "type": "slider",
+              "scale": "SLIDER_1_10_AGREE",
+              "question": "It is important that our organization pushes the cutting edge in new ideas and technology."
+            },
+            {
+              "qid": "OC_INNOV_04",
+              "type": "slider",
+              "scale": "SLIDER_1_10_AGREE",
+              "question": "Employees are asked to take on projects that are not part of their usual roles."
+            },
+            {
+              "qid": "OC_INNOV_05",
+              "type": "slider",
+              "scale": "SLIDER_1_10_AGREE",
+              "question": "Our organization invests in new ideas even if they will not be profitable for many years."
+            },
+            {
+              "qid": "OC_INNOV_06",
+              "type": "slider",
+              "scale": "SLIDER_1_10_AGREE",
+              "question": "Innovation is just as important as efficiency."
+            },
+            {
+              "qid": "OC_INNOV_07",
+              "type": "slider",
+              "scale": "SLIDER_1_10_AGREE",
+              "question": "Our organization invests in long-term research even when the payoff is uncertain."
+            }
+          ]
+        },
+        {
+          "section_id": "ethics_values",
+          "title": "Ethics & Values",
+          "items": [
+            {
+              "qid": "OC_EV_01",
+              "type": "slider",
+              "scale": "SLIDER_1_10_AGREE",
+              "question": "Our organization cares about our clients, customers or those we serve."
+            },
+            {
+              "qid": "OC_EV_02",
+              "type": "slider",
+              "scale": "SLIDER_1_10_AGREE",
+              "question": "Our organization creates space for employees to balance work, family and personal needs."
+            },
+            {
+              "qid": "OC_EV_03",
+              "type": "slider",
+              "scale": "SLIDER_1_10_AGREE",
+              "question": "Leadership in this organization acts ethically in what they say and do."
+            }
+          ]
+        },
+        {
+          "section_id": "org_effectiveness",
+          "title": "Organizational Effectiveness",
+          "items": [
+            {
+              "qid": "OC_EFFECT_01",
+              "type": "slider",
+              "scale": "SLIDER_1_10_EFFECTIVENESS",
+              "question": "On a scale from 1 to 10, how would you rate your organization’s overall effectiveness?"
+            }
+          ]
+        }
+      ]
+    },
+
+    {
+      "page_id": "attr_01",
+      "title": "Work Content Attribute 1",
+      "attribute_label": "Building relationships with other people.",
+      "items": [
+        {
+          "qid": "WCA_REL_A",
+          "type": "slider",
+          "scale": "SLIDER_1_10_PART_OF_JOB",
+          "question": "In your current position, how much is building relationships with other people a part of your job?"
+        },
+        {
+          "qid": "WCA_REL_B",
+          "type": "slider",
+          "scale": "SLIDER_1_10_PART_OF_JOB",
+          "question": "If you could build your ideal job right now, how much would building relationships with other people be a part of that job?"
+        },
+        {
+          "qid": "WCA_REL_C",
+          "type": "slider",
+          "scale": "SLIDER_1_9_AGREE",
+          "question": "I wish that I had more opportunities to build relationships with other people at my current job."
+        }
+      ]
+    },
+    {
+      "page_id": "attr_02",
+      "title": "Work Content Attribute 2",
+      "attribute_label": "Receiving training in valuable new skills.",
+      "items": [
+        { "qid": "WCA_TRAIN_A", "type": "slider", "scale": "SLIDER_1_10_PART_OF_JOB", "question": "In your current position, how much is receiving training in valuable new skills a part of your job?" },
+        { "qid": "WCA_TRAIN_B", "type": "slider", "scale": "SLIDER_1_10_PART_OF_JOB", "question": "If you could build your ideal job right now, how much would receiving training in valuable new skills be a part of that job?" },
+        { "qid": "WCA_TRAIN_C", "type": "slider", "scale": "SLIDER_1_9_AGREE", "question": "I wish that I had more opportunities to receive training in valuable new skills at my current job." }
+      ]
+    },
+    {
+      "page_id": "attr_03",
+      "title": "Work Content Attribute 3",
+      "attribute_label": "Learning valuable new knowledge.",
+      "items": [
+        { "qid": "WCA_LEARN_A", "type": "slider", "scale": "SLIDER_1_10_PART_OF_JOB", "question": "In your current position, how much is learning valuable new knowledge a part of your job?" },
+        { "qid": "WCA_LEARN_B", "type": "slider", "scale": "SLIDER_1_10_PART_OF_JOB", "question": "If you could build your ideal job right now, how much would learning valuable new knowledge be a part of that job?" },
+        { "qid": "WCA_LEARN_C", "type": "slider", "scale": "SLIDER_1_9_AGREE", "question": "I wish that I had more opportunities to learn valuable new knowledge at my current job." }
+      ]
+    },
+    {
+      "page_id": "attr_04",
+      "title": "Work Content Attribute 4",
+      "attribute_label": "Doing things that help me be a better person.",
+      "items": [
+        { "qid": "WCA_BETTER_A", "type": "slider", "scale": "SLIDER_1_10_PART_OF_JOB", "question": "In your current position, how much is doing things that help me be a better person a part of your job?" },
+        { "qid": "WCA_BETTER_B", "type": "slider", "scale": "SLIDER_1_10_PART_OF_JOB", "question": "If you could build your ideal job right now, how much would doing things that help me be a better person be a part of that job?" },
+        { "qid": "WCA_BETTER_C", "type": "slider", "scale": "SLIDER_1_9_AGREE", "question": "I wish that I had more opportunities to do things that help me be a better person at my current job." }
+      ]
+    },
+    {
+      "page_id": "attr_05",
+      "title": "Work Content Attribute 5",
+      "attribute_label": "Pay and benefits (salary, bonuses, healthcare, retirement, etc.).",
+      "items": [
+        { "qid": "WCA_PAY_A", "type": "slider", "scale": "SLIDER_1_10_PART_OF_JOB", "question": "In your current position, how much are pay and benefits (salary, bonuses, healthcare, retirement, etc.) a part of your job?" },
+        { "qid": "WCA_PAY_B", "type": "slider", "scale": "SLIDER_1_10_PART_OF_JOB", "question": "If you could build your ideal job right now, how much would pay and benefits (salary, bonuses, healthcare, retirement, etc.) be a part of that job?" },
+        { "qid": "WCA_PAY_C", "type": "slider", "scale": "SLIDER_1_9_AGREE", "question": "I wish that I had more opportunities related to pay and benefits at my current job." }
+      ]
+    },
+    {
+      "page_id": "attr_06",
+      "title": "Work Content Attribute 6",
+      "attribute_label": "Schedule or working location (for example, ability to work remotely, flexible hours or choice of physical location).",
+      "items": [
+        { "qid": "WCA_SCHED_A", "type": "slider", "scale": "SLIDER_1_10_PART_OF_JOB", "question": "In your current position, how much is schedule or working location a part of your job?" },
+        { "qid": "WCA_SCHED_B", "type": "slider", "scale": "SLIDER_1_10_PART_OF_JOB", "question": "If you could build your ideal job right now, how much would schedule or working location be a part of that job?" },
+        { "qid": "WCA_SCHED_C", "type": "slider", "scale": "SLIDER_1_9_AGREE", "question": "I wish that I had more opportunities related to schedule or working location at my current job." }
+      ]
+    },
+    {
+      "page_id": "attr_07",
+      "title": "Work Content Attribute 7",
+      "attribute_label": "Working toward my dream role or position.",
+      "items": [
+        { "qid": "WCA_DREAM_A", "type": "slider", "scale": "SLIDER_1_10_PART_OF_JOB", "question": "In your current position, how much is working toward your dream role or position a part of your job?" },
+        { "qid": "WCA_DREAM_B", "type": "slider", "scale": "SLIDER_1_10_PART_OF_JOB", "question": "If you could build your ideal job right now, how much would working toward your dream role or position be a part of that job?" },
+        { "qid": "WCA_DREAM_C", "type": "slider", "scale": "SLIDER_1_9_AGREE", "question": "I wish that I had more opportunities to work toward my dream role or position at my current job." }
+      ]
+    },
+    {
+      "page_id": "attr_08",
+      "title": "Work Content Attribute 8",
+      "attribute_label": "Having a direct impact on helping clients, customers or those we serve.",
+      "items": [
+        { "qid": "WCA_CLIENTS_A", "type": "slider", "scale": "SLIDER_1_10_PART_OF_JOB", "question": "In your current position, how much is having a direct impact on helping clients, customers or those you serve a part of your job?" },
+        { "qid": "WCA_CLIENTS_B", "type": "slider", "scale": "SLIDER_1_10_PART_OF_JOB", "question": "If you could build your ideal job right now, how much would having a direct impact on helping clients, customers or those you serve be a part of that job?" },
+        { "qid": "WCA_CLIENTS_C", "type": "slider", "scale": "SLIDER_1_9_AGREE", "question": "I wish that I had more opportunities to have a direct impact on helping clients, customers or those we serve at my current job." }
+      ]
+    },
+    {
+      "page_id": "attr_09",
+      "title": "Work Content Attribute 9",
+      "attribute_label": "Making a direct contribution to the progress of our organization.",
+      "items": [
+        { "qid": "WCA_PROGRESS_A", "type": "slider", "scale": "SLIDER_1_10_PART_OF_JOB", "question": "In your current position, how much is making a direct contribution to the progress of your organization a part of your job?" },
+        { "qid": "WCA_PROGRESS_B", "type": "slider", "scale": "SLIDER_1_10_PART_OF_JOB", "question": "If you could build your ideal job right now, how much would making a direct contribution to the progress of your organization be a part of that job?" },
+        { "qid": "WCA_PROGRESS_C", "type": "slider", "scale": "SLIDER_1_9_AGREE", "question": "I wish that I had more opportunities to make a direct contribution to the progress of our organization at my current job." }
+      ]
+    },
+    {
+      "page_id": "attr_10",
+      "title": "Work Content Attribute 10",
+      "attribute_label": "Being part of a close-knit team.",
+      "items": [
+        { "qid": "WCA_TEAM_A", "type": "slider", "scale": "SLIDER_1_10_PART_OF_JOB", "question": "In your current position, how much is being part of a close-knit team a part of your job?" },
+        { "qid": "WCA_TEAM_B", "type": "slider", "scale": "SLIDER_1_10_PART_OF_JOB", "question": "If you could build your ideal job right now, how much would being part of a close-knit team be a part of that job?" },
+        { "qid": "WCA_TEAM_C", "type": "slider", "scale": "SLIDER_1_9_AGREE", "question": "I wish that I had more opportunities to be part of a close-knit team at my current job." }
+      ]
+    },
+    {
+      "page_id": "attr_11",
+      "title": "Work Content Attribute 11",
+      "attribute_label": "Completing tasks that I find meaningful.",
+      "items": [
+        { "qid": "WCA_TASKS_A", "type": "slider", "scale": "SLIDER_1_10_PART_OF_JOB", "question": "In your current position, how much is completing tasks that you find meaningful a part of your job?" },
+        { "qid": "WCA_TASKS_B", "type": "slider", "scale": "SLIDER_1_10_PART_OF_JOB", "question": "If you could build your ideal job right now, how much would completing tasks that you find meaningful be a part of that job?" },
+        { "qid": "WCA_TASKS_C", "type": "slider", "scale": "SLIDER_1_9_AGREE", "question": "I wish that I had more opportunities to complete tasks that I find meaningful at my current job." }
+      ]
+    },
+    {
+      "page_id": "attr_12",
+      "title": "Work Content Attribute 12",
+      "attribute_label": "Making important contributions to meaningful projects.",
+      "items": [
+        { "qid": "WCA_PROJECTS_A", "type": "slider", "scale": "SLIDER_1_10_PART_OF_JOB", "question": "In your current position, how much is making important contributions to meaningful projects a part of your job?" },
+        { "qid": "WCA_PROJECTS_B", "type": "slider", "scale": "SLIDER_1_10_PART_OF_JOB", "question": "If you could build your ideal job right now, how much would making important contributions to meaningful projects be a part of that job?" },
+        { "qid": "WCA_PROJECTS_C", "type": "slider", "scale": "SLIDER_1_9_AGREE", "question": "I wish that I had more opportunities to make important contributions to meaningful projects at my current job." }
+      ]
+    },
+
+    {
+      "page_id": "team_culture",
+      "title": "Team Culture",
+      "sections": [
+        {
+          "section_id": "team_culture_core",
+          "title": "Core Items (1–9 sliders; anchors vary where specified)",
+          "items": [
+            {
+              "qid": "TC_01",
+              "type": "slider",
+              "scale": { "type": "slider", "min": 1, "max": 9, "step": 1, "left_label": "Not at all", "right_label": "Very clear" },
+              "question": "How clear are your team’s expectations to you?"
+            },
+            {
+              "qid": "TC_02",
+              "type": "slider",
+              "scale": { "type": "slider", "min": 1, "max": 9, "step": 1, "left_label": "Not enough", "right_label": "Enough" },
+              "question": "How adequate are the resources (including time) allocated to you to be productive?"
+            },
+            {
+              "qid": "TC_03",
+              "type": "slider",
+              "scale": "SLIDER_1_9_DEFAULT",
+              "question": "If something needs to get done, how likely are you to take it upon yourself to do it even if it is not part of your defined role?"
+            },
+            {
+              "qid": "TC_04",
+              "type": "slider",
+              "scale": "SLIDER_1_9_DEFAULT",
+              "question": "How often do you avoid bringing up touchy subjects for fear of conflict?"
+            }
+          ]
+        },
+        {
+          "section_id": "team_psych_safety",
+          "title": "Team Culture & Psychological Safety (1–9: 1–3 Never/Rarely, 4–6 Sometimes, 7–9 Always)",
+          "items": [
+            { "qid": "TC_PS_05", "type": "slider", "scale": "SLIDER_1_9_FREQ_INTERVALS", "question": "People in my team are comfortable owning up to mistakes." },
+            { "qid": "TC_PS_06", "type": "slider", "scale": "SLIDER_1_9_FREQ_INTERVALS", "question": "In my team, people treat each other with respect." },
+            { "qid": "TC_PS_07", "type": "slider", "scale": "SLIDER_1_9_FREQ_INTERVALS", "question": "We avoid discussing touchy subjects such as pay and politics in my team.", "coding_hint": { "polarity": "negative" } },
+            { "qid": "TC_PS_08", "type": "slider", "scale": "SLIDER_1_9_FREQ_INTERVALS", "question": "Employees in my team have a strong sense of what our company stands for." },
+            { "qid": "TC_PS_09", "type": "slider", "scale": "SLIDER_1_9_FREQ_INTERVALS", "question": "Rules and red tape get in the way of us doing our jobs.", "coding_hint": { "polarity": "negative" } },
+            { "qid": "TC_PS_10", "type": "slider", "scale": "SLIDER_1_9_FREQ_INTERVALS", "question": "Sometimes colleagues in my team attempt to undermine each other.", "coding_hint": { "polarity": "negative" } },
+            { "qid": "TC_PS_11", "type": "slider", "scale": "SLIDER_1_9_FREQ_INTERVALS", "question": "On the whole, conflict in my team is productive and not destructive." }
+          ]
+        },
+        {
+          "section_id": "team_additional",
+          "title": "Additional Team Culture Statements (1–9)",
+          "items": [
+            { "qid": "TC_ADD_12", "type": "slider", "scale": "SLIDER_1_9_DEFAULT", "question": "It is important to come to an agreement quickly rather than explore conflicting opinions.", "coding_hint": { "polarity": "negative_for_debate" } },
+            { "qid": "TC_ADD_13", "type": "slider", "scale": "SLIDER_1_9_DEFAULT", "question": "Sometimes I avoid asking for help from team members for fear of damaging my reputation.", "coding_hint": { "polarity": "negative" } },
+            { "qid": "TC_ADD_14", "type": "slider", "scale": "SLIDER_1_9_DEFAULT", "question": "There are cliques or factions within our team.", "coding_hint": { "polarity": "negative" } }
+          ]
+        }
+      ]
+    },
+
+    {
+      "page_id": "workplace_ethics_leadership",
+      "title": "Workplace Ethics & Leadership",
+      "sections": [
+        {
+          "section_id": "leadership_ethics",
+          "title": "Leadership & Ethics (1–9: Never/Rarely → Sometimes → Always)",
+          "items": [
+            { "qid": "WEL_01", "type": "slider", "scale": "SLIDER_1_9_FREQ_INTERVALS", "question": "If my manager does something that is not allowed, someone will say something." },
+            { "qid": "WEL_02", "type": "slider", "scale": "SLIDER_1_9_FREQ_INTERVALS", "question": "My supervisor does what they say they will do." },
+            { "qid": "WEL_03", "type": "slider", "scale": "SLIDER_1_9_FREQ_INTERVALS", "question": "My supervisor sets a good example in terms of ethical behaviour." }
+          ]
+        },
+        {
+          "section_id": "team_culture_ethics",
+          "title": "Team Culture & Ethics (same 1–9 anchors)",
+          "items": [
+            { "qid": "WEL_TCE_04", "type": "slider", "scale": "SLIDER_1_9_FREQ_INTERVALS", "question": "If I made a complaint about my supervisor, I feel it would lead to positive changes." },
+            { "qid": "WEL_TCE_05", "type": "slider", "scale": "SLIDER_1_9_FREQ_INTERVALS", "question": "Only people who act with the highest levels of integrity will be considered for promotion." },
+            { "qid": "WEL_TCE_06", "type": "slider", "scale": "SLIDER_1_9_FREQ_INTERVALS", "question": "I sometimes feel pressure to do things in a way that is not entirely ethical.", "coding_hint": { "polarity": "negative" } }
+          ]
+        }
+      ]
+    },
+
+    {
+      "page_id": "impact_on_society",
+      "title": "Impact on Society",
+      "sections": [
+        {
+          "section_id": "positive_vs_negative",
+          "title": "Positive vs Negative Impact",
+          "items": [
+            { "qid": "IMPACT_PN_01", "type": "slider", "scale": "SLIDER_1_10_POS_NEG", "question": "How negative or positive is your job’s impact on society?" },
+            { "qid": "IMPACT_PN_02", "type": "slider", "scale": "SLIDER_1_10_IMPORTANCE", "question": "In your ideal job, how important is it that your job has a positive impact on society?" },
+            { "qid": "IMPACT_PN_03", "type": "slider", "scale": "SLIDER_1_9_AGREE", "question": "I wish I had more opportunities to have a positive impact on society at my current job." }
+          ]
+        },
+        {
+          "section_id": "size_of_impact",
+          "title": "Size of Impact",
+          "items": [
+            { "qid": "IMPACT_SIZE_04", "type": "slider", "scale": { "type": "slider", "min": 1, "max": 10, "step": 1, "left_label": "Very small impact", "right_label": "Very large impact" }, "question": "How small or large of an impact on society does your current job have?" },
+            { "qid": "IMPACT_SIZE_05", "type": "slider", "scale": "SLIDER_1_10_IMPORTANCE", "question": "In your ideal job, how important is it that your job has a large impact on society?" },
+            { "qid": "IMPACT_SIZE_06", "type": "slider", "scale": "SLIDER_1_9_AGREE", "question": "I wish I had more opportunities to make a large impact on society at my current job." }
+          ]
+        }
+      ]
+    },
+
+    {
+      "page_id": "demographics",
+      "title": "Demographics – Final Section",
+      "items": [
+        {
+          "qid": "DEM_ETHNIC_HISP",
+          "type": "single_select",
+          "question": "Are you of Spanish, Hispanic or Latino origin?",
+          "options": [
+            { "value": 1, "label": "Yes" },
+            { "value": 0, "label": "No" }
+          ]
+        },
+        {
+          "qid": "DEM_TENURE_YEARS",
+          "type": "dropdown",
+          "question": "How many years have you worked here?",
+          "options_algorithm": {
+            "kind": "years_of_service",
+            "include_less_than_one": true,
+            "start": 1,
+            "end": 50,
+            "include_50_plus": true,
+            "labels": {
+              "lt1": "Less than 1 year",
+              "n_plus": "50+"
+            }
+          },
+          "note": "Source text showed examples up to 12 years; generator provides 1..50+ for robustness."
+        },
+        {
+          "qid": "DEM_EDU_HIGHEST",
+          "type": "single_select",
+          "question": "What is the highest level of education you have completed?",
+          "options": [
+            { "value": 1, "label": "Some high school or less" },
+            { "value": 2, "label": "High school diploma or GED" },
+            { "value": 3, "label": "Some college, but no degree" },
+            { "value": 4, "label": "Associates or technical degree" },
+            { "value": 5, "label": "Bachelor’s degree" },
+            { "value": 6, "label": "Graduate or professional degree (MA, MS, MBA, PhD, JD, MD, DDS etc.)" },
+            { "value": 9, "label": "Prefer not to say" }
+          ]
+        },
+        {
+          "qid": "DEM_BA_FIELD",
+          "type": "dropdown",
+          "question": "In what field is your Bachelor’s Degree?",
+          "options": [
+            { "value": "ART_DESIGN", "label": "Art & Design" },
+            { "value": "BUSINESS_MGMT", "label": "Business & Management" },
+            { "value": "COMP_TECH", "label": "Computers & Technology" },
+            { "value": "EDUCATION", "label": "Education" },
+            { "value": "ENGINEERING", "label": "Engineering" },
+            { "value": "HEALTH_PROF", "label": "Health Professions" },
+            { "value": "HUM_LANG", "label": "Humanities & Languages" },
+            { "value": "MATH_SCI", "label": "Math & Science" },
+            { "value": "SOC_SCI", "label": "Social Sciences" },
+            { "value": "OTHER", "label": "Other" }
+          ]
+        },
+        {
+          "qid": "DEM_BA_BUSINESS_FOCUS",
+          "type": "dropdown",
+          "display_logic": { "when": [{ "qid": "DEM_BA_FIELD", "equals_any": ["BUSINESS_MGMT"] }] },
+          "question": "In what area of Business & Management was your focus?",
+          "options": [
+            { "value": "ACCOUNTING", "label": "Accounting" },
+            { "value": "ADVERTISING", "label": "Advertising" },
+            { "value": "BUS_ADMIN", "label": "Business Administration" },
+            { "value": "BUS_INTEL", "label": "Business Intelligence" },
+            { "value": "BUS_LAW", "label": "Business Law" },
+            { "value": "CONTRACT_MGMT", "label": "Contract Management" },
+            { "value": "DIGITAL_MKT", "label": "Digital Marketing" },
+            { "value": "ECONOMICS", "label": "Economics" },
+            { "value": "ENTERTAINMENT_MGMT", "label": "Entertainment Management" },
+            { "value": "ENTREPRENEURSHIP", "label": "Entrepreneurship" },
+            { "value": "FINANCE", "label": "Finance" },
+            { "value": "HOSPITALITY_MGMT", "label": "Hospitality Management" },
+            { "value": "HR", "label": "Human Resources" },
+            { "value": "INTL_BUSINESS", "label": "International Business" },
+            { "value": "MANAGEMENT", "label": "Management" },
+            { "value": "MIS", "label": "Management Information Systems" },
+            { "value": "MARKETING", "label": "Marketing" },
+            { "value": "OPERATIONS_MGMT", "label": "Operations Management" },
+            { "value": "REAL_ESTATE", "label": "Real Estate" },
+            { "value": "RISK_MGMT", "label": "Risk Management" },
+            { "value": "STRATEGIC_MGMT", "label": "Strategic Management" },
+            { "value": "SUPPLY_CHAIN", "label": "Supply Chain Management" },
+            { "value": "OTHER", "label": "Other" }
+          ]
+        },
+        {
+          "qid": "DEM_EDU_BEYOND_BA",
+          "type": "multi_select",
+          "question": "Do you have any degrees beyond a bachelors? (Select all that apply)",
+          "options": [
+            { "value": "MASTERS", "label": "Master’s" },
+            { "value": "DOCTORAL_PROF", "label": "Doctoral or Professional" },
+            { "value": "NONE", "label": "None", "exclusive": true }
+          ]
+        },
+        {
+          "qid": "DEM_YEARS_SINCE_BA",
+          "type": "dropdown",
+          "question": "How many years has it been since you graduated with your Bachelor’s Degree (if you hold one)?",
+          "options_algorithm": {
+            "kind": "years_since_degree",
+            "include_less_than_one": true,
+            "start": 1,
+            "end": 50,
+            "include_50_plus": true,
+            "labels": { "lt1": "Less than 1 year", "n_plus": "50+" }
+          }
+        },
+        {
+          "qid": "DEM_AGE",
+          "type": "single_select",
+          "question": "How old are you?",
+          "options": [
+            { "value": 1, "label": "Under 18" },
+            { "value": 2, "label": "18–24 years old" },
+            { "value": 3, "label": "25–34 years old" },
+            { "value": 4, "label": "35–44 years old" },
+            { "value": 5, "label": "45–54 years old" },
+            { "value": 6, "label": "55–64 years old" },
+            { "value": 7, "label": "65+ years old" }
+          ]
+        },
+        {
+          "qid": "DEM_GENDER",
+          "type": "single_select_text",
+          "question": "How do you describe yourself?",
+          "options": [
+            { "value": "MALE", "label": "Male" },
+            { "value": "FEMALE", "label": "Female" },
+            { "value": "NON_BINARY", "label": "Non-binary / third gender" },
+            { "value": "SELF_DESCRIBE", "label": "Prefer to self-describe", "freetext_placeholder": "" },
+            { "value": "PNTS", "label": "Prefer not to say" }
+          ]
+        },
+        {
+          "qid": "DEM_CHILDREN_UNDER18",
+          "type": "number_integer",
+          "question": "How many children under 18 live with you?",
+          "response": { "min": 0 }
+        },
+        {
+          "qid": "DEM_CHILDREN_UNDER5",
+          "type": "number_integer",
+          "question": "How many children age 5 or under live with you?",
+          "response": { "min": 0 }
+        },
+        {
+          "qid": "DEM_MARITAL",
+          "type": "single_select",
+          "question": "What is your current marital status?",
+          "options": [
+            { "value": "MARRIED", "label": "Married" },
+            { "value": "PARTNERED", "label": "Living with a partner" },
+            { "value": "WIDOWED", "label": "Widowed" },
+            { "value": "DIVORCED_SEPARATED", "label": "Divorced/Separated" },
+            { "value": "NEVER_MARRIED", "label": "Never been married" }
+          ]
+        },
+        {
+          "qid": "DEM_RACE",
+          "type": "multi_select",
+          "question": "Choose one or more races that you consider yourself to be",
+          "options": [
+            { "value": "WHITE", "label": "White or Caucasian" },
+            { "value": "BLACK", "label": "Black or African American" },
+            { "value": "NATIVE_AMERICAN", "label": "American Indian/Native American or Alaska Native" },
+            { "value": "ASIAN", "label": "Asian" },
+            { "value": "NATIVE_HAWAIIAN_PI", "label": "Native Hawaiian or Other Pacific Islander" },
+            { "value": "OTHER", "label": "Other" },
+            { "value": "PNTS", "label": "Prefer not to say" }
+          ]
+        },
+        {
+          "qid": "DEM_CITIZENSHIP",
+          "type": "multi_select",
+          "question": "In what Country or Countries is your citizenship?",
+          "options_source": { "kind": "ISO_3166_COUNTRIES_EN", "multi_select": true }
+        },
+        {
+          "qid": "DEM_RESIDENCE",
+          "type": "dropdown",
+          "question": "In what Country do you currently reside?",
+          "options_source": { "kind": "ISO_3166_COUNTRIES_EN" }
+        },
+        {
+          "qid": "DEM_WORK_MODE",
+          "type": "single_select",
+          "question": "Do you work Remote, In-Person, or Hybrid?",
+          "options": [
+            { "value": "COMPLETE_REMOTE", "label": "Completely Remote" },
+            { "value": "MOSTLY_REMOTE", "label": "Mostly Remote" },
+            { "value": "HALF_HALF", "label": "About Half Remote / Half In-Person" },
+            { "value": "MOSTLY_IN_PERSON", "label": "Mostly In Person" },
+            { "value": "ENTIRELY_IN_PERSON", "label": "Entirely In-Person" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "page_id": "thank_you",
+      "title": "End of Survey",
+      "end_of_survey_message": "We thank you for your time spent taking this survey. Your response has been recorded."
+    }
+  ]
+}

@@ -72,6 +72,9 @@ class UserService
                     elseif ($userOldRole == 4) $status = 'employee';
                 }
 
+                $targetUser = User::where('email', $newEmail)->first();
+                $surveyLink = $targetUser?->surveyLink() ?? $link;
+
                 $sendLetter = User::send_letter($newEmail, $newName, $companyTitle, view('admin-msg', [
                     'name' => $newName,
                     'link' => $link,
@@ -81,6 +84,7 @@ class UserService
                     'status' => $status,
                     'department' => $newDepartment,
                     'teamlead' => $authUserRole == 3 ? $authUserName : null,
+                    'surveyLink' => $surveyLink,
                 ])->render());
                 if ($sendLetter['status'] === 500) {
                     return ['status' => 500, 'message' => $sendLetter['message']];
@@ -107,7 +111,7 @@ class UserService
                 }
             }
 
-            User::create([
+            $createdUser = User::create([
                 'name' => $name,
                 'email' => $email,
                 'password' => Hash::make($password),
@@ -141,6 +145,8 @@ class UserService
             elseif ($role == 3) $status = 'teamlead';
             elseif ($role == 4) $status = 'employee';
 
+            $surveyLink = $createdUser->surveyLink() ?? $testLink;
+
             $sendLetter = User::send_letter($email, $name, $companyTitle, view('admin-msg', [
                 'name' => $name,
                 'link' => $loginLink,
@@ -148,9 +154,9 @@ class UserService
                 'password' => $password,
                 'company' => $companyTitle,
                 'status' => $status,
-                'test' => $testLink,
                 'department' => $department,
                 'teamlead' => $teamlead,
+                'surveyLink' => $surveyLink,
             ])->render());
 
             if ($sendLetter['status'] === 500) {

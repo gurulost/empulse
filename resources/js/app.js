@@ -6,34 +6,143 @@
 
 import './bootstrap';
 import { createApp } from 'vue';
+import SurveyApp from './components/survey/SurveyApp.vue';
+import GapChart from './components/dashboard/GapChart.vue';
+import IndicatorList from './components/dashboard/IndicatorList.vue';
+import TeamScatter from './components/dashboard/TeamScatter.vue';
 
-/**
- * Next, we will create a fresh Vue application instance. You may then begin
- * registering components with the application instance so they are ready
- * to use in your application's views. An example is included for you.
- */
+const surveyRoot = document.getElementById('survey-app');
+if (surveyRoot) {
+    const props = {
+        definitionUrl: surveyRoot.dataset.definitionUrl,
+        submitUrl: surveyRoot.dataset.submitUrl,
+        autosaveUrl: surveyRoot.dataset.autosaveUrl,
+    };
 
-const app = createApp({});
+    createApp(SurveyApp, props).mount(surveyRoot);
+}
 
-import ExampleComponent from './components/ExampleComponent.vue';
-app.component('example-component', ExampleComponent);
+let gapApp = null;
+const gapChartRoot = document.getElementById('gap-chart-root');
+if (gapChartRoot) {
+    const items = JSON.parse(gapChartRoot.dataset.items || '[]');
+    gapApp = createApp(GapChart, { items });
+    gapApp.mount(gapChartRoot);
+}
 
-/**
- * The following block of code may be used to automatically register your
- * Vue components. It will recursively scan this directory for the Vue
- * components and automatically register them with their "basename".
- *
- * Eg. ./components/ExampleComponent.vue -> <example-component></example-component>
- */
+let indicatorApp = null;
+const indicatorRoot = document.getElementById('indicator-list-root');
+if (indicatorRoot) {
+    const indicators = JSON.parse(indicatorRoot.dataset.items || '[]');
+    indicatorApp = createApp(IndicatorList, { indicators });
+    indicatorApp.mount(indicatorRoot);
+}
 
-// Object.entries(import.meta.glob('./**/*.vue', { eager: true })).forEach(([path, definition]) => {
-//     app.component(path.split('/').pop().replace(/\.\w+$/, ''), definition.default);
-// });
+let teamScatterApp = null;
+const teamScatterRoot = document.getElementById('team-scatter-root');
+if (teamScatterRoot) {
+    const points = JSON.parse(teamScatterRoot.dataset.items || '[]');
+    teamScatterApp = createApp(TeamScatter, { points });
+    teamScatterApp.mount(teamScatterRoot);
+}
 
-/**
- * Finally, we will attach the application instance to a HTML element with
- * an "id" attribute of "app". This element is included with the "auth"
- * scaffolding. Otherwise, you will need to add an element yourself.
- */
+const applyFiltersBtn = document.getElementById('apply-filters');
+const resetFiltersBtn = document.getElementById('reset-filters');
+const departmentSelect = document.getElementById('filter-department');
+const teamSelect = document.getElementById('filter-team');
+const waveSelect = document.getElementById('filter-wave');
+const filterStatus = document.getElementById('filter-status');
 
-app.mount('#app');
+async function refreshDashboard(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    setFilterLoading(true, 'Loading...');
+    const response = await fetch(`/dashboard/analytics?${query}`, {
+        headers: { 'Accept': 'application/json' },
+    });
+    if (!response.ok) {
+        setFilterLoading(false, 'Failed to load data.');
+        return;
+    }
+
+    const payload = await response.json();
+    const data = payload.data ?? {};
+
+    const gapRoot = document.getElementById('gap-chart-root');
+    if (gapChartRoot && data.gap_chart) {
+        gapChartRoot.dataset.items = JSON.stringify(data.gap_chart);
+        if (gapApp) {
+            gapApp.unmount();
+        }
+        gapApp = createApp(GapChart, { items: data.gap_chart });
+        gapApp.mount(gapChartRoot);
+    }
+
+    if (indicatorRoot && data.indicators) {
+        indicatorRoot.dataset.items = JSON.stringify(data.indicators);
+        if (indicatorApp) {
+            indicatorApp.unmount();
+        }
+        indicatorApp = createApp(IndicatorList, { indicators: data.indicators });
+        indicatorApp.mount(indicatorRoot);
+    }
+
+    if (teamScatterRoot && data.team_scatter) {
+        teamScatterRoot.dataset.items = JSON.stringify(data.team_scatter);
+        if (teamScatterApp) {
+            teamScatterApp.unmount();
+        }
+        teamScatterApp = createApp(TeamScatter, { points: data.team_scatter });
+        teamScatterApp.mount(teamScatterRoot);
+    }
+
+    setFilterLoading(false);
+}
+
+function setFilterLoading(isLoading, message = '') {
+    if (!filterStatus) {
+        return;
+    }
+
+    if (isLoading) {
+        filterStatus.textContent = message;
+        filterStatus.classList.remove('d-none');
+        applyFiltersBtn?.setAttribute('disabled', 'disabled');
+        resetFiltersBtn?.setAttribute('disabled', 'disabled');
+    } else {
+        filterStatus.textContent = message;
+        filterStatus.classList.toggle('d-none', !message);
+        applyFiltersBtn?.removeAttribute('disabled');
+        resetFiltersBtn?.removeAttribute('disabled');
+    }
+}
+
+if (applyFiltersBtn) {
+    applyFiltersBtn.addEventListener('click', () => {
+        const params = {};
+        if (departmentSelect?.value) {
+            params.department = departmentSelect.value;
+        }
+        if (teamSelect?.value) {
+            params.team = teamSelect.value;
+        }
+        if (waveSelect?.value) {
+            params.wave = waveSelect.value;
+        }
+        refreshDashboard(params);
+    });
+}
+
+if (resetFiltersBtn) {
+    resetFiltersBtn.addEventListener('click', () => {
+        if (departmentSelect) {
+            departmentSelect.value = '';
+        }
+        if (teamSelect) {
+            teamSelect.value = '';
+        }
+        if (waveSelect) {
+            waveSelect.value = '';
+        }
+        refreshDashboard({});
+    });
+}

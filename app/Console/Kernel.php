@@ -4,12 +4,6 @@ namespace App\Console;
 
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
-use Illuminate\Support\Facades\DB;
-use App\Models\User;
-use App\Mail\CowokersMsg;
-use Illuminate\Support\Facades\Mail;
-use App\Console\Commands\SendLink;
-
 class Kernel extends ConsoleKernel
 {
     /**
@@ -19,13 +13,14 @@ class Kernel extends ConsoleKernel
      * @return void
      */
     protected $commands = [
-        'App\Console\Commands\SendLink',
-        'App\Console\Commands\Qualtrics',
+        \App\Console\Commands\SendLink::class,
+        \App\Console\Commands\ImportSurvey::class,
+        \App\Console\Commands\ScheduleSurveyWaves::class,
     ];
     protected function schedule(Schedule $schedule)
     {
         $schedule->command('email:link')->monthlyOn(6, '10:00');
-        $schedule->command('qualtrics:run')->everyFiveMinutes();
+        $schedule->command('survey:waves:schedule')->weekly();
     }
 
     /**

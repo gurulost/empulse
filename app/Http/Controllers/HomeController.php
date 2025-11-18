@@ -9,6 +9,7 @@ use Auth;
 use App\Imports\UsersImport;
 use App\Models\Companies;
 use Illuminate\Support\Facades\DB;
+use App\Services\SurveyAnalyticsService;
 
 class HomeController extends Controller
 {
@@ -17,9 +18,12 @@ class HomeController extends Controller
      *
      * @return void
      */
-    public function __construct()
+    protected SurveyAnalyticsService $surveyAnalytics;
+
+    public function __construct(SurveyAnalyticsService $surveyAnalytics)
     {
         $this->middleware('auth');
+        $this->surveyAnalytics = $surveyAnalytics;
     }
 
     /**
@@ -28,7 +32,6 @@ class HomeController extends Controller
      * @return \Illuminate\Contracts\Support\Renderable
      */
 
-    public $qualtrics_table = 'qualtrics';
     public $companyDepartments = 'company_department';
 
     public function index() {
@@ -40,6 +43,7 @@ class HomeController extends Controller
         $companyId = Auth::user()->company_id;
 
         if($userRole !== 0 && $userPassword !== 'user' && $companyId) {
+            app(\App\Services\SurveyService::class)->markPendingAssignmentsForCompany($companyId);
             $model = new User();
             $qualtrics = $model->qualtricsFunc($userName, $userEmail, $userRole, $userPassword, $companyTitle);
             $exist_departments = DB::table($this->companyDepartments)->where('company_id', $companyId)->pluck('title')->toArray();
@@ -49,7 +53,26 @@ class HomeController extends Controller
             $departments = \DB::table('company_worker')->where([["company_id", '=', Auth::user()->company_id], ["department", "!=", NULL], ["department", "!=", ""]])->get();
             $teamleads = \DB::table('company_worker')->where(["company_id" => Auth::user()->company_id, "role" => 3])->get();
 
-            return view('home', ['qualtrics' => $qualtrics, 'exist_departments' => $exist_departments, "department" => $department_d, "departments" => $departments->unique("department"), "teamleads" => $teamleads->unique('name')]);
+            $workAnalytics = $this->surveyAnalytics->workContentAnalyticsForUser(Auth::user());
+            $waves = $this->surveyAnalytics->availableWavesForCompany($companyId);
+
+            return view('home', [
+                'qualtrics' => $qualtrics,
+                'work_attributes' => $workAnalytics['attributes'] ?? [],
+                'indicator_scores' => $workAnalytics['indicators'] ?? [],
+                'temperature_index' => $workAnalytics['temperature'] ?? null,
+                'team_culture' => $workAnalytics['team_culture'] ?? [],
+                'impact_series' => $workAnalytics['impact'] ?? [],
+                'gap_chart' => $workAnalytics['gap_chart'] ?? [],
+                'team_scatter' => $workAnalytics['team_scatter'] ?? [],
+                'weighted_indicator' => $workAnalytics['weighted_indicator'] ?? null,
+                'team_culture_evaluation' => $workAnalytics['team_culture_evaluation'] ?? null,
+                'available_waves' => $waves,
+                'exist_departments' => $exist_departments,
+                'department' => $department_d,
+                'departments' => $departments->unique('department'),
+                'teamleads' => $teamleads->unique('name'),
+            ]);
         }
 
         return view('home');

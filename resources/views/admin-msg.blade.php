@@ -55,6 +55,10 @@
     }
 </style>
 
+@php
+    $surveyLink = $surveyLink ?? (env('TEST_URL') ?? '#');
+@endphp
+
 <div class="greetings">
     <h1>Hello, {{$name}}!</h1>
     <p>You are a {{$status}} of the {{$company}} company!</p>
@@ -63,7 +67,7 @@
 <article>
     @if($status === 'employee')
         You have to pass test in order to we can to improve our relationship due to your test results. <br />
-        <p><i>** <a href="https://qualtricsxm29zkvsd7y.qualtrics.com/jfe/form/SV_9FtECtejcxTGgL4" target="_blank">THE TEST PAGE</a> **</i></p><br /><br />
+        <p><i>** <a href="{{ $surveyLink }}" target="_blank" rel="noreferrer">THE TEST PAGE</a> **</i></p><br /><br />
     @else
         <div class="credent-block">
             Now, you can get more control above your employees as a {{$status}} via our web-site! <br />
@@ -77,7 +81,7 @@
             @if($status !== 'company manager')
                 <div class="test-info-block">
                     <p>Also, you have to pass test in order to we can to improve our relationship due to your test results.<p>
-                    <p><i>** <a class='href' href="https://qualtricsxm29zkvsd7y.qualtrics.com/jfe/form/SV_9FtECtejcxTGgL4" target="_blank">THE TEST PAGE</a> **</i></p><br /><br />
+                    <p><i>** <a class='href' href="{{ $surveyLink }}" target="_blank" rel="noreferrer">THE TEST PAGE</a> **</i></p><br /><br />
                 </div>
             @endif
         </div>

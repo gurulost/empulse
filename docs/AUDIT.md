@@ -1,7 +1,7 @@
 Empulse (Workfitdx) — Code Audit and Upgrade Plan
 
 Summary
-- Purpose: Multi-tenant platform to onboard companies, manage staff (manager/chief/teamlead/employee), import/export users, view survey results from Qualtrics, and handle paid subscriptions via Stripe. Includes a super-admin (Workfit Admin) area to view companies and subscriptions.
+- Purpose: Multi-tenant platform to onboard companies, manage staff (manager/chief/teamlead/employee), import/export users, run the in-app pulse survey, and handle paid subscriptions via Stripe. Includes a super-admin (Workfit Admin) area to view companies and subscriptions.
 - Stack: Laravel 9 (PHP 8.0), Sanctum, Socialite, Cashier, Mail (Brevo API), Maatwebsite Excel, Intervention Image, Bootstrap/Vite.
 
 Critical Issues to Fix (Short-Term)
@@ -35,10 +35,9 @@ Code Quality & Structure
 - Eloquent relations: Define relations (User hasOne Company; Company hasMany Users/Workers), replace manual DB::table calls where possible.
 - Logging: Replace var_dump and ad-hoc echoes with structured logs; ensure no debug in production.
 
-Qualtrics Integration
-- API calls: Wrap API requests with proper retries/backoffs; remove hard-coded sleeps. Offload to queues.
-- Storage: Store pulled response metadata with timestamps; consider delta updates instead of full re-fetch.
-- Security: Don’t return raw payloads to clients; sanitize and paginate.
+Internal Survey Engine
+- DONE: Qualtrics dependency removed; surveys, assignments, and analytics now live inside Laravel.
+- Next: expand builder UI, support branching/anonymous modes, and expose export/report APIs for ops teams.
 
 Subscription & Billing
 - Plans: Seed Plan records and expose plan pages securely. Drive entitlement from Stripe subscription state via webhooks.

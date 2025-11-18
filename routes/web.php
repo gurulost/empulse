@@ -22,6 +22,10 @@ use App\Http\Controllers\WorkfitAdminController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\StripeWebhookController;
 use App\Http\Controllers\BillingController;
+use App\Http\Controllers\SurveyController;
+use App\Http\Controllers\SurveyManagementController;
+use App\Http\Controllers\SurveyWaveController;
+use App\Http\Controllers\DashboardAnalyticsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -42,6 +46,11 @@ Route::get('/google', [SocialController::class, 'googleRedirect'])->name('auth.g
 Route::get('/auth/google/callback', [SocialController::class, 'loginWithGoogle']);
 Route::get('/facebook', [FacebookController::class, 'facebookRedirect'])->name('auth.facebook');
 Route::get('/facebook/callback', [FacebookController::class, 'facebookLogin']);
+
+Route::get('/survey/{token}', [SurveyController::class, 'show'])->name('survey.take');
+Route::get('/survey/{token}/definition', [SurveyController::class, 'definition'])->name('survey.definition');
+Route::post('/survey/{token}/autosave', [SurveyController::class, 'autosave'])->name('survey.autosave');
+Route::post('/survey/{token}', [SurveyController::class, 'submit'])->name('survey.submit');
 
 Route::group(['middleware' => 'auth'], function () {
     Route::group(['prefix' => 'home', 'middleware' => 'admin'], function () {
@@ -113,6 +122,9 @@ Route::post('/stripe/webhook', [StripeWebhookController::class, 'handleWebhook']
         Route::get('/add/avatar', [UserController::class, 'addAvatar'])->name('add.avatar');
         Route::post('/store/avatar', [UserController::class, 'storeAvatar'])->name('store.avatar');
         Route::get('/delete/avatar/{id}', [UserController::class, 'deleteAvatar'])->name('delete.avatar');
+        Route::get('/surveys/manage', [SurveyManagementController::class, 'index'])->name('surveys.manage');
+        Route::get('/survey-waves', [SurveyWaveController::class, 'index'])->name('survey-waves.index');
+        Route::post('/survey-waves', [SurveyWaveController::class, 'store'])->name('survey-waves.store');
     });
     Route::group(['middleware' => 'workfit_admin'], function () {
         Route::prefix('/admin')->name('admin.')->group(function () {
@@ -131,4 +143,7 @@ Route::post('/stripe/webhook', [StripeWebhookController::class, 'handleWebhook']
             });
         });
     });
+
+    Route::get('/dashboard/analytics', DashboardAnalyticsController::class)
+        ->name('dashboard.analytics');
 });
