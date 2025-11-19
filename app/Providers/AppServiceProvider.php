@@ -25,7 +25,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        \URL::forceScheme('https');
+        // Force asset URLs to use request URL for Replit proxy compatibility
+        if ($this->app->runningInConsole() === false && request()) {
+            $url = request()->getSchemeAndHttpHost();
+            config(['app.url' => $url]);
+            \URL::forceRootUrl($url);
+        } else {
+            \URL::forceScheme('https');
+        }
+        
         Model::preventLazyLoading(!app()->isProduction());
         Schema::defaultStringLength(191);
     }
