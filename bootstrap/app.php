@@ -11,6 +11,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Add middleware to rewrite asset URLs to relative paths
+        $middleware->append(\App\Http\Middleware\RewriteAssetUrls::class);
+        
         $middleware->alias([
             'manager' => \App\Http\Middleware\Manager::class,
             'teamlead' => \App\Http\Middleware\Teamlead::class,
