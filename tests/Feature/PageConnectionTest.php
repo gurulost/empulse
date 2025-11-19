@@ -9,6 +9,7 @@ use App\Models\User;
 
 class PageConnectionTest extends TestCase
 {
+    use RefreshDatabase;
     /**
      * A basic feature test example.
      *
@@ -22,11 +23,15 @@ class PageConnectionTest extends TestCase
 
     public function test_home_page()
     {
-        $user = User::find(30);
+        $user = User::factory()->create([
+            'role' => 1,
+            'company' => 1,
+        ]);
+
         $result = $this->actingAs($user)
-            ->withSession(["banned" => false])
+            ->withSession(['banned' => false])
             ->get('/login');
 
-        $result->assertRedirect("/home");
+        $result->assertRedirect('/home');
     }
 }

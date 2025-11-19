@@ -14,6 +14,13 @@ Quick Start
 - cp .env.example .env and configure DB, Redis, Mail (Brevo), Socialite, Stripe
 - composer install && php artisan key:generate && php artisan migrate --seed
 - npm install && npm run dev
+- Keep a queue worker (`php artisan queue:work --tries=1`) and the scheduler (`* * * * * php artisan schedule:run >> storage/logs/schedule.log 2>&1`) running so survey automations and drip cadences execute without manual CLI intervention.
+
+Survey Waves & Automation
+- Admins can create waves at `/survey-waves` (full send or drip). Status, cadence, logs, and per-assignment progress are surfaced directly in the UI with pause/resume + manual run buttons.
+- The scheduler command `php artisan survey:waves:schedule` (already registered in `App\Console\Kernel`) enforces drip cadences per assignment, respects billing status, and logs every action to `survey_wave_logs` for auditability.
+- Drip cadences are gated to the Pulse plan (tariff `1`). The mapping lives in `config/survey.php` under the `automation` key; downgrade or past-due billing automatically pauses waves until the subscription is active again.
+- Feature tests (`tests/Feature/SurveyWaveTest.php`, `tests/Feature/DashboardAnalyticsTest.php`) cover wave creation, cadence gating, billing pauses, and analytics filters so future changes remain safe.
 
 Internal Surveys
 - Run `php artisan migrate` to create the placeholder survey schema/assignments.

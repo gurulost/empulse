@@ -88,4 +88,30 @@ return [
             'IMPACT_SIZE_06',
         ],
     ],
+
+    'automation' => [
+        'cadence_windows' => [
+            'weekly' => 60 * 24 * 7,
+            'monthly' => 60 * 24 * 30,
+            'quarterly' => 60 * 24 * 90,
+        ],
+        'manual_one_shot' => true,
+        'drip_tariffs' => [1],
+        'tariff_labels' => [
+            0 => 'Starter',
+            1 => 'Pulse (Drip Enabled)',
+            'default' => 'Starter',
+        ],
+        'billing_statuses' => ['active', 'trialing', 'manual-premium'],
+        'billing_labels' => [
+            'active' => 'Active subscription',
+            'trialing' => 'Trialing',
+            'past_due' => 'Past due',
+            'unpaid' => 'Unpaid',
+            'canceled' => 'Canceled',
+            'incomplete_expired' => 'Incomplete',
+            'manual-premium' => 'Manual premium (grandfathered)',
+            'none' => 'Not subscribed',
+        ],
+    ],
 ];

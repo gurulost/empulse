@@ -4,8 +4,10 @@ namespace App\Console\Commands;
 
 use App\Jobs\ProcessSurveyWave;
 use App\Models\SurveyWave;
+use App\Models\SurveyWaveLog;
+use App\Support\CompanyBilling;
+use App\Support\SurveyWaveAutomation;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Log;
 
 class ScheduleSurveyWaves extends Command
 {
@@ -26,67 +28,85 @@ class ScheduleSurveyWaves extends Command
                 continue;
             }
 
+            $manager = CompanyBilling::manager($wave->company_id);
+            $billingStatus = CompanyBilling::status($manager);
+
             if ($wave->status === 'paused') {
+                $this->logWaveEvent($wave, 'skipped', 'Paused');
                 continue;
             }
 
             if ($wave->due_at && $wave->due_at->isPast()) {
                 $wave->update(['status' => 'completed']);
+                $this->logWaveEvent($wave, 'completed', 'Wave past due date.');
                 continue;
             }
 
-            if ($wave->kind === 'drip' && !$this->shouldDispatchDrip($wave)) {
+            if (!CompanyBilling::allowsScheduling($manager)) {
+                $wave->update(['status' => 'paused']);
+                $this->logWaveEvent(
+                    $wave,
+                    'paused',
+                    'Billing inactive: ' . SurveyWaveAutomation::billingStatusLabel($billingStatus)
+                );
                 continue;
             }
 
-            if (!$this->companyHasActiveSubscription($wave->company_id)) {
-                Log::info('Skipping wave scheduling due to inactive subscription.', ['wave' => $wave->id]);
+            if ($wave->kind === 'drip' && !SurveyWaveAutomation::dripEnabledForTariff($manager?->tariff)) {
+                $wave->update(['status' => 'paused']);
+                $this->logWaveEvent($wave, 'paused', 'Current plan does not allow drip cadences.');
+                continue;
+            }
+
+            if ($wave->kind === 'drip' && !$this->waveHasDispatchableAssignments($wave)) {
+                $this->logWaveEvent($wave, 'skipped', 'All assignments are still inside cadence window.');
                 continue;
             }
 
             $wave->update(['status' => 'processing']);
             ProcessSurveyWave::dispatch($wave->id);
+            $this->logWaveEvent($wave, 'processing', 'Wave dispatched to queue.');
         }
 
         $this->info('Wave scheduling pass completed.');
         return Command::SUCCESS;
     }
 
-    protected function companyHasActiveSubscription(int $companyId): bool
-    {
-        $company = \App\Models\Companies::find($companyId);
-        if (!$company || !$company->stripe_status) {
-            return false;
-        }
-
-        return $company->stripe_status === 'active';
-    }
-
-    protected function shouldDispatchDrip(SurveyWave $wave): bool
+    protected function waveHasDispatchableAssignments(SurveyWave $wave): bool
     {
         if ($wave->kind !== 'drip') {
             return true;
         }
 
-        $interval = match ($wave->cadence) {
-            'weekly' => now()->subWeek(),
-            'monthly' => now()->subMonth(),
-            'quarterly' => now()->subMonths(3),
-            default => null,
-        };
+        $assignmentsQuery = $wave->assignments();
+
+        if (!$assignmentsQuery->exists()) {
+            return true;
+        }
 
         if ($wave->cadence === 'manual') {
-            return $wave->last_dispatched_at === null;
+            return $assignmentsQuery->whereNull('last_dispatched_at')->exists();
         }
 
-        if (!$interval) {
+        $threshold = SurveyWaveAutomation::cadenceThreshold($wave->cadence);
+        if (!$threshold) {
             return true;
         }
 
-        if ($wave->last_dispatched_at === null) {
-            return true;
-        }
+        return $assignmentsQuery
+            ->where(function ($query) use ($threshold) {
+                $query->whereNull('last_dispatched_at')
+                    ->orWhere('last_dispatched_at', '<=', $threshold);
+            })
+            ->exists();
+    }
 
-        return $wave->last_dispatched_at->lessThanOrEqualTo($interval);
+    protected function logWaveEvent(SurveyWave $wave, string $status, string $message): void
+    {
+        SurveyWaveLog::create([
+            'survey_wave_id' => $wave->id,
+            'status' => $status,
+            'message' => $message,
+        ]);
     }
 }

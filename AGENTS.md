@@ -209,3 +209,10 @@ Document any new mappings (QID → indicator/series_role/polarity) inside this f
 3. Wire billing checks so scheduling pauses if subscription inactive.
 4. Enhance the dashboard filter bar with loading/error states for async fetches. ✅ Added basic loading/error text tied to the async fetch (see `home.blade.php` + `resources/js/app.js`).
 5. After waves + scheduling are stable, move into the remaining Phase 4 tasks (docs/tests).
+
+### Phase 4 status – automation & billing polish
+1. **Per-assignment cadences** – `ProcessSurveyWave` now tracks `last_dispatched_at` + `dispatch_count` on `survey_assignments`, and the scheduler only fires drips when specific assignments fall outside their cadence windows. Manual cadences become one-shot per user.
+2. **Status transitions & monitoring** – wave statuses automatically move from `processing` → `scheduled`/`completed`, and `survey_wave_logs` capture dispatch summaries plus manual actions. The admin UI surfaces per-wave progress (sent vs. completed), expandable logs, and reminder banners for queue/scheduler health.
+3. **Billing alignment** – drip cadences are locked to the Pulse plan (tariff `1`) via `config/survey.php`. Billing states read from the manager’s Cashier subscription; `past_due`/`canceled` waves pause automatically with descriptive logs and UI badges.
+4. **Docs/tests** – README and this file document the automation architecture, operational commands, and billing gates. Feature coverage includes wave creation guards, cadence enforcement, billing pauses, and the `/dashboard/analytics` filter endpoint (mocked service) so regressions are caught.
+5. **Operational reminders** – Always run `php artisan queue:work --tries=1` and schedule `php artisan survey:waves:schedule` via cron (`* * * * * php artisan schedule:run`). Without both, drip jobs will stall and the UI will show stale statuses.

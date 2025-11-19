@@ -125,6 +125,8 @@ Route::post('/stripe/webhook', [StripeWebhookController::class, 'handleWebhook']
         Route::get('/surveys/manage', [SurveyManagementController::class, 'index'])->name('surveys.manage');
         Route::get('/survey-waves', [SurveyWaveController::class, 'index'])->name('survey-waves.index');
         Route::post('/survey-waves', [SurveyWaveController::class, 'store'])->name('survey-waves.store');
+        Route::post('/survey-waves/{wave}/status', [SurveyWaveController::class, 'updateStatus'])->name('survey-waves.status');
+        Route::post('/survey-waves/{wave}/dispatch', [SurveyWaveController::class, 'dispatchWave'])->name('survey-waves.dispatch');
     });
     Route::group(['middleware' => 'workfit_admin'], function () {
         Route::prefix('/admin')->name('admin.')->group(function () {

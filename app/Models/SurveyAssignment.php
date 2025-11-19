@@ -19,6 +19,8 @@ class SurveyAssignment extends Model
         'wave_label',
         'draft_answers',
         'last_autosaved_at',
+        'last_dispatched_at',
+        'dispatch_count',
         'due_at',
         'completed_at',
     ];
@@ -26,6 +28,7 @@ class SurveyAssignment extends Model
     protected $casts = [
         'draft_answers' => 'array',
         'last_autosaved_at' => 'datetime',
+        'last_dispatched_at' => 'datetime',
         'due_at' => 'datetime',
         'completed_at' => 'datetime',
     ];
