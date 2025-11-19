@@ -32,6 +32,9 @@
                 </nav>
             </div>
         @endif
+        
+        <!-- Guest Content Area -->
+        @yield('content')
     @else
         <div class="d-flex">
             <!-- Sidebar Component -->
