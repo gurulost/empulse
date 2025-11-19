@@ -137,14 +137,7 @@
                             <small class="text-muted">Mirrors the upcoming indicator chart and temperature gauge.</small>
                         </div>
                         @if(!empty($weighted_indicator))
-                            <div class="text-center" style="min-width: 120px;">
-                                <small class="text-muted d-block">Weighted Indicator</small>
-                                <div class="progress" style="height: 8px;">
-                                    @php $weightedPercent = min(max(($weighted_indicator / 10) * 100, 0), 100); @endphp
-                                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ $weightedPercent }}%" aria-valuenow="{{ $weighted_indicator }}" aria-valuemin="0" aria-valuemax="10"></div>
-                                </div>
-                                <span class="fw-semibold">{{ number_format($weighted_indicator, 1) }}/10</span>
-                            </div>
+                            <div id="temp-gauge-root" data-score="{{ $weighted_indicator }}"></div>
                         @endif
                     </div>
                     <div class="card-body">
@@ -200,61 +193,13 @@
                         @endif
                     </div>
                     <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-4 mb-3 mb-md-0">
-                                <h6 class="text-muted text-uppercase small">Positive Signals</h6>
-                                <p class="display-6 mb-1">{{ $team_culture['positive'] ? number_format($team_culture['positive'], 1) : '—' }}</p>
-                                <small class="text-muted">Average of trust, clarity, respect statements.</small>
-                            </div>
-                            <div class="col-md-4 mb-3 mb-md-0">
-                                <h6 class="text-muted text-uppercase small">Areas of Friction</h6>
-                                <p class="display-6 mb-1">{{ $team_culture['negative'] ? number_format($team_culture['negative'], 1) : '—' }}</p>
-                                <small class="text-muted">Average of conflict, bureaucracy, pressure statements.</small>
-                            </div>
-                            <div class="col-md-4">
-                                <h6 class="text-muted text-uppercase small">Net Culture Score</h6>
-                                @php $score = $team_culture['score'] ?? null; @endphp
-                                <div class="progress" style="height: 8px;">
-                                    @php
-                                        $percent = $score !== null ? min(max((($score + 9) / 18) * 100, 0), 100) : 0;
-                                    @endphp
-                                    <div class="progress-bar {{ $score >= 0 ? 'bg-success' : 'bg-danger' }}" role="progressbar"
-                                         style="width: {{ $score !== null ? $percent : 0 }}%"></div>
-                                </div>
-                                <small class="text-muted">
-                                    {{ $score !== null ? ($score >= 0 ? 'Above waterline' : 'Needs attention') : 'No data yet' }}
-                                </small>
-                            </div>
-                        </div>
-                        <hr>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <h6 class="text-muted text-uppercase small mb-2">Top Tension Drivers</h6>
-                                <ul class="list-unstyled mb-0">
-                                    @forelse($negativeItems as $item)
-                                        <li class="d-flex justify-content-between">
-                                            <span>{{ $item['qid'] }}</span>
-                                            <span class="badge bg-danger">{{ number_format($item['value'], 1) }}</span>
-                                        </li>
-                                    @empty
-                                        <li class="text-muted">No responses yet.</li>
-                                    @endforelse
-                                </ul>
-                            </div>
-                            <div class="col-md-6">
-                                <h6 class="text-muted text-uppercase small mb-2">Positive Reinforcers</h6>
-                                <ul class="list-unstyled mb-0">
-                                    @forelse($positiveItems as $item)
-                                        <li class="d-flex justify-content-between">
-                                            <span>{{ $item['qid'] }}</span>
-                                            <span class="badge bg-success">{{ number_format($item['value'], 1) }}</span>
-                                        </li>
-                                    @empty
-                                        <li class="text-muted">No responses yet.</li>
-                                    @endforelse
-                                </ul>
-                            </div>
-                        </div>
+                        <div id="team-culture-root"
+                             data-score="{{ $team_culture['score'] ?? 0 }}"
+                             data-positive="{{ $team_culture['positive'] ?? 0 }}"
+                             data-negative="{{ $team_culture['negative'] ?? 0 }}"
+                             data-positive-items='@json($positiveItems)'
+                             data-negative-items='@json($negativeItems)'
+                        ></div>
                     </div>
                 </div>
             </div>
@@ -270,20 +215,11 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <div class="row text-center">
-                            <div class="col-md-4 mb-3 mb-md-0">
-                                <p class="text-uppercase small text-muted mb-1">Current Impact</p>
-                                <p class="display-6 mb-0">{{ $impact_series['positive'] ? number_format($impact_series['positive'], 1) : '—' }}</p>
-                            </div>
-                            <div class="col-md-4 mb-3 mb-md-0">
-                                <p class="text-uppercase small text-muted mb-1">Importance in Ideal Role</p>
-                                <p class="display-6 mb-0">{{ $impact_series['importance'] ? number_format($impact_series['importance'], 1) : '—' }}</p>
-                            </div>
-                            <div class="col-md-4">
-                                <p class="text-uppercase small text-muted mb-1">Desire Gap</p>
-                                <p class="display-6 mb-0">{{ $impact_series['desire'] ? number_format($impact_series['desire'], 1) : '—' }}</p>
-                            </div>
-                        </div>
+                        <div id="impact-root"
+                             data-positive="{{ $impact_series['positive'] ?? 0 }}"
+                             data-importance="{{ $impact_series['importance'] ?? 0 }}"
+                             data-desire="{{ $impact_series['desire'] ?? 0 }}"
+                        ></div>
                     </div>
                 </div>
             </div>

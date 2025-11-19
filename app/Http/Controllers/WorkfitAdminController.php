@@ -2,48 +2,88 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Companies;
-
-// Історія оплачених рахунків тощо.
-// Завантажуйте звіти (PDF або інші формати)
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class WorkfitAdminController extends Controller
 {
-    public function getCompanyList(){
-        $companiesModel = new Companies();
-        $list = $companiesModel->getCompanyList();
-
-        return view('workfit_admin.company.list', [
-            'list' => $list
-        ]);
+    public function __construct()
+    {
+        $this->middleware(['auth', 'workfit_admin']);
     }
 
-    public function getCompany(Request $request, $id){
-        $companiesModel = new Companies();
-        $list = $companiesModel->getCompanyUsers($id);
-
-        return view('workfit_admin.company.item', [
-            'list' => $list
-        ]);
+    public function index()
+    {
+        return view('workfit_admin.dashboard');
     }
 
-    public function deleteUser(Request $request, $id){
-        $companiesModel = new Companies();
-        $companiesModel->deleteUser($id);
+    public function getCompanies()
+    {
+        $companies = DB::table('companies')
+            ->select([
+                'companies.id',
+                'companies.title',
+                'companies.manager',
+                'companies.manager_email',
+                'users.tariff',
+            ])
+            ->leftJoin('users', 'users.company_id', '=', 'companies.id')
+            ->where('users.role', 1) // Assuming manager role links tariff
+            ->groupBy([
+                'companies.id',
+                'companies.title',
+                'companies.manager',
+                'companies.manager_email',
+                'users.tariff',
+            ])
+            ->orderByDesc('companies.id')
+            ->paginate(10);
 
-        return redirect()->back();
+        return response()->json($companies);
     }
-    public function getSubscriptionList(){
-        $companiesModel = new Companies();
-        $list = $companiesModel->getSubscriptionList();
 
-        return view('workfit_admin.subscription.list', [
-            'list' => $list
-        ]);
+    public function getUsers(Request $request)
+    {
+        $query = User::query();
+
+        if ($search = $request->input('search')) {
+            $query->where('name', 'like', "%{$search}%")
+                ->orWhere('email', 'like', "%{$search}%");
+        }
+
+        if ($companyId = $request->input('company_id')) {
+            $query->where('company_id', $companyId);
+        }
+
+        return response()->json($query->orderByDesc('created_at')->paginate(20));
     }
 
-    public function getUsersList(){
-        abort(404);
+    public function deleteUser($id)
+    {
+        $user = User::findOrFail($id);
+
+        if ($user->id === auth()->id()) {
+            return response()->json(['message' => 'Cannot delete yourself.'], 403);
+        }
+
+        if ($user->role === 0) {
+            return response()->json(['message' => 'Cannot delete Super Admin.'], 403);
+        }
+
+        $user->delete();
+        return response()->json(['status' => 'ok']);
+    }
+
+    public function impersonate($id)
+    {
+        $user = User::findOrFail($id);
+        
+        // Guard against impersonating other super admins if needed, but usually allowed.
+        
+        auth()->loginUsingId($user->id);
+        
+        return response()->json(['redirect' => route('home')]);
     }
 }

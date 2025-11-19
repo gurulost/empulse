@@ -24,48 +24,53 @@ class ScheduleSurveyWaves extends Command
             ->get();
 
         foreach ($waves as $wave) {
-            if (!$wave->survey || !$wave->company_id) {
-                continue;
+            try {
+                if (!$wave->survey || !$wave->company_id) {
+                    continue;
+                }
+
+                $manager = CompanyBilling::manager($wave->company_id);
+                $billingStatus = CompanyBilling::status($manager);
+
+                if ($wave->status === 'paused') {
+                    $this->logWaveEvent($wave, 'skipped', 'Paused');
+                    continue;
+                }
+
+                if ($wave->due_at && $wave->due_at->isPast()) {
+                    $wave->update(['status' => 'completed']);
+                    $this->logWaveEvent($wave, 'completed', 'Wave past due date.');
+                    continue;
+                }
+
+                if (!CompanyBilling::allowsScheduling($manager)) {
+                    $wave->update(['status' => 'paused']);
+                    $this->logWaveEvent(
+                        $wave,
+                        'paused',
+                        'Billing inactive: ' . SurveyWaveAutomation::billingStatusLabel($billingStatus)
+                    );
+                    continue;
+                }
+
+                if ($wave->kind === 'drip' && !SurveyWaveAutomation::dripEnabledForTariff($manager?->tariff)) {
+                    $wave->update(['status' => 'paused']);
+                    $this->logWaveEvent($wave, 'paused', 'Current plan does not allow drip cadences.');
+                    continue;
+                }
+
+                if ($wave->kind === 'drip' && !$this->waveHasDispatchableAssignments($wave)) {
+                    $this->logWaveEvent($wave, 'skipped', 'All assignments are still inside cadence window.');
+                    continue;
+                }
+
+                $wave->update(['status' => 'processing']);
+                ProcessSurveyWave::dispatch($wave->id);
+                $this->logWaveEvent($wave, 'processing', 'Wave dispatched to queue.');
+            } catch (\Throwable $e) {
+                \Log::error("Failed to schedule wave {$wave->id}: " . $e->getMessage());
+                $this->logWaveEvent($wave, 'error', 'Scheduler error: ' . $e->getMessage());
             }
-
-            $manager = CompanyBilling::manager($wave->company_id);
-            $billingStatus = CompanyBilling::status($manager);
-
-            if ($wave->status === 'paused') {
-                $this->logWaveEvent($wave, 'skipped', 'Paused');
-                continue;
-            }
-
-            if ($wave->due_at && $wave->due_at->isPast()) {
-                $wave->update(['status' => 'completed']);
-                $this->logWaveEvent($wave, 'completed', 'Wave past due date.');
-                continue;
-            }
-
-            if (!CompanyBilling::allowsScheduling($manager)) {
-                $wave->update(['status' => 'paused']);
-                $this->logWaveEvent(
-                    $wave,
-                    'paused',
-                    'Billing inactive: ' . SurveyWaveAutomation::billingStatusLabel($billingStatus)
-                );
-                continue;
-            }
-
-            if ($wave->kind === 'drip' && !SurveyWaveAutomation::dripEnabledForTariff($manager?->tariff)) {
-                $wave->update(['status' => 'paused']);
-                $this->logWaveEvent($wave, 'paused', 'Current plan does not allow drip cadences.');
-                continue;
-            }
-
-            if ($wave->kind === 'drip' && !$this->waveHasDispatchableAssignments($wave)) {
-                $this->logWaveEvent($wave, 'skipped', 'All assignments are still inside cadence window.');
-                continue;
-            }
-
-            $wave->update(['status' => 'processing']);
-            ProcessSurveyWave::dispatch($wave->id);
-            $this->logWaveEvent($wave, 'processing', 'Wave dispatched to queue.');
         }
 
         $this->info('Wave scheduling pass completed.');

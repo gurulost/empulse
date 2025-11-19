@@ -7,7 +7,15 @@ use Illuminate\Database\Eloquent\Model;
 class CompanyWorker extends Model
 {
     protected $table = 'company_worker';
-    protected $guarded = [];
+    
+    protected $fillable = [
+        'company_id',
+        'name',
+        'email',
+        'role',
+        'department',
+        'supervisor',
+    ];
+    
     public $timestamps = true;
 }
-

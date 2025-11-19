@@ -1,87 +1,161 @@
 <template>
-    <div>
-        <div v-if="loading" class="text-center py-5">
-            <div class="spinner-border text-primary" role="status">
-                <span class="sr-only">Loading...</span>
-            </div>
-        </div>
-        <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
-        <div v-else-if="completed">
-            <div class="card shadow-sm">
-                <div class="card-body text-center py-5">
-                    <h1 class="h4 mb-3">Thank you!</h1>
-                    <p class="text-muted mb-0" v-if="alreadyCompleted">
-                        You have already submitted this survey. We appreciate your time.
-                    </p>
-                    <p class="text-muted mb-0" v-else>
-                        Your responses have been recorded.
-                    </p>
+    <div class="survey-container mx-auto" style="max-width: 800px;">
+        <Transition name="fade" mode="out-in">
+            <div v-if="loading" class="text-center py-5" key="loading">
+                <div class="card border-0 shadow-sm rounded-4 p-5">
+                    <SkeletonLoader height="2rem" width="60%" class="mb-4 mx-auto" />
+                    <SkeletonLoader height="1rem" width="80%" class="mb-2 mx-auto" />
+                    <SkeletonLoader height="1rem" width="70%" class="mb-4 mx-auto" />
+                    <div class="d-flex justify-content-center gap-3">
+                        <SkeletonLoader height="3rem" width="120px" borderRadius="2rem" />
+                        <SkeletonLoader height="3rem" width="120px" borderRadius="2rem" />
+                    </div>
                 </div>
             </div>
-        </div>
-        <div v-else>
-            <div class="card shadow-sm mb-3">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div>
-                            <h1 class="h5 mb-1">{{ currentPage?.title }}</h1>
-                            <p class="text-muted mb-0" v-if="currentPage?.attribute_label">{{ currentPage.attribute_label }}</p>
+            
+            <div v-else-if="error" class="alert alert-danger shadow-sm border-0 rounded-3" key="error">
+                <i class="bi bi-exclamation-circle-fill me-2"></i> {{ error }}
+            </div>
+            
+            <div v-else-if="completed" key="completed">
+                <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                    <div class="card-body text-center py-5 px-4">
+                        <div class="mb-4">
+                            <div class="bg-success bg-opacity-10 text-success rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                                <i class="bi bi-check-lg display-4"></i>
+                            </div>
                         </div>
-                        <div class="text-muted small">Page {{ currentPageIndex + 1 }} of {{ totalPages }}</div>
+                        <h1 class="h3 fw-bold mb-3">Thank you!</h1>
+                        <p class="text-muted mb-4 lead" v-if="alreadyCompleted">
+                            You have already submitted this survey. We appreciate your time.
+                        </p>
+                        <p class="text-muted mb-4 lead" v-else>
+                            Your responses have been recorded successfully.
+                        </p>
+                        <a href="/" class="btn btn-primary rounded-pill px-4 py-2">Return to Home</a>
                     </div>
+                </div>
+            </div>
+            
+            <div v-else key="survey">
+                <!-- Progress Bar -->
+                <div class="mb-4 px-1">
+                    <div class="d-flex justify-content-between text-muted small mb-2 fw-semibold">
+                        <span>Page {{ currentPageIndex + 1 }} of {{ totalPages }}</span>
+                        <span>{{ Math.round(((currentPageIndex + 1) / totalPages) * 100) }}% Completed</span>
+                    </div>
+                    <div class="progress" style="height: 6px; background-color: #e9ecef;">
+                        <div class="progress-bar bg-primary rounded-pill" role="progressbar" 
+                             :style="{ width: `${((currentPageIndex + 1) / totalPages) * 100}%` }"></div>
+                    </div>
+                </div>
 
-                    <div v-if="currentPage">
-                        <SurveyItem
-                            v-for="item in visibleItems(currentPage.items || [])"
-                            :key="item.qid"
-                            :item="item"
-                            :model-value="responses[item.qid]"
-                            :error="errors[item.qid]"
-                            :disabled="submitting"
-                            @update:modelValue="value => updateResponse(item.qid, value)"
-                        />
+                <div class="card border-0 shadow-lg rounded-4">
+                    <div class="card-body p-4 p-md-5">
+                        <Transition name="slide-fade" mode="out-in">
+                            <div :key="currentPageIndex">
+                                <div class="mb-4 border-bottom pb-3">
+                                    <h1 class="h4 fw-bold mb-2 text-primary">{{ currentPage?.title }}</h1>
+                                    <p class="text-muted mb-0" v-if="currentPage?.attribute_label">{{ currentPage.attribute_label }}</p>
+                                </div>
 
-                        <div v-for="section in currentPage.sections || []" :key="section.section_id" class="mb-4">
-                            <h2 class="h6 mb-3" v-if="section.title">{{ section.title }}</h2>
-                            <SurveyItem
-                                v-for="item in visibleItems(section.items || [])"
-                                :key="item.qid"
-                                :item="item"
-                                :model-value="responses[item.qid]"
-                                :error="errors[item.qid]"
-                                :disabled="submitting"
-                                @update:modelValue="value => updateResponse(item.qid, value)"
-                            />
-                        </div>
+                                <div v-if="currentPage" class="survey-content">
+                                    <div class="mb-4">
+                                        <SurveyItem
+                                            v-for="item in visibleItems(currentPage.items || [])"
+                                            :key="item.qid"
+                                            :item="item"
+                                            :model-value="responses[item.qid]"
+                                            :error="errors[item.qid]"
+                                            :disabled="submitting"
+                                            @update:modelValue="value => updateResponse(item.qid, value)"
+                                            class="mb-4"
+                                        />
+                                    </div>
 
-                        <div class="d-flex justify-content-between mt-4">
-                            <button class="btn btn-outline-secondary" :disabled="currentPageIndex === 0 || submitting" @click="previousPage">
-                                Previous
+                                    <div v-for="section in currentPage.sections || []" :key="section.section_id" class="mb-5 p-4 bg-light rounded-3 border-start border-4 border-primary">
+                                        <h2 class="h5 fw-bold mb-3 text-dark" v-if="section.title">{{ section.title }}</h2>
+                                        <SurveyItem
+                                            v-for="item in visibleItems(section.items || [])"
+                                            :key="item.qid"
+                                            :item="item"
+                                            :model-value="responses[item.qid]"
+                                            :error="errors[item.qid]"
+                                            :disabled="submitting"
+                                            @update:modelValue="value => updateResponse(item.qid, value)"
+                                            class="mb-4"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </Transition>
+
+                        <div class="d-flex justify-content-between align-items-center mt-5 pt-3 border-top">
+                            <button class="btn btn-outline-secondary rounded-pill px-4" 
+                                    :disabled="currentPageIndex === 0 || submitting" 
+                                    @click="previousPage">
+                                <i class="bi bi-arrow-left me-1"></i> Previous
                             </button>
+                            
                             <div class="d-flex align-items-center gap-3">
-                                <small class="text-muted" v-if="autosaveState.status === 'saving'">Saving…</small>
-                                <small class="text-muted" v-else-if="autosaveState.status === 'saved'">Saved {{ autosaveState.timestamp }}</small>
-                                <small class="text-danger" v-else-if="autosaveState.status === 'error'">Autosave failed</small>
-                                <button v-if="!isLastPage" class="btn btn-primary" :disabled="submitting" @click="nextPage">
-                                    Next
+                                <div class="d-none d-md-block text-end me-2">
+                                    <small class="text-muted d-block lh-1" v-if="autosaveState.status === 'saving'">Saving...</small>
+                                    <small class="text-muted d-block lh-1" v-else-if="autosaveState.status === 'saved'">Saved {{ autosaveState.timestamp }}</small>
+                                    <small class="text-danger d-block lh-1" v-else-if="autosaveState.status === 'error'">Autosave failed</small>
+                                </div>
+                                
+                                <button v-if="!isLastPage" class="btn btn-primary rounded-pill px-4 shadow-sm" 
+                                        :disabled="submitting" 
+                                        @click="nextPage">
+                                    Next <i class="bi bi-arrow-right ms-1"></i>
                                 </button>
-                                <button v-else class="btn btn-success" :disabled="submitting" @click="submitSurvey">
+                                <button v-else class="btn btn-success rounded-pill px-4 shadow-sm text-white" 
+                                        :disabled="submitting" 
+                                        @click="submitSurvey">
                                     <span v-if="submitting" class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                    Submit
+                                    Submit Survey
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </Transition>
     </div>
 </template>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.slide-fade-enter-active {
+  transition: all 0.3s ease-out;
+}
+
+.slide-fade-leave-active {
+  transition: all 0.2s cubic-bezier(1, 0.5, 0.8, 1);
+}
+
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+  transform: translateX(20px);
+  opacity: 0;
+}
+</style>
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import axios from 'axios';
 import SurveyItem from './SurveyItem.vue';
+import SkeletonLoader from '../common/SkeletonLoader.vue';
+import { useToast } from '../../composables/useToast';
 
 const props = defineProps({
     definitionUrl: { type: String, required: true },
@@ -89,6 +163,7 @@ const props = defineProps({
     autosaveUrl: { type: String, required: true },
 });
 
+const toast = useToast();
 const loading = ref(true);
 const error = ref(null);
 const definition = ref(null);
@@ -130,6 +205,7 @@ const fetchDefinition = async () => {
     } catch (err) {
         console.error(err);
         error.value = 'Unable to load the survey right now. Please try again later.';
+        toast.error('Failed to load survey data.');
     } finally {
         loading.value = false;
     }
@@ -158,6 +234,7 @@ const scheduleAutosave = () => {
         } catch (err) {
             console.error('Autosave failed', err);
             autosaveState.value = { status: 'error', timestamp: null };
+            toast.error('Autosave failed. Please check your connection.');
         }
     }, 1000);
 };

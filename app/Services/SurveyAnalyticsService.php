@@ -653,4 +653,132 @@ class SurveyAnalyticsService
 
         return null;
     }
+
+    public function getTrendData(int $companyId, string $metric = 'engagement'): array
+    {
+        // Get all waves for the company
+        $waves = \App\Models\SurveyWave::where('company_id', $companyId)
+            ->whereNotNull('due_at')
+            ->where('due_at', '<=', now())
+            ->orderBy('due_at')
+            ->get();
+
+        $labels = [];
+        $data = [];
+
+        foreach ($waves as $wave) {
+            // Get responses for this wave
+            $responses = SurveyResponse::with(['answers', 'user'])
+                ->where('survey_wave_id', $wave->id)
+                ->whereNotNull('submitted_at')
+                ->get();
+
+            if ($responses->isEmpty()) {
+                continue;
+            }
+
+            $answers = $responses->flatMap(fn ($r) => $r->answers);
+            $score = null;
+
+            if ($metric === 'engagement') {
+                // Calculate weighted indicator for this wave
+                $attributes = $this->aggregateAttributes($answers);
+                $indicators = $this->indicatorSatisfaction($attributes);
+                $score = $this->weightedIndicatorScore($indicators);
+            } elseif ($metric === 'culture') {
+                $culture = $this->teamCultureAnalytics($answers);
+                $score = $culture['score'] ?? null;
+            }
+
+            if ($score !== null) {
+                $labels[] = $wave->label ?? $wave->due_at->format('M Y');
+                $data[] = $score;
+            }
+        }
+
+        return [
+            'labels' => $labels,
+            'datasets' => [
+                [
+                    'label' => ucfirst($metric) . ' Score',
+                    'data' => $data,
+                    'borderColor' => '#4f46e5',
+                    'backgroundColor' => 'rgba(79, 70, 229, 0.2)',
+                    'fill' => true,
+                ]
+            ]
+        ];
+    }
+
+    public function getComparisonData(int $companyId, int $waveId, string $dimension = 'department'): array
+    {
+        $responses = SurveyResponse::with(['answers', 'user'])
+            ->where('survey_wave_id', $waveId)
+            ->whereNotNull('submitted_at')
+            ->get();
+
+        if ($responses->isEmpty()) {
+            return [];
+        }
+
+        $workers = $this->companyWorkersByEmail($responses);
+        $groups = [];
+
+        foreach ($responses as $response) {
+            $user = $response->user;
+            $email = $user?->email;
+            $worker = $email && isset($workers[$email]) ? $workers[$email] : null;
+            
+            $key = 'Unknown';
+            if ($dimension === 'department') {
+                $key = $worker->department ?? 'Unknown';
+            } elseif ($dimension === 'team') {
+                $key = $worker->supervisor ?? 'Unknown';
+            }
+
+            if (!isset($groups[$key])) {
+                $groups[$key] = collect();
+            }
+            $groups[$key]->push($response);
+        }
+
+        $labels = [];
+        $engagementData = [];
+        $cultureData = [];
+
+        foreach ($groups as $key => $groupResponses) {
+            $answers = $groupResponses->flatMap(fn ($r) => $r->answers);
+            
+            // Engagement
+            $attributes = $this->aggregateAttributes($answers);
+            $indicators = $this->indicatorSatisfaction($attributes);
+            $engScore = $this->weightedIndicatorScore($indicators);
+
+            // Culture
+            $culture = $this->teamCultureAnalytics($answers);
+            $cultScore = $culture['score'] ?? 0;
+
+            if ($engScore !== null) {
+                $labels[] = $key;
+                $engagementData[] = $engScore;
+                $cultureData[] = $cultScore;
+            }
+        }
+
+        return [
+            'labels' => $labels,
+            'datasets' => [
+                [
+                    'label' => 'Engagement',
+                    'data' => $engagementData,
+                    'backgroundColor' => '#4f46e5',
+                ],
+                [
+                    'label' => 'Culture',
+                    'data' => $cultureData,
+                    'backgroundColor' => '#10b981',
+                ]
+            ]
+        ];
+    }
 }

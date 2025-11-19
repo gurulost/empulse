@@ -1,70 +1,83 @@
 <template>
     <div class="mb-4">
-        <label class="form-label fw-semibold">{{ item.question }}</label>
-        <p class="text-muted small" v-if="item.metadata?.note">{{ item.metadata.note }}</p>
+        <label class="form-label text-dark fw-bold mb-2 d-block">{{ item.question }}</label>
+        <p class="text-muted small mb-3" v-if="item.metadata?.note">
+            <i class="bi bi-info-circle me-1"></i> {{ item.metadata.note }}
+        </p>
 
         <template v-if="item.type === 'slider'">
-            <div class="d-flex justify-content-between text-muted small mb-1">
-                <span>{{ scaleLabels.left }}</span>
-                <span v-if="scaleLabels.mid">{{ scaleLabels.mid }}</span>
-                <span>{{ scaleLabels.right }}</span>
+            <div class="bg-light p-4 rounded-3 border-0">
+                <div class="d-flex justify-content-between text-muted small fw-bold text-uppercase mb-3">
+                    <span>{{ scaleLabels.left }}</span>
+                    <span v-if="scaleLabels.mid">{{ scaleLabels.mid }}</span>
+                    <span>{{ scaleLabels.right }}</span>
+                </div>
+                <input type="range"
+                       class="form-range custom-range"
+                       :min="scale.min"
+                       :max="scale.max"
+                       :step="scale.step || 1"
+                       v-model.number="sliderValue"
+                       :disabled="disabled"
+                />
+                <div class="d-flex justify-content-center mt-3">
+                    <span class="badge bg-primary rounded-pill px-3 py-2 fs-6 shadow-sm">
+                        Selected: {{ sliderValue }}
+                    </span>
+                </div>
             </div>
-            <input type="range"
-                   class="form-range"
-                   :min="scale.min"
-                   :max="scale.max"
-                   :step="scale.step || 1"
-                   v-model.number="sliderValue"
-                   :disabled="disabled"
-            />
-            <div class="text-end text-muted small">Value: {{ sliderValue }}</div>
         </template>
 
         <template v-else-if="item.type === 'text_short' || item.type === 'text'">
-            <input type="text" class="form-control" :value="textValue" :disabled="disabled" @input="updateText($event.target.value)" />
+            <input type="text" class="form-control form-control-lg shadow-sm" :value="textValue" :disabled="disabled" @input="updateText($event.target.value)" placeholder="Type your answer here..." />
         </template>
 
         <template v-else-if="item.type === 'text_long'">
-            <textarea class="form-control" rows="4" :value="textValue" :disabled="disabled" @input="updateText($event.target.value)"></textarea>
+            <textarea class="form-control form-control-lg shadow-sm" rows="4" :value="textValue" :disabled="disabled" @input="updateText($event.target.value)" placeholder="Type your answer here..."></textarea>
         </template>
 
         <template v-else-if="item.type === 'number_integer'">
-            <input type="number" class="form-control" :value="numberValue" :disabled="disabled" @input="updateNumber($event.target.value)" />
+            <input type="number" class="form-control form-control-lg shadow-sm" :value="numberValue" :disabled="disabled" @input="updateNumber($event.target.value)" placeholder="0" />
         </template>
 
         <template v-else-if="item.type === 'dropdown' || item.type === 'single_select' || item.type === 'single_select_text'">
-            <select class="form-select" :value="selectValue" :disabled="disabled" @change="onSelectChange($event.target.value)">
+            <select class="form-select form-select-lg shadow-sm" :value="selectValue" :disabled="disabled" @change="onSelectChange($event.target.value)">
                 <option value="" disabled>Select an option</option>
                 <option v-for="option in options" :key="option.value" :value="option.value">
                     {{ option.label }}
                 </option>
             </select>
-            <div v-if="showFreeText" class="mt-2">
-                <input type="text" class="form-control" :placeholder="freeTextPlaceholder" :value="freeText" :disabled="disabled" @input="onFreeTextChange($event.target.value)" />
+            <div v-if="showFreeText" class="mt-3">
+                <input type="text" class="form-control form-control-lg shadow-sm" :placeholder="freeTextPlaceholder" :value="freeText" :disabled="disabled" @input="onFreeTextChange($event.target.value)" />
             </div>
         </template>
 
         <template v-else-if="item.type === 'multi_select'">
-            <div class="d-flex flex-column gap-1">
-                <div v-for="option in options" :key="option.value" class="form-check">
-                    <input class="form-check-input"
+            <div class="d-flex flex-column gap-2">
+                <div v-for="option in options" :key="option.value" class="form-check custom-checkbox p-3 border rounded-3 bg-white shadow-sm hover-bg transition-all">
+                    <input class="form-check-input me-2"
                            type="checkbox"
                            :id="item.qid + '-' + option.value"
                            :value="option.value"
                            :checked="multiSelectValues.includes(option.value)"
                            :disabled="disabled"
                            @change="onMultiSelectToggle(option)"
+                           style="transform: scale(1.2);"
                     >
-                    <label class="form-check-label" :for="item.qid + '-' + option.value">{{ option.label }}</label>
+                    <label class="form-check-label w-100 stretched-link" :for="item.qid + '-' + option.value" style="cursor: pointer;">
+                        {{ option.label }}
+                    </label>
                 </div>
             </div>
         </template>
 
         <template v-else>
-            <input type="text" class="form-control" :value="textValue" :disabled="disabled" @input="updateText($event.target.value)" />
+            <input type="text" class="form-control form-control-lg shadow-sm" :value="textValue" :disabled="disabled" @input="updateText($event.target.value)" />
         </template>
 
-        <div v-if="error" class="text-danger small mt-1">{{ error }}</div>
+        <div v-if="error" class="alert alert-danger border-0 bg-danger bg-opacity-10 text-danger d-flex align-items-center mt-2 py-2 px-3 rounded-3">
+            <i class="bi bi-exclamation-circle-fill me-2"></i> {{ error }}
+        </div>
     </div>
 </template>
 
@@ -198,3 +211,18 @@ const onMultiSelectToggle = (option) => {
     emit('update:modelValue', nextValues);
 };
 </script>
+
+<style scoped>
+.hover-bg:hover {
+    background-color: #f8f9fa !important;
+}
+.transition-all {
+    transition: all 0.2s ease;
+}
+.custom-range::-webkit-slider-thumb {
+    background: #0d6efd;
+}
+.custom-range::-moz-range-thumb {
+    background: #0d6efd;
+}
+</style>

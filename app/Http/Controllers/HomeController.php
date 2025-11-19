@@ -45,7 +45,6 @@ class HomeController extends Controller
         if($userRole !== 0 && $userPassword !== 'user' && $companyId) {
             app(\App\Services\SurveyService::class)->markPendingAssignmentsForCompany($companyId);
             $model = new User();
-            $qualtrics = $model->qualtricsFunc($userName, $userEmail, $userRole, $userPassword, $companyTitle);
             $exist_departments = DB::table($this->companyDepartments)->where('company_id', $companyId)->pluck('title')->toArray();
             $department = \DB::table('company_worker')->where(["company_id" => Auth::user()->company_id, "email" => Auth::user()->email])->value("department");
 
@@ -57,7 +56,6 @@ class HomeController extends Controller
             $waves = $this->surveyAnalytics->availableWavesForCompany($companyId);
 
             return view('home', [
-                'qualtrics' => $qualtrics,
                 'work_attributes' => $workAnalytics['attributes'] ?? [],
                 'indicator_scores' => $workAnalytics['indicators'] ?? [],
                 'temperature_index' => $workAnalytics['temperature'] ?? null,

@@ -171,10 +171,13 @@ class SurveyWaveTest extends TestCase
             'cadence' => 'manual',
         ]);
 
+        Queue::fake();
+
         Artisan::call('survey:waves:schedule');
 
         $wave->refresh();
         $this->assertSame('paused', $wave->status);
         $this->assertSame('paused', SurveyWaveLog::latest()->first()->status);
+        Queue::assertNothingPushed();
     }
 }

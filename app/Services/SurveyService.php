@@ -208,4 +208,74 @@ class SurveyService
             ]
         );
     }
+    public function cloneVersion(SurveyVersion $source): SurveyVersion
+    {
+        return DB::transaction(function () use ($source) {
+            $newVersion = $source->replicate();
+            $newVersion->version = $this->incrementVersion($source->version);
+            $newVersion->is_active = false;
+            $newVersion->created_utc = now();
+            $newVersion->push();
+
+            foreach ($source->pages as $page) {
+                $newPage = $page->replicate();
+                $newPage->survey_version_id = $newVersion->id;
+                $newPage->push();
+
+                foreach ($page->items as $item) {
+                    $this->cloneItem($item, $newVersion->id, $newPage->id, null);
+                }
+
+                foreach ($page->sections as $section) {
+                    $newSection = $section->replicate();
+                    $newSection->survey_page_id = $newPage->id;
+                    $newSection->push();
+
+                    foreach ($section->items as $item) {
+                        $this->cloneItem($item, $newVersion->id, $newPage->id, $newSection->id);
+                    }
+                }
+            }
+
+            return $newVersion;
+        });
+    }
+
+    protected function cloneItem($sourceItem, $versionId, $pageId, $sectionId)
+    {
+        $newItem = $sourceItem->replicate();
+        $newItem->survey_version_id = $versionId;
+        $newItem->survey_page_id = $pageId;
+        $newItem->survey_section_id = $sectionId;
+        $newItem->push();
+
+        foreach ($sourceItem->options as $option) {
+            $newOption = $option->replicate();
+            $newOption->survey_item_id = $newItem->id;
+            $newOption->push();
+        }
+    }
+
+    public function publishVersion(SurveyVersion $version): void
+    {
+        DB::transaction(function () use ($version) {
+            // Deactivate all other versions of this instrument
+            SurveyVersion::where('instrument_id', $version->instrument_id)
+                ->where('id', '!=', $version->id)
+                ->update(['is_active' => false]);
+
+            $version->update(['is_active' => true]);
+        });
+    }
+
+    protected function incrementVersion($versionStr)
+    {
+        $parts = explode('.', $versionStr);
+        if (count($parts) >= 3) {
+            $parts[2] = (int)$parts[2] + 1;
+        } else {
+            $parts[] = 1;
+        }
+        return implode('.', $parts);
+    }
 }

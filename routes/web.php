@@ -8,6 +8,7 @@ use App\Http\Controllers\WelcomeController;
 use App\Http\Controllers\ApiController;
 use App\Http\Controllers\SocialController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\FacebookController;
 use App\Http\Controllers\ManagerController;
@@ -25,6 +26,8 @@ use App\Http\Controllers\BillingController;
 use App\Http\Controllers\SurveyController;
 use App\Http\Controllers\SurveyManagementController;
 use App\Http\Controllers\SurveyWaveController;
+use App\Http\Controllers\SurveyBuilderController;
+use App\Http\Controllers\TeamController;
 use App\Http\Controllers\DashboardAnalyticsController;
 
 /*
@@ -49,6 +52,13 @@ Route::get('/facebook/callback', [FacebookController::class, 'facebookLogin']);
 
 Route::get('/survey/{token}', [SurveyController::class, 'show'])->name('survey.take');
 Route::get('/survey/{token}/definition', [SurveyController::class, 'definition'])->name('survey.definition');
+Route::get('/dashboard/analytics', [DashboardController::class, 'analytics'])->name('dashboard.analytics');
+
+// Reports
+Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+Route::get('/reports/trends', [ReportController::class, 'getTrends'])->name('reports.trends');
+Route::get('/reports/comparison', [ReportController::class, 'getComparison'])->name('reports.comparison');
+
 Route::post('/survey/{token}/autosave', [SurveyController::class, 'autosave'])->name('survey.autosave');
 Route::post('/survey/{token}', [SurveyController::class, 'submit'])->name('survey.submit');
 
@@ -62,8 +72,15 @@ Route::group(['middleware' => 'auth'], function () {
 // Stripe webhook endpoint (Cashier)
 Route::post('/stripe/webhook', [StripeWebhookController::class, 'handleWebhook']);
 
+// Team Management (Vue Dashboard)
+Route::get('/team/manage', [TeamController::class, 'index'])->middleware('admin')->name('team.manage');
+
+// Redirect old /users route to new dashboard
+Route::redirect('/users', '/team/manage', 301)->middleware('admin');
+
+// Keep existing API endpoints for Vue dashboard
     Route::group(['prefix' => 'users', 'middleware' => 'admin'], function () {
-        Route::get('/', [AdminController::class, 'upload_coworkers'])->name("company_staff");
+        // Route::get('/', [AdminController::class, 'upload_coworkers'])->name("company_staff"); // Redirected above
         Route::post('/', [AdminController::class, 'add_worker']);
         Route::post('/import', [UserController::class, 'importUsers']);
         Route::get('/export/{role}', [UserController::class, 'exportTable']);
@@ -86,8 +103,12 @@ Route::post('/stripe/webhook', [StripeWebhookController::class, 'handleWebhook']
         Route::get('/response', [ContuctUsController::class, 'response']);
     });
 
+// Redirect old /departments route to new dashboard
+Route::redirect('/departments', '/team/manage', 301)->middleware('admin');
+
+// Keep existing department API endpoints for Vue dashboard
     Route::group(['prefix' => 'departments', 'middleware' => 'admin'], function () {
-        Route::get('/', [AdminController::class, 'departments'])->name("departments");
+        // Route::get('/', [AdminController::class, 'departments'])->name("departments"); // Redirected above
         Route::get('/list', [AdminController::class, 'departments_list']);
         Route::get('/delete/{title}', [AdminController::class, 'deleteDepartment']);
         Route::post('/', [AdminController::class, 'addDepartment']);
@@ -130,6 +151,24 @@ Route::post('/stripe/webhook', [StripeWebhookController::class, 'handleWebhook']
     });
     Route::group(['middleware' => 'workfit_admin'], function () {
         Route::prefix('/admin')->name('admin.')->group(function () {
+            Route::get('/', [WorkfitAdminController::class, 'index'])->name('dashboard');
+            
+            Route::prefix('/api')->group(function () {
+                Route::get('/companies', [WorkfitAdminController::class, 'getCompanies']);
+                Route::get('/users', [WorkfitAdminController::class, 'getUsers']);
+                Route::delete('/users/{id}', [WorkfitAdminController::class, 'deleteUser']);
+                Route::post('/users/{id}/impersonate', [WorkfitAdminController::class, 'impersonate']);
+            });
+
+            Route::prefix('/builder')->name('builder.')->group(function () {
+                Route::get('/', [SurveyBuilderController::class, 'index'])->name('index');
+                Route::get('/structure/{versionId}', [SurveyBuilderController::class, 'getStructure']);
+                Route::post('/draft/{surveyId}', [SurveyBuilderController::class, 'createDraft']);
+                Route::post('/publish/{versionId}', [SurveyBuilderController::class, 'publishVersion']);
+                Route::post('/item/{itemId}', [SurveyBuilderController::class, 'updateItem']);
+                Route::post('/reorder', [SurveyBuilderController::class, 'reorderItems']);
+            });
+
             Route::prefix('/company')->name('company.')->group(function () {
                 Route::get('list', [WorkfitAdminController::class, 'getCompanyList'])->name('list');
                 Route::get('{id}', [WorkfitAdminController::class, 'getCompany'])->name('item');
