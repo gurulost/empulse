@@ -3,7 +3,7 @@
 ## Overview
 Multi-tenant Laravel 11 application with Vue.js frontend for company onboarding, employee management, survey engine, and Stripe subscriptions.
 
-## Recent Changes (November 19, 2025)
+## Recent Changes (November 19-20, 2025)
 - ✅ Imported from GitHub and configured for Replit environment
 - ✅ Installed PHP 8.2 and Composer dependencies  
 - ✅ Installed Node.js dependencies and built frontend assets
@@ -12,9 +12,10 @@ Multi-tenant Laravel 11 application with Vue.js frontend for company onboarding,
 - ✅ Configured TrustProxies middleware to trust Replit's proxy (`$proxies = '*'`)
 - ✅ Created RewriteAssetUrls middleware to convert absolute asset URLs to relative paths
 - ✅ Fixed layouts/app.blade.php to include @yield('content') for guest users
+- ✅ Fixed Vue.js mounting to be conditional (only for authenticated users, not guest landing page)
 - ✅ Set up Laravel dev server workflow on port 5000
 - ✅ Configured autoscale deployment with build step
-- ✅ Assets loading correctly with relative paths for Replit proxy compatibility
+- ✅ Landing page fully functional with Bootstrap styling and dashboard preview
 
 ## Project Architecture
 

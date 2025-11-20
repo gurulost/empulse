@@ -36,7 +36,12 @@ app.component('app-sidebar', AppSidebar);
 app.component('toast-container', ToastContainer);
 app.component('team-management-dashboard', TeamManagementDashboard);
 
-app.mount('#app');
+// Only mount Vue app if there are components to mount (authenticated users)
+// For guest users (landing page), we don't need Vue to mount and replace content
+const appElement = document.getElementById('app');
+if (appElement && (appElement.querySelector('[data-vue-component]') || document.querySelector('.main-content-wrapper'))) {
+    app.mount('#app');
+}
 const surveyRoot = document.getElementById('survey-app');
 if (surveyRoot) {
     const props = {
