@@ -46,6 +46,21 @@ Multi-tenant Laravel 11 application with Vue.js frontend for company onboarding,
 
 ## Configuration for Replit
 
+### Database Configuration (IMPORTANT)
+**The application uses PostgreSQL, NOT SQLite, despite what .env says:**
+- `.env` file shows `DB_CONNECTION=sqlite` (legacy config)
+- **Actual database**: PostgreSQL 16.10 via `DATABASE_URL` environment variable
+- `DATABASE_URL` overrides `.env` settings (this is correct behavior)
+- Database host: `helium` (Replit's internal PostgreSQL service)
+- **29 tables** migrated, **7 test users** seeded
+- **DO NOT** change this - PostgreSQL is production-grade and already working
+
+**To seed fresh test data:**
+```bash
+php artisan db:seed
+```
+This creates test accounts for all roles (Admin, Manager, Chief, Team Lead, Employees).
+
 ### Dynamic URL Handling
 The application automatically detects and uses the URL it's accessed from, thanks to the `AppServiceProvider` configuration. This means:
 - Assets automatically use the correct URL (whether localhost, Replit proxy, or custom domain)
