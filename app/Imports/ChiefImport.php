@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
-use App\Http\Controllers\AdminController;
+
 
 class ChiefImport implements ToModel, WithHeadingRow
 {
@@ -43,19 +43,19 @@ class ChiefImport implements ToModel, WithHeadingRow
             throw new \Exception($validator->errors()->first());
         }
 
-        $adminController = new AdminController();
+        $userService = app(\App\Services\UserService::class);
 
         $name = $row['name'];
         $email = $row['email'];
-        $password = $adminController->generatePassword();
+        $password = $userService->generatePassword();
         $status = isset($row['status']) && strlen($row['status']) > 0 ? $row['status'] : 'employee';
         $department = $this->department();
 
         $userAuthRole = \Auth::user()->role;
-        $checkStatus = $adminController->checkStatus($userAuthRole, $status);
+        $checkStatus = $userService->checkStatus($userAuthRole, $status);
 
         if($checkStatus === true) {
-            return User::add_worker($name, $email, $password, $status, $department);
+            return $userService->addWorker($name, $email, $password, $status, $department);
         }
     }
 

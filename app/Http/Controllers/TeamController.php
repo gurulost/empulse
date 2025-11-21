@@ -105,8 +105,8 @@ class TeamController extends Controller
         $email = $request->email;
         $role = $request->role;
         
-        // Generate random password
-        $password = \Illuminate\Support\Str::random(16);
+        // Generate random password using UserService
+        $password = $this->userService->generatePassword();
         
         $department = $request->department;
         if (!$department) {

@@ -13,7 +13,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\FacebookController;
 use App\Http\Controllers\ManagerController;
 use App\Http\Controllers\ChiefController;
-use App\Http\Controllers\AdminController;
+
 use App\Http\Controllers\TeamleadController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\CompanyMainPageController;

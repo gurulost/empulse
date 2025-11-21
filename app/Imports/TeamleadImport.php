@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
-use App\Http\Controllers\AdminController;
+
 
 class TeamleadImport implements ToModel, WithHeadingRow
 {
@@ -37,7 +37,7 @@ class TeamleadImport implements ToModel, WithHeadingRow
             throw new \Exception($validator->errors()->first());
         }
 
-        $adminController = new AdminController();
+        $userService = app(\App\Services\UserService::class);
 
         $name = $row['name'];
         $email = $row['email'];
@@ -45,10 +45,10 @@ class TeamleadImport implements ToModel, WithHeadingRow
         $teamlead = \Auth::user()->name;
 
         $userAuthRole = \Auth::user()->role;
-        $checkStatus = $adminController->checkStatus($userAuthRole, $status);
+        $checkStatus = $userService->checkStatus($userAuthRole, $status);
 
         if($checkStatus === true) {
-            return User::add_worker_teamlead($name, $email, $teamlead);
+            return $userService->addWorkerTeamlead($name, $email, $teamlead);
         }
     }
 
