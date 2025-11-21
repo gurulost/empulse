@@ -55,7 +55,6 @@ class DatabaseSeeder extends Seeder
             'password' => $password,
             'role' => 3,
             'company_id' => $company->id,
-            'department' => 'Engineering',
         ]);
 
         // Employees
@@ -67,7 +66,6 @@ class DatabaseSeeder extends Seeder
                 'password' => $password,
                 'role' => 4,
                 'company_id' => $company->id,
-                'department' => 'Engineering',
             ]);
         }
 
