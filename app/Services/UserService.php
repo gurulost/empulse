@@ -6,9 +6,189 @@ use App\Models\User;
 use App\Models\Companies;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use App\Services\EmailService;
 
 class UserService
 {
+    protected EmailService $emailService;
+
+    public function __construct(EmailService $emailService)
+    {
+        $this->emailService = $emailService;
+    }
+
+    public function generatePassword($length = 8) {
+        $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        $count = mb_strlen($chars);
+
+        for ($i = 0, $result = ''; $i < $length; $i++) {
+            $index = rand(0, $count - 1);
+            $result .= mb_substr($chars, $index, 1);
+        }
+
+        return $result;
+    }
+
+    public function checkStatus($userAuthRole, $status) {
+        if ($userAuthRole == 1) {
+            if (str_contains(strtolower($status), 'chief')) {
+                return true;
+            } elseif (str_contains(strtolower($status), 'manager')) {
+                return true;
+            }
+        } elseif ($userAuthRole == 2) {
+            if (str_contains(strtolower($status), 'teamlead')) {
+                return true;
+            } elseif (str_contains(strtolower($status), 'employee')) {
+                return true;
+            }
+        } elseif ($userAuthRole == 3) {
+            if (str_contains(strtolower($status), 'employee')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function addWorker(string $name, string $email, string $password, string $status, ?string $department)
+    {
+        $companyId = \Auth::user()->company_id;
+        $company = \Auth::user()->company_title;
+        $tariff = \Auth::user()->tariff;
+        $link = env('LOGIN_URL');
+        $role = 0;
+
+        // Check if user exists (logic migrated from User::ifUserExist)
+        $userExists = User::where('email', $email)->exists();
+        if ($userExists) {
+            // Mimic the session logic if strictly necessary, or just return null/error
+            // For now, assuming we just skip if exists, similar to original logic returning nothing
+            return null;
+        }
+
+        if (str_contains(strtolower($status), 'chief')) {
+            $role = 2;
+        } elseif (str_contains(strtolower($status), 'manager')) {
+            $role = 1;
+        } elseif (str_contains(strtolower($status), 'teamlead')) {
+            $role = 3;
+        } elseif (str_contains(strtolower($status), 'employee')) {
+            $role = 4;
+        }
+
+        if ($department !== null) {
+            $ifDepartmentExist = User::ifDepartmentExist($department, $companyId);
+            if ($ifDepartmentExist === false) {
+                $department = 'None department';
+            }
+        } else {
+            $department = 'None department';
+        }
+
+        DB::table('company_worker')->insert([
+            "company_id" => $companyId,
+            "name" => $name,
+            "email" => $email,
+            'role' => $role,
+            "department" => $department
+        ]);
+
+        if ($role == 1) {
+            $ifManagerExists = Companies::where("manager_email", $email)->first();
+
+            if ($ifManagerExists) {
+                DB::table('companies')->where("manager_email", $email)->update([
+                    "title" => \Auth::user()->company_title,
+                    "manager" => $name,
+                    "manager_email" => $email
+                ]);
+            } else {
+                DB::table('companies')->insert([
+                    "title" => $company,
+                    "manager" => $name,
+                    "manager_email" => $email
+                ]);
+            }
+        }
+
+        $this->emailService->sendLetter($email, $name, $company, view("admin-msg", [
+            "name" => $name,
+            "link" => $link,
+            "email" => $email,
+            "password" => $password,
+            "company" => $company,
+            "status" => $status,
+            'teamlead' => null,
+            "department" => $department,
+        ])->render());
+
+        return User::create([
+            'name' => $name,
+            'email' => $email,
+            'password' => Hash::make($password),
+            'role' => $role,
+            'company_id' => $companyId,
+            'tariff' => $tariff,
+            'company_title' => $company
+        ]);
+    }
+
+    public function addWorkerTeamlead(string $name, string $email, string $teamlead)
+    {
+        $companyId = \Auth::user()->company_id;
+        $company = \Auth::user()->company_title;
+        $tariff = \Auth::user()->tariff;
+        $link = env('LOGIN_URL');
+        $status = 'employee';
+        $role = 4;
+        $department = DB::table('company_worker')->where('email', \Auth::user()->email)->value('department');
+
+        $userExists = User::where('email', $email)->exists();
+        if ($userExists) {
+            return null;
+        }
+
+        if ($department !== null) {
+            $ifDepartmentExist = User::ifDepartmentExist($department, $companyId);
+            if ($ifDepartmentExist === false) {
+                $department = 'None department';
+            }
+        } else {
+            $department = 'None department';
+        }
+
+        DB::table('company_worker')->insert([
+            "company_id" => $companyId,
+            "name" => $name,
+            "email" => $email,
+            'role' => $role,
+            "supervisor" => $teamlead,
+            "department" => $department,
+        ]);
+
+        $this->emailService->sendLetter($email, $name, $company, view("admin-msg", [
+            "name" => $name,
+            "link" => $link,
+            "email" => $email,
+            "password" => null,
+            "company" => $company,
+            "status" => $status,
+            "department" => $department,
+            'teamlead' => $teamlead
+        ])->render());
+
+        return User::create([
+            'name' => $name,
+            'email' => $email,
+            'password' => null,
+            'role' => $role,
+            'company_id' => $companyId,
+            'tariff' => $tariff,
+            'company_title' => $company
+        ]);
+    }
+
     public function updateUser(string $email, int $companyId, string $companyTitle, string $newName, string $newEmail, ?int $newRole, ?string $newDepartment, ?object $userFromUsers, ?object $userFromCompanies, ?object $userFromCompanyWorkers, int $authUserRole, string $authUserName): array
     {
         try {
@@ -75,7 +255,7 @@ class UserService
                 $targetUser = User::where('email', $newEmail)->first();
                 $surveyLink = $targetUser?->surveyLink() ?? $link;
 
-                $sendLetter = User::send_letter($newEmail, $newName, $companyTitle, view('admin-msg', [
+                $sendLetter = $this->emailService->sendLetter($newEmail, $newName, $companyTitle, view('admin-msg', [
                     'name' => $newName,
                     'link' => $link,
                     'email' => $newEmail,
@@ -147,7 +327,7 @@ class UserService
 
             $surveyLink = $createdUser->surveyLink() ?? $testLink;
 
-            $sendLetter = User::send_letter($email, $name, $companyTitle, view('admin-msg', [
+            $sendLetter = $this->emailService->sendLetter($email, $name, $companyTitle, view('admin-msg', [
                 'name' => $name,
                 'link' => $loginLink,
                 'email' => $email,

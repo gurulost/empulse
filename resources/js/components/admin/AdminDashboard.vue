@@ -1,138 +1,175 @@
 <template>
-    <div class="container py-4">
-        <h1 class="h3 mb-4">Super Admin Dashboard</h1>
-
-        <ul class="nav nav-tabs mb-4">
-            <li class="nav-item">
-                <a class="nav-link" :class="{ active: activeTab === 'companies' }" href="#" @click.prevent="activeTab = 'companies'">Companies</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" :class="{ active: activeTab === 'users' }" href="#" @click.prevent="activeTab = 'users'">Users</a>
-            </li>
-        </ul>
-
-        <div v-if="loading" class="text-center py-5">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-        </div>
-
-        <div v-else-if="activeTab === 'companies'">
-            <div class="card shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Companies</h5>
-                    <button class="btn btn-sm btn-primary" @click="fetchCompanies(companies.current_page)">Refresh</button>
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
-                        <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Manager</th>
-                            <th>Email</th>
-                            <th>Plan</th>
-                            <th>Actions</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr v-for="company in companies.data" :key="company.id">
-                            <td>{{ company.id }}</td>
-                            <td>{{ company.title }}</td>
-                            <td>{{ company.manager }}</td>
-                            <td>{{ company.manager_email }}</td>
-                            <td>
-                                <span class="badge" :class="company.tariff === 1 ? 'bg-success' : 'bg-secondary'">
-                                    {{ company.tariff === 1 ? 'Premium' : 'Free' }}
-                                </span>
-                            </td>
-                            <td>
-                                <button class="btn btn-sm btn-outline-secondary" @click="viewCompany(company)">View Users</button>
-                            </td>
-                        </tr>
-                        <tr v-if="companies.data.length === 0">
-                            <td colspan="6" class="text-center text-muted py-3">No companies found.</td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div class="card-footer d-flex justify-content-between align-items-center" v-if="companies.last_page > 1">
-                    <button class="btn btn-sm btn-outline-secondary" :disabled="companies.current_page === 1" @click="fetchCompanies(companies.current_page - 1)">Previous</button>
-                    <span class="small text-muted">Page {{ companies.current_page }} of {{ companies.last_page }}</span>
-                    <button class="btn btn-sm btn-outline-secondary" :disabled="companies.current_page === companies.last_page" @click="fetchCompanies(companies.current_page + 1)">Next</button>
+    <div class="admin-layout d-flex min-vh-100">
+        <!-- Sidebar -->
+        <aside :class="['sidebar bg-white border-end', { 'collapsed': isSidebarCollapsed }]">
+            <div class="sidebar-header d-flex align-items-center justify-content-center py-4 border-bottom">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-graph-up-arrow text-primary fs-4"></i>
+                    <span class="fw-bold fs-5 text-dark" v-if="!isSidebarCollapsed">Empulse</span>
                 </div>
             </div>
-        </div>
 
-        <div v-else-if="activeTab === 'users'">
-            <div class="card shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
-                        All Users
-                        <span v-if="companyFilter" class="badge bg-info ms-2">
-                            Company ID: {{ companyFilter }}
-                            <button type="button" class="btn-close btn-close-white ms-1" aria-label="Close" @click="clearCompanyFilter" style="font-size: 0.5em;"></button>
-                        </span>
-                    </h5>
+            <nav class="p-3">
+                <ul class="nav flex-column gap-2">
+                    <li class="nav-item">
+                        <a href="#" 
+                           class="nav-link d-flex align-items-center gap-3 rounded-3"
+                           :class="{ 'active': activeTab === 'companies', 'text-primary bg-primary-subtle': activeTab === 'companies', 'text-secondary': activeTab !== 'companies' }"
+                           @click.prevent="activeTab = 'companies'">
+                            <i class="bi bi-building fs-5"></i>
+                            <span v-if="!isSidebarCollapsed">Companies</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" 
+                           class="nav-link d-flex align-items-center gap-3 rounded-3"
+                           :class="{ 'active': activeTab === 'users', 'text-primary bg-primary-subtle': activeTab === 'users', 'text-secondary': activeTab !== 'users' }"
+                           @click.prevent="activeTab = 'users'">
+                            <i class="bi bi-people fs-5"></i>
+                            <span v-if="!isSidebarCollapsed">Users</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" 
+                           class="nav-link d-flex align-items-center gap-3 rounded-3"
+                           :class="{ 'active': activeTab === 'subscriptions', 'text-primary bg-primary-subtle': activeTab === 'subscriptions', 'text-secondary': activeTab !== 'subscriptions' }"
+                           @click.prevent="activeTab = 'subscriptions'">
+                            <i class="bi bi-credit-card fs-5"></i>
+                            <span v-if="!isSidebarCollapsed">Subscriptions</span>
+                        </a>
+                    </li>
+                    <li class="nav-item mt-4">
+                        <div class="text-uppercase small text-muted fw-bold px-3 mb-2" v-if="!isSidebarCollapsed">System</div>
+                        <a href="/home" class="nav-link d-flex align-items-center gap-3 rounded-3 text-secondary">
+                            <i class="bi bi-box-arrow-left fs-5"></i>
+                            <span v-if="!isSidebarCollapsed">Back to App</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="flex-grow-1 d-flex flex-column bg-light">
+            <!-- Topbar -->
+            <header class="bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center sticky-top shadow-sm">
+                <button class="btn btn-link text-secondary p-0" @click="isSidebarCollapsed = !isSidebarCollapsed">
+                    <i class="bi bi-list fs-4"></i>
+                </button>
+
+                <div class="d-flex align-items-center gap-3">
+                    <div class="dropdown">
+                        <a href="#" class="d-flex align-items-center gap-2 text-decoration-none dropdown-toggle text-dark" data-bs-toggle="dropdown">
+                            <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold">
+                                {{ userInitials }}
+                            </div>
+                            <span class="d-none d-md-block fw-medium">{{ user?.name }}</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-3 mt-2">
+                            <li><h6 class="dropdown-header">Signed in as <br><strong>{{ user?.email }}</strong></h6></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form action="/logout" method="POST">
+                                    <input type="hidden" name="_token" :value="csrfToken">
+                                    <button type="submit" class="dropdown-item text-danger d-flex align-items-center gap-2">
+                                        <i class="bi bi-box-arrow-right"></i> Logout
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div class="input-group mb-3">
-                        <input type="text" class="form-control" placeholder="Search users..." v-model="searchQuery" @keyup.enter="fetchUsers(1)">
-                        <button class="btn btn-outline-secondary" @click="fetchUsers(1)">Search</button>
+            </header>
+
+            <!-- Page Content -->
+            <main class="p-4">
+                <div class="container-fluid">
+                    <!-- Header -->
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2 class="h4 fw-bold text-dark mb-0">{{ pageTitle }}</h2>
+                        <div>
+                            <button class="btn btn-primary d-flex align-items-center gap-2 rounded-pill shadow-sm" @click="refreshCurrentTab">
+                                <i class="bi bi-arrow-clockwise"></i> Refresh
+                            </button>
+                        </div>
                     </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead class="table-light">
-                            <tr>
-                                <th>ID</th>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Role</th>
-                                <th>Company</th>
-                                <th>Actions</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            <tr v-for="user in users.data" :key="user.id">
-                                <td>{{ user.id }}</td>
-                                <td>{{ user.name }}</td>
-                                <td>{{ user.email }}</td>
-                                <td>{{ getRoleLabel(user.role) }}</td>
-                                <td>{{ user.company_id }}</td>
-                                <td>
-                                    <div class="btn-group btn-group-sm">
-                                        <button class="btn btn-outline-primary" @click="impersonateUser(user.id)" title="Login as this user">Login</button>
-                                        <button class="btn btn-outline-danger" @click="deleteUser(user.id)">Delete</button>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr v-if="users.data.length === 0">
-                                <td colspan="6" class="text-center text-muted py-3">No users found.</td>
-                            </tr>
-                            </tbody>
-                        </table>
+
+                    <!-- Content Area -->
+                    <div v-if="loading" class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
                     </div>
-                    <div class="d-flex justify-content-between align-items-center mt-3" v-if="users.last_page > 1">
-                        <button class="btn btn-sm btn-outline-secondary" :disabled="users.current_page === 1" @click="fetchUsers(users.current_page - 1)">Previous</button>
-                        <span class="small text-muted">Page {{ users.current_page }} of {{ users.last_page }}</span>
-                        <button class="btn btn-sm btn-outline-secondary" :disabled="users.current_page === users.last_page" @click="fetchUsers(users.current_page + 1)">Next</button>
+
+                    <div v-else>
+                        <company-list 
+                            v-if="activeTab === 'companies'" 
+                            :companies="companies" 
+                            @view-company="viewCompany" 
+                            @page-change="fetchCompanies"
+                        />
+
+                        <user-list 
+                            v-else-if="activeTab === 'users'" 
+                            :users="users" 
+                            v-model:searchQuery="searchQuery"
+                            :companyFilter="companyFilter"
+                            @search="fetchUsers(1)"
+                            @clear-filter="clearCompanyFilter"
+                            @page-change="fetchUsers"
+                            @impersonate="impersonateUser"
+                            @delete="deleteUser"
+                        />
+
+                        <subscription-list 
+                            v-else-if="activeTab === 'subscriptions'" 
+                            :subscriptions="subscriptions" 
+                            @page-change="fetchSubscriptions"
+                        />
                     </div>
                 </div>
-            </div>
+            </main>
         </div>
     </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import axios from 'axios';
+import CompanyList from './CompanyList.vue';
+import UserList from './UserList.vue';
+import SubscriptionList from './SubscriptionList.vue';
+
+const props = defineProps({
+    user: {
+        type: Object,
+        required: true
+    }
+});
 
 const activeTab = ref('companies');
 const companies = ref({ data: [], current_page: 1, last_page: 1 });
 const users = ref({ data: [], current_page: 1, last_page: 1 });
+const subscriptions = ref({ data: [], current_page: 1, last_page: 1 });
 const loading = ref(false);
 const searchQuery = ref('');
 const companyFilter = ref(null);
+const isSidebarCollapsed = ref(false);
+const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+const userInitials = computed(() => {
+    if (!props.user || !props.user.name) return 'U';
+    return props.user.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+});
+
+const pageTitle = computed(() => {
+    const titles = {
+        companies: 'Company Management',
+        users: 'User Management',
+        subscriptions: 'Subscription Management'
+    };
+    return titles[activeTab.value] ?? 'Dashboard';
+});
 
 const fetchCompanies = async (page = 1) => {
     loading.value = true;
@@ -164,6 +201,19 @@ const fetchUsers = async (page = 1) => {
     }
 };
 
+const fetchSubscriptions = async (page = 1) => {
+    loading.value = true;
+    try {
+        const { data } = await axios.get(`/admin/subscription/list?page=${page}`);
+        subscriptions.value = data;
+    } catch (e) {
+        console.error(e);
+        alert('Failed to load subscriptions');
+    } finally {
+        loading.value = false;
+    }
+};
+
 const deleteUser = async (id) => {
     if (!confirm('Are you sure you want to delete this user?')) return;
     try {
@@ -186,11 +236,6 @@ const impersonateUser = async (id) => {
     }
 };
 
-const getRoleLabel = (role) => {
-    const roles = { 0: 'Super Admin', 1: 'Manager', 3: 'Team Lead', 4: 'Employee' };
-    return roles[role] ?? 'Unknown';
-};
-
 const viewCompany = (company) => {
     companyFilter.value = company.id;
     searchQuery.value = ''; // Clear search to see all company users
@@ -203,8 +248,43 @@ const clearCompanyFilter = () => {
     fetchUsers(1);
 };
 
+const refreshCurrentTab = () => {
+    if (activeTab.value === 'companies') fetchCompanies(companies.value.current_page);
+    else if (activeTab.value === 'users') fetchUsers(users.value.current_page);
+    else if (activeTab.value === 'subscriptions') fetchSubscriptions(subscriptions.value.current_page);
+};
+
+watch(activeTab, (newTab) => {
+    if (newTab === 'companies' && companies.value.data.length === 0) fetchCompanies();
+    if (newTab === 'users' && users.value.data.length === 0) fetchUsers();
+    if (newTab === 'subscriptions' && subscriptions.value.data.length === 0) fetchSubscriptions();
+});
+
 onMounted(() => {
     fetchCompanies();
-    fetchUsers();
 });
 </script>
+
+<style scoped>
+.sidebar {
+    width: 260px;
+    transition: all 0.3s ease;
+}
+.sidebar.collapsed {
+    width: 80px;
+}
+.avatar {
+    width: 40px;
+    height: 40px;
+}
+.nav-link {
+    transition: all 0.2s;
+}
+.nav-link:hover {
+    background-color: #f8f9fa;
+}
+.nav-link.active {
+    background-color: #e0e7ff; /* Light indigo */
+    color: #4f46e5; /* Indigo 600 */
+}
+</style>

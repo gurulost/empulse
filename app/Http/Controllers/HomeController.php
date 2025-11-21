@@ -35,45 +35,7 @@ class HomeController extends Controller
     public $companyDepartments = 'company_department';
 
     public function index() {
-        $userName = Auth::user()->name;
-        $userEmail = Auth::user()->email;
-        $userRole = Auth::user()->role;
-        $userPassword = Auth::user()->password;
-        $companyTitle = Auth::user()->company_title;
-        $companyId = Auth::user()->company_id;
-
-        if($userRole !== 0 && $userPassword !== 'user' && $companyId) {
-            app(\App\Services\SurveyService::class)->markPendingAssignmentsForCompany($companyId);
-            $model = new User();
-            $exist_departments = DB::table($this->companyDepartments)->where('company_id', $companyId)->pluck('title')->toArray();
-            $department = \DB::table('company_worker')->where(["company_id" => Auth::user()->company_id, "email" => Auth::user()->email])->value("department");
-
-            $department_d = str_replace("&amp;", "&", $department);
-            $departments = \DB::table('company_worker')->where([["company_id", '=', Auth::user()->company_id], ["department", "!=", NULL], ["department", "!=", ""]])->get();
-            $teamleads = \DB::table('company_worker')->where(["company_id" => Auth::user()->company_id, "role" => 3])->get();
-
-            $workAnalytics = $this->surveyAnalytics->workContentAnalyticsForUser(Auth::user());
-            $waves = $this->surveyAnalytics->availableWavesForCompany($companyId);
-
-            return view('home', [
-                'work_attributes' => $workAnalytics['attributes'] ?? [],
-                'indicator_scores' => $workAnalytics['indicators'] ?? [],
-                'temperature_index' => $workAnalytics['temperature'] ?? null,
-                'team_culture' => $workAnalytics['team_culture'] ?? [],
-                'impact_series' => $workAnalytics['impact'] ?? [],
-                'gap_chart' => $workAnalytics['gap_chart'] ?? [],
-                'team_scatter' => $workAnalytics['team_scatter'] ?? [],
-                'weighted_indicator' => $workAnalytics['weighted_indicator'] ?? null,
-                'team_culture_evaluation' => $workAnalytics['team_culture_evaluation'] ?? null,
-                'available_waves' => $waves,
-                'exist_departments' => $exist_departments,
-                'department' => $department_d,
-                'departments' => $departments->unique('department'),
-                'teamleads' => $teamleads->unique('name'),
-            ]);
-        }
-
-        return view('home');
+        return view('dashboard.analytics');
     }
 
     public function createCompanyId($email, $name, $companyTitle)

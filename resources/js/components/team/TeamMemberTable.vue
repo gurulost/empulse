@@ -234,36 +234,17 @@ const loadMembers = async (page = 1) => {
             dir: sortDir.value
         };
         
-        const html = await api.getTeamMembers(params);
-        parseMembers(html);
+        const response = await api.getTeamMembers(params);
+        members.value = response.data;
+        pagination.value = {
+            current_page: response.current_page,
+            last_page: response.last_page
+        };
     } catch (error) {
         console.error('Failed to load members:', error);
         toast.error('Failed to load team members');
     } finally {
         loading.value = false;
-    }
-};
-
-const parseMembers = (html) => {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-    
-    // Extract members from table rows
-    const rows = doc.querySelectorAll('tbody tr[data-email]');
-    members.value = Array.from(rows).map(row => ({
-        name: row.querySelector('.p-name')?.textContent.trim() || '',
-        email: row.getAttribute('data-email') || '',
-        role: parseInt(row.getAttribute('data-role')) || 4,
-        department: row.querySelector('.p-department')?.textContent.trim() || ''
-    }));
-    
-    // Extract pagination info
-    const paginationLinks = doc.querySelectorAll('.pagination .page-link');
-    if (paginationLinks.length > 0) {
-        const lastPage = Math.max(...Array.from(paginationLinks)
-            .map(link => parseInt(link.textContent))
-            .filter(n => !isNaN(n)));
-        pagination.value.last_page = lastPage || 1;
     }
 };
 
@@ -303,9 +284,21 @@ const changePage = (page) => {
 };
 
 const highlightSearch = (text) => {
-    if (!filters.value.search) return text;
-    const regex = new RegExp(`(${filters.value.search})`, 'gi');
-    return text.replace(regex, '<mark>$1</mark>');
+    if (!text) return '';
+    // Escape HTML to prevent XSS
+    const escapedText = text.toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+
+    if (!filters.value.search) return escapedText;
+    
+    // Escape special regex characters in search term
+    const search = filters.value.search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${search})`, 'gi');
+    return escapedText.replace(regex, '<mark>$1</mark>');
 };
 
 const getRoleLabel = (role) => {

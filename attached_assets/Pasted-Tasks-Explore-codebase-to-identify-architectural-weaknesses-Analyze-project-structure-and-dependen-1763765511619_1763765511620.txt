@@ -1,0 +1,127 @@
+Tasks
+ Explore codebase to identify architectural weaknesses
+ Analyze project structure and dependencies
+ Check for legacy patterns (Blade/jQuery vs Vue/API)
+ Review controller and service layer consistency
+ Synthesize findings and propose solutions
+Refactor Dashboard Analytics
+ Plan and Design
+ Create implementation plan
+ Analyze existing data fetching logic
+ Backend Implementation
+ Create 
+AnalyticsApiController
+ Define API routes
+ Simplify 
+DashboardAnalyticsController
+ Frontend Implementation
+ Create 
+AnalyticsDashboard.vue
+ container
+ Update 
+app.js
+ registration
+ Update Blade view
+ Verification and Cleanup
+ Verify functionality (Manual)
+ Verify functionality (Manual)
+ Remove legacy mounting code
+ Polish and Perfection
+ Create 
+useAnalyticsApi
+ composable
+ Add debouncing to filters
+ Fix duplicate registration in 
+app.js
+Modernize Reports
+ Explore existing reports implementation
+ Analyze 
+ReportController
+ and routes
+ Check 
+ReportsDashboard.vue
+ and views
+ Plan and Design
+ Create implementation plan
+ Backend Implementation
+ Create 
+ReportsApiController
+ Update 
+ReportController
+ to serve view only
+ Frontend Implementation
+ Refactor 
+ReportsDashboard.vue
+ to fetch data
+ Update 
+app.js
+ and views
+ Verification
+ Deprecate 
+home.blade.php
+Refactor Team Management
+ Analyze Existing Code
+ Review 
+TeamController
+ API endpoints
+ Review 
+TeamManagementDashboard.vue
+ and children
+ Backend Implementation
+ Ensure 
+TeamController
+ has full CRUD JSON API
+ Update 
+routes/web.php
+ if needed
+ Frontend Implementation
+ Create 
+useTeamApi.js
+ composable
+ Refactor 
+TeamManagementDashboard.vue
+ Refactor 
+TeamMemberTable.vue
+ Refactor 
+DepartmentManager.vue
+ Verify 
+app.js
+ mounting logic
+ Verification
+ Create 
+tests/Feature/TeamApiTest.php
+ Manual verification of CRUD operations
+ Deprecate 
+home.blade.php
+Refactor AdminController
+ Analyze 
+AdminController
+ Inventory methods and responsibilities
+ Check 
+TeamController
+ overlap
+ Design Architecture
+ Define new controllers (e.g., CompanyController, UserController)
+ Design 
+EmailService
+ interface
+ Implementation
+ Create 
+EmailService
+ Create Admin\CompanyController
+ Create Admin\UserController
+ Migrate logic and update routes
+ Cleanup
+ Remove legacy code from 
+AdminController
+ Deprecate 
+home.blade.php
+Final Cleanup
+ Remove unused 
+AdminController
+ imports
+ Fix 
+TeamController
+ password generation consistency
+ Verify no legacy User::send_letter calls remain
+ Code review of Team Management refactor

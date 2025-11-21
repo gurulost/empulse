@@ -46,7 +46,7 @@ class DashboardAnalyticsTest extends TestCase
 
         $this->app->instance(SurveyAnalyticsService::class, $mock);
 
-        $response = $this->actingAs($user)->getJson('/dashboard/analytics?department=Operations&team=A-Team&wave=wave-1');
+        $response = $this->actingAs($user)->getJson('/analytics/api/dashboard?department=Operations&team=A-Team&wave=wave-1');
 
         $response->assertOk();
         $response->assertJson([
