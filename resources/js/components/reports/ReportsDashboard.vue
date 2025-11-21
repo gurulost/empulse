@@ -109,9 +109,11 @@
 
 <script setup>
 import { ref, onMounted, watch } from 'vue';
-import axios from 'axios';
+import { useReportsApi } from '../../composables/useReportsApi';
 import TrendChart from './TrendChart.vue';
 import ComparisonChart from './ComparisonChart.vue';
+
+const { getTrends, getComparison } = useReportsApi();
 
 const activeTab = ref('trends');
 const loading = ref(false);
@@ -127,8 +129,7 @@ const comparisonData = ref(null);
 const fetchTrends = async () => {
     loading.value = true;
     try {
-        const { data } = await axios.get(`/reports/trends?metric=${trendMetric.value}`);
-        trendData.value = data;
+        trendData.value = await getTrends(trendMetric.value);
     } catch (e) {
         console.error(e);
     } finally {
@@ -139,8 +140,7 @@ const fetchTrends = async () => {
 const fetchComparison = async () => {
     loading.value = true;
     try {
-        const { data } = await axios.get(`/reports/comparison?dimension=${comparisonDimension.value}`);
-        comparisonData.value = data;
+        comparisonData.value = await getComparison(comparisonDimension.value);
     } catch (e) {
         console.error(e);
     } finally {

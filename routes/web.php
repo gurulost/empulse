@@ -56,8 +56,8 @@ Route::get('/dashboard/analytics', [DashboardController::class, 'analytics'])->n
 
 // Reports
 Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
-Route::get('/reports/trends', [ReportController::class, 'getTrends'])->name('reports.trends');
-Route::get('/reports/comparison', [ReportController::class, 'getComparison'])->name('reports.comparison');
+Route::get('/reports/trends', [App\Http\Controllers\ReportsApiController::class, 'getTrends']);
+Route::get('/reports/comparison', [App\Http\Controllers\ReportsApiController::class, 'getComparison'])->name('reports.comparison');
 
 Route::post('/survey/{token}/autosave', [SurveyController::class, 'autosave'])->name('survey.autosave');
 Route::post('/survey/{token}', [SurveyController::class, 'submit'])->name('survey.submit');
@@ -167,4 +167,7 @@ Route::group(['middleware' => 'auth'], function () {
 
     Route::get('/dashboard/analytics', DashboardAnalyticsController::class)
         ->name('dashboard.analytics');
+
+    Route::get('/analytics/api/dashboard', [AnalyticsApiController::class, 'index'])
+        ->name('analytics.api.dashboard');
 });
