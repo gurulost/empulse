@@ -49,14 +49,9 @@ const api = useTeamApi();
 
 const loadDepartments = async () => {
     try {
-        const html = await api.getDepartments();
-        // Parse HTML response to extract departments
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-        const rows = doc.querySelectorAll('tr[data-department]');
-        departments.value = Array.from(rows).map(row => ({
-            title: row.getAttribute('data-department')
-        }));
+        const response = await api.getDepartments();
+        const list = response.data || response;
+        departments.value = list.map(d => ({ title: d.title }));
     } catch (error) {
         console.error('Failed to load departments:', error);
         departments.value = [];

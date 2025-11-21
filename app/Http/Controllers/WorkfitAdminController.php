@@ -16,7 +16,7 @@ class WorkfitAdminController extends Controller
 
     public function index()
     {
-        return view('workfit_admin.dashboard');
+        return view('layouts.admin_modern');
     }
 
     public function getCompanies()
@@ -85,5 +85,20 @@ class WorkfitAdminController extends Controller
         auth()->loginUsingId($user->id);
         
         return response()->json(['redirect' => route('home')]);
+    }
+
+    public function getSubscriptionList()
+    {
+        $subscriptions = DB::table('subscriptions')
+            ->join('users', 'users.id', '=', 'subscriptions.user_id')
+            ->select([
+                'subscriptions.*',
+                'users.name as user_name',
+                'users.email as user_email'
+            ])
+            ->orderByDesc('subscriptions.created_at')
+            ->paginate(10);
+
+        return response()->json($subscriptions);
     }
 }

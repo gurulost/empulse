@@ -131,23 +131,15 @@ const saving = ref(false);
 const loadDepartments = async () => {
     loading.value = true;
     try {
-        const html = await api.getDepartments();
-        parseDepartments(html);
+        const response = await api.getDepartments();
+        // Handle both paginated response and simple array if API changes
+        departmentList.value = response.data || response;
     } catch (error) {
         console.error('Failed to load departments:', error);
         toast.error('Failed to load departments');
     } finally {
         loading.value = false;
     }
-};
-
-const parseDepartments = (html) => {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-    const rows = doc.querySelectorAll('tr[data-department]');
-    departmentList.value = Array.from(rows).map(row => ({
-        title: row.getAttribute('data-department')
-    }));
 };
 
 const addDepartment = async () => {

@@ -67,52 +67,32 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('/', [HomeController::class, 'index'])->name('home');
         Route::post('/updatePassword/{email}', [HomeController::class, 'updatePassword']);
         Route::get('/response_error', [PaymentController::class, 'responses_error']);
-});
+    });
 
-// Stripe webhook endpoint (Cashier)
-Route::post('/stripe/webhook', [StripeWebhookController::class, 'handleWebhook']);
+    // Stripe webhook endpoint (Cashier)
+    Route::post('/stripe/webhook', [StripeWebhookController::class, 'handleWebhook']);
 
-// Team Management (Vue Dashboard)
-Route::get('/team/manage', [TeamController::class, 'index'])->middleware('admin')->name('team.manage');
+    // Team Management (Vue Dashboard)
+    Route::get('/team/manage', [TeamController::class, 'index'])->middleware('admin')->name('team.manage');
 
-// Redirect old /users route to new dashboard
-Route::redirect('/users', '/team/manage', 301)->middleware('admin');
+    // Team Management JSON API
+    Route::group(['prefix' => 'team/api', 'middleware' => 'admin'], function () {
+        // Members
+        Route::get('/members', [TeamController::class, 'getMembers']);
+        Route::post('/members', [TeamController::class, 'addMember']);
+        Route::put('/members/{email}', [TeamController::class, 'updateMember']);
+        Route::delete('/members/{email}', [TeamController::class, 'deleteMember']);
+        Route::post('/members/import', [TeamController::class, 'importUsers']);
+        
+        // Departments
+        Route::get('/departments', [TeamController::class, 'getDepartments']);
+        Route::post('/departments', [TeamController::class, 'addDepartment']);
+        Route::put('/departments/{title}', [TeamController::class, 'updateDepartment']);
+        Route::delete('/departments/{title}', [TeamController::class, 'deleteDepartment']);
+    });
 
-// Keep existing API endpoints for Vue dashboard
     Route::group(['prefix' => 'users', 'middleware' => 'admin'], function () {
-        // Route::get('/', [AdminController::class, 'upload_coworkers'])->name("company_staff"); // Redirected above
-        Route::post('/', [AdminController::class, 'add_worker']);
-        Route::post('/import', [UserController::class, 'importUsers']);
         Route::get('/export/{role}', [UserController::class, 'exportTable']);
-        Route::get('/delete/{email}', [AdminController::class, 'delete'])->middleware('tenant.email');
-        Route::put('/{email}', [AdminController::class, 'updateUser'])->name('udpateUser')->middleware('tenant.email');
-        Route::post('/manager_status/{email}', [AdminController::class, 'manager_status'])->middleware('tenant.email');
-        Route::post('/teamlead_status/{email}', [AdminController::class, 'teamlead_status'])->middleware('tenant.email');
-        Route::post('/chief_status/{email}', [AdminController::class, 'chief_status'])->middleware('tenant.email');
-        Route::post('/employee_status/{email}', [AdminController::class, 'employee_status'])->middleware('tenant.email');
-        Route::get('/list', [AdminController::class, 'usersPagination'])->name("company_staff_list");;
-        Route::post("/changeName_chief/{name}", [AdminController::class, "changeName_chief"]);
-        Route::post("/changeEmail_chief/{email}", [AdminController::class, "changeEmail_chief"]);
-        Route::put('/coworker/update/{param}/{currenty}/{new}', [HomeController::class, 'update_coworker_name'])->name('update_coworker_name');
-        Route::put('/coworker/{email}/department/{department}', [HomeController::class, 'update_coworker_department'])->name('update_coworker_department');
-    });
-
-    Route::group(['prefix' => 'contuctUs', 'middleware' => 'admin'], function() {
-        Route::get('/', [ContuctUsController::class, 'index'])->name('contuctUs');
-        Route::post('/', [ContuctUsController::class, 'sendForm']);
-        Route::get('/response', [ContuctUsController::class, 'response']);
-    });
-
-// Redirect old /departments route to new dashboard
-Route::redirect('/departments', '/team/manage', 301)->middleware('admin');
-
-// Keep existing department API endpoints for Vue dashboard
-    Route::group(['prefix' => 'departments', 'middleware' => 'admin'], function () {
-        // Route::get('/', [AdminController::class, 'departments'])->name("departments"); // Redirected above
-        Route::get('/list', [AdminController::class, 'departments_list']);
-        Route::get('/delete/{title}', [AdminController::class, 'deleteDepartment']);
-        Route::post('/', [AdminController::class, 'addDepartment']);
-        Route::post('/update/{title}', [AdminController::class, 'updateDepartment']);
     });
 
     Route::group(['prefix' => 'payment', 'middleware' => 'admin'], function() {
