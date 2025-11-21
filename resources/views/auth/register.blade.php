@@ -1,119 +1,207 @@
 @extends('layouts.app')
 
 @section('title')
-    Registartion
+    Sign Up - Empulse
 @endsection
 
 @section('content')
-    <link rel="stylesheet" type="text/css" href="{{asset('/css/auth/auth.css')}}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.css" />
-    <link rel="stylesheet" href="{{asset('/css/register.css')}}">
-    <div class="login-main">
-        <div class="login-logo-content">
-            <div class="login-logo-main">
-                <img class="login-logo" src="../../materials/images/workfitdxr_logo_1.png">
-            </div>
-            <div class="login-title-block">
-                <h1 class="login-title">
-                    A better way to address the gap in employee satisfaction
-                </h1>
-            </div>
-        </div>
-        <div class="login-form">
-            <form method="POST" action="{{ route('register') }}" class="login-form-content">
-                <h1 class="login-main-title">Sign Up</h1>
-                @csrf
-                <div class="test1">
-                    <div class="log-form-name">
-                        <input id="name" type="text" class="log-f-name is-invalid " name="name" value="{{ old('name') }}" required autocomplete="name" placeholder="ENTER YOUR NAME">
-                    </div>
-                    <div class="log-form-email">
-                        <input id="email" type="email" class="log-f-email is-invalid" name="email" value="{{ old('email') }}" required autocomplete="email" placeholder="ENTER YOUR EMAIL">
-                    </div>
-                    <div class="log-form-email">
-                        <input id="company_title" type="text" class="log-f-email is-invalid" name="company_title" value="{{ old('company_title') }}" required placeholder="ENTER YOUR COMPANY">
-                    </div><br />
-                    <div class="log-form-pass">
-                        <input id="password" type="password" class="log-f-pass is-invalid" name="password" required autocomplete="new-password" placeholder="YOUR PASSWORD">
-                    </div>
-                    <div class="log-form-pass-conf">
-                        <input id="password-confirm" type="password" class="log-f-pass-conf" name="password_confirmation" required autocomplete="new-password" placeholder="CONFIRM PASSWORD">
-                    </div>
-                    <div class="log-form-enter">
-                        <button type="submit" class="log-f-enter-btn"><span class="log-f-enter-text">Enter</span></button>
-                    </div>
-                    <div class="log-text-decorate">
-                        <p class="log-text-dec">or</p>
-                    </div>
-                    <div class="log-form-google">
-                        <a class="log-f-google" href="{{ route('auth.google') }}">
-                            <svg width="42px"
-                                 height="39px"
-                                 viewBox="0 0 43 40"
-                                 fill="none"
-                                 xmlns="http://www.w3.org/2000/svg"
-                                 xmlns:xlink="http://www.w3.org/1999/xlink">
-                                <rect x="0.152344" y="0.554688" width="42.5986" height="39.4432" rx="19.7216" fill="url(#pattern0)"/>
-                                <defs>
-                                    <pattern id="pattern0" patternContentUnits="objectBoundingBox" width="1" height="1">
-                                        <use xlink:href="#image0_1_75" transform="scale(0.0185185 0.02)"/>
-                                    </pattern>
-                                    <image id="image0_1_75" width="54" height="50" xlink:href="data:image/png;base64,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"/>
-                                </defs>
-                            </svg>
-                            <span class="log-f-g-text">Continue with google</span>
-                        </a>
-                    </div>
-{{--                    <div class="log-form-facebook" >--}}
-{{--                        <a class="log-f-facebook" href="{{ route('auth.facebook') }}">--}}
-{{--                            <svg width="32px"--}}
-{{--                                 height="55px"--}}
-{{--                                 viewBox="0 0 50 50"--}}
-{{--                                 fill="none"--}}
-{{--                                 style="margin: 0 5px 0 0"--}}
-{{--                                 xmlns="http://www.w3.org/2000/svg">--}}
-{{--                                <path d="M48 24C48 10.7438 37.2562 0 24 0C10.7438 0 0 10.7438 0 24C0 35.9813 8.775 45.9094 20.25 47.7094V30.9375H14.1562V24H20.25V18.7125C20.25 12.6984 23.8313 9.375 29.3156 9.375C31.9406 9.375 34.6875 9.84375 34.6875 9.84375V15.75H31.6594C28.6781 15.75 27.75 17.6016 27.75 19.5V24H34.4062L33.3422 30.9375H27.75V47.7094C39.225 45.9094 48 35.9813 48 24Z" fill="#1877F2"/>--}}
-{{--                                <path d="M33.3422 30.9375L34.4062 24H27.75V19.5C27.75 17.6016 28.6781 15.75 31.6594 15.75H34.6875V9.84375C34.6875 9.84375 31.9406 9.375 29.3156 9.375C23.8313 9.375 20.25 12.6984 20.25 18.7125V24H14.1562V30.9375H20.25V47.7094C21.4734 47.9016 22.725 48 24 48C25.275 48 26.5266 47.9016 27.75 47.7094V30.9375H33.3422Z" fill="white"/>--}}
-{{--                            </svg>--}}
-{{--                            <span class="log-f-f-text">Continue with facebook</span>--}}
-{{--                        </a>--}}
-{{--                    </div>--}}
+<div class="auth-page min-vh-100 d-flex align-items-center justify-content-center py-5" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-11 col-lg-9 col-xl-7">
+                <div class="card border-0 shadow-2xl rounded-4 overflow-hidden">
+                    <div class="row g-0">
+                        <!-- Left Side - Branding -->
+                        <div class="col-md-5 d-none d-md-flex flex-column justify-content-center align-items-center text-white p-5" style="background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);">
+                            <div class="mb-4">
+                                <i class="bi bi-person-plus-fill" style="font-size: 4rem;"></i>
+                            </div>
+                            <h3 class="fw-bold text-center mb-3">Join Empulse</h3>
+                            <p class="text-center small opacity-90">Start transforming your workplace culture today</p>
+                            <div class="mt-4 text-center">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <i class="bi bi-check-circle-fill"></i>
+                                    <span class="small">14-day free trial</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <i class="bi bi-check-circle-fill"></i>
+                                    <span class="small">No credit card required</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-check-circle-fill"></i>
+                                    <span class="small">Cancel anytime</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Right Side - Registration Form -->
+                        <div class="col-md-7">
+                            <div class="card-body p-4 p-lg-5">
+                                <h2 class="fw-bold mb-2">Create Account</h2>
+                                <p class="text-muted mb-4">Get started with your free trial</p>
 
-                    <div class="log-title-text">
-                        <p class="log-title-t">If you already have an account, that log in:</p>
-                    </div>
-                    <div class="log-btn-singup">
-                        <a href="/login" class="log-btn-sing">
-                            <span>Log In</span>
-                        </a>
+                                @if($errors->any())
+                                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                        <strong>Please fix the following errors:</strong>
+                                        <ul class="mb-0 mt-2">
+                                            @foreach($errors->all() as $error)
+                                                <li>{{ $error }}</li>
+                                            @endforeach
+                                        </ul>
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                    </div>
+                                @endif
+
+                                <form method="POST" action="{{ route('register') }}">
+                                    @csrf
+
+                                    <div class="mb-3">
+                                        <label for="name" class="form-label fw-semibold">Full Name</label>
+                                        <input id="name" 
+                                               type="text" 
+                                               class="form-control form-control-lg @error('name') is-invalid @enderror" 
+                                               name="name" 
+                                               value="{{ old('name') }}" 
+                                               required 
+                                               autocomplete="name" 
+                                               autofocus
+                                               placeholder="John Doe">
+                                        @error('name')
+                                            <span class="invalid-feedback" role="alert">
+                                                <strong>{{ $message }}</strong>
+                                            </span>
+                                        @enderror
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="email" class="form-label fw-semibold">Email Address</label>
+                                        <input id="email" 
+                                               type="email" 
+                                               class="form-control form-control-lg @error('email') is-invalid @enderror" 
+                                               name="email" 
+                                               value="{{ old('email') }}" 
+                                               required 
+                                               autocomplete="email"
+                                               placeholder="your@email.com">
+                                        @error('email')
+                                            <span class="invalid-feedback" role="alert">
+                                                <strong>{{ $message }}</strong>
+                                            </span>
+                                        @enderror
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="company_title" class="form-label fw-semibold">Company Name</label>
+                                        <input id="company_title" 
+                                               type="text" 
+                                               class="form-control form-control-lg @error('company_title') is-invalid @enderror" 
+                                               name="company_title" 
+                                               value="{{ old('company_title') }}" 
+                                               required
+                                               placeholder="Your Company Inc.">
+                                        @error('company_title')
+                                            <span class="invalid-feedback" role="alert">
+                                                <strong>{{ $message }}</strong>
+                                            </span>
+                                        @enderror
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="password" class="form-label fw-semibold">Password</label>
+                                        <input id="password" 
+                                               type="password" 
+                                               class="form-control form-control-lg @error('password') is-invalid @enderror" 
+                                               name="password" 
+                                               required 
+                                               autocomplete="new-password"
+                                               placeholder="Minimum 8 characters">
+                                        @error('password')
+                                            <span class="invalid-feedback" role="alert">
+                                                <strong>{{ $message }}</strong>
+                                            </span>
+                                        @enderror
+                                    </div>
+
+                                    <div class="mb-4">
+                                        <label for="password-confirm" class="form-label fw-semibold">Confirm Password</label>
+                                        <input id="password-confirm" 
+                                               type="password" 
+                                               class="form-control form-control-lg" 
+                                               name="password_confirmation" 
+                                               required 
+                                               autocomplete="new-password"
+                                               placeholder="Re-enter your password">
+                                    </div>
+
+                                    <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill mb-3 fw-bold">
+                                        Create Account
+                                    </button>
+
+                                    @if(Route::has('auth.google'))
+                                        <div class="text-center my-3">
+                                            <span class="text-muted small">OR</span>
+                                        </div>
+
+                                        <a href="{{ route('auth.google') }}" class="btn btn-outline-secondary btn-lg w-100 rounded-pill d-flex align-items-center justify-content-center gap-2">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                                                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                                                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                                                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                                            </svg>
+                                            Continue with Google
+                                        </a>
+                                    @endif
+
+                                    <div class="text-center mt-4">
+                                        <p class="text-muted mb-0">
+                                            Already have an account?
+                                            <a href="{{ route('login') }}" class="text-decoration-none fw-semibold">Log in</a>
+                                        </p>
+                                    </div>
+
+                                    <div class="text-center mt-3">
+                                        <p class="small text-muted">
+                                            By signing up, you agree to our 
+                                            <a href="https://workfitdx.com/terms-and-conditions/" target="_blank" class="text-decoration-none">Terms</a> and 
+                                            <a href="https://workfitdx.com/privacy-policy-2/" target="_blank" class="text-decoration-none">Privacy Policy</a>
+                                        </p>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </form>
+                
+                <div class="text-center mt-4">
+                    <a href="{{ url('/') }}" class="text-white text-decoration-none opacity-75 hover-opacity-100">
+                        <i class="bi bi-arrow-left me-2"></i>Back to Home
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
+</div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    <script>
-        @if(!empty($notification))
-            toastr.options = {
-                "closeButton": false,
-                "debug": true,
-                "newestOnTop": false,
-                "progressBar": false,
-                "positionClass": "toast-top-center",
-                "preventDuplicates": false,
-                "onclick": null,
-                "showDuration": "300",
-                "hideDuration": "1000",
-                "timeOut": "5000",
-                "extendedTimeOut": "1000",
-                "showEasing": "swing",
-                "hideEasing": "linear",
-                "showMethod": "fadeIn",
-                "hideMethod": "fadeOut"
-            }
-
-            toastr["error"](" {{ $notification['message'] }} ")
-        @endif
-    </script>
+<style>
+    .auth-page {
+        position: relative;
+    }
+    .auth-page::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="1" fill="white" opacity="0.1"/></svg>');
+        background-size: 50px 50px;
+    }
+    .shadow-2xl {
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+    .hover-opacity-100:hover {
+        opacity: 1 !important;
+    }
+</style>
 @endsection
