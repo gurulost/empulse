@@ -47,17 +47,14 @@ class TeamController extends Controller
             ->select('name', 'email', 'role', 'department');
 
         // Role-based access control
-        if ($authRole == 1) { // Manager: see all managers (1) and chiefs (2)
-            if ($request->has('role') && $request->role) {
-                 $query->where('role', (int)$request->role);
-            } else {
-                 $query->whereIn('role', [1, 2]);
-            }
-            
-            if ($request->has('department') && $request->department) {
-                $query->where('department', $request->department);
+        if ($authRole == 1) { // Manager: allow optional filters but default to entire roster
+            if ($request->filled('role')) {
+                $query->where('role', (int) $request->role);
             }
 
+            if ($request->filled('department')) {
+                $query->where('department', $request->department);
+            }
         } elseif ($authRole == 2) { // Chief
             $department = DB::table('company_worker')->where(['company_id' => $companyId, 'email' => $authEmail])->value('department');
             $query->where('department', $department);
@@ -116,8 +113,8 @@ class TeamController extends Controller
         $teamlead = ($authUserRole == 3) ? $authUserName : null;
         
         $status = "company manager"; // Default, logic inside UserService handles specific roles
-        $link = env('LOGIN_URL');
-        $test = env('TEST_URL');
+        $link = env('LOGIN_URL') ?: 'http://localhost/login';
+        $test = env('TEST_URL') ?: 'http://localhost';
         $companyWorkerTable = 'company_worker';
 
         $result = $this->userService->createUser(
@@ -199,8 +196,13 @@ class TeamController extends Controller
     public function getDepartments()
     {
         $companyId = Auth::user()->company_id;
-        $departments = $this->departmentService->list($companyId, 100); // Get all (or many)
-        return response()->json($departments); // Returns paginated object
+        $departments = $this->departmentService->list($companyId, 100);
+
+        if ($departments instanceof \Illuminate\Contracts\Pagination\Paginator) {
+            $departments = $departments->items();
+        }
+
+        return response()->json($departments);
     }
 
     public function addDepartment(AddDepartmentRequest $request)

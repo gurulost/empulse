@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\SurveyResponse;
 use App\Services\SurveyAnalyticsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -53,7 +54,7 @@ class AnalyticsApiController extends Controller
             ->distinct()
             ->get();
 
-        $waves = $this->analytics->availableWavesForCompany($companyId);
+        $waves = $this->availableWavesForCompany($companyId);
 
         return response()->json([
             'data' => $data,
@@ -64,5 +65,29 @@ class AnalyticsApiController extends Controller
                 'exist_departments' => $exist_departments
             ]
         ]);
+    }
+
+    protected function availableWavesForCompany(int $companyId): array
+    {
+        return SurveyResponse::with('surveyWave')
+            ->select('survey_version_id', 'wave_label', 'survey_wave_id')
+            ->whereHas('user', fn ($q) => $q->where('company_id', $companyId))
+            ->whereNotNull('submitted_at')
+            ->orderByDesc('submitted_at')
+            ->limit(200)
+            ->get()
+            ->map(function ($response) {
+                $wave = $response->surveyWave;
+                $label = $wave->label ?? $response->wave_label ?? "Version {$response->survey_version_id}";
+                $key = $wave?->id ?? $response->wave_label ?? (string) $response->survey_version_id;
+
+                return [
+                    'key' => (string) $key,
+                    'label' => $label,
+                ];
+            })
+            ->unique('key')
+            ->pluck('label', 'key')
+            ->toArray();
     }
 }

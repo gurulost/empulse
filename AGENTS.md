@@ -174,6 +174,11 @@ Document any new mappings (QID → indicator/series_role/polarity) inside this f
 - Added a basic Department/Team filter bar above the dashboard cards (`home.blade.php`). Buttons call new JS hooks that fetch `/dashboard/analytics` with department/team query params and re-mount the Vue components with the filtered data.
 - `resources/js/app.js` now handles mounting/unmounting of Gap/Indicator/Team scatter components and refreshing them after filter changes. Wave filtering + more graceful state handling (loading/error states) still TODO.
 
+### Team Management API notes
+- Team API routes now assume sane defaults when `LOGIN_URL` / `TEST_URL` are absent, falling back to `http://localhost/login` and `http://localhost`. This keeps worker creation/updating functional in local/test environments where env vars aren’t set.
+- `TeamController` wraps calls to `surveyLink()` in a try/catch; if survey scaffolding hasn’t been seeded yet we log a warning and continue using the fallback links so background jobs/responses don’t explode.
+- `GET /team/api/departments` returns a plain array (no paginator metadata) to match the Vue dashboard expectations and the Feature tests we added around the endpoints.
+
 ### Sub-update – Wave labeling groundwork
 - Added `wave_label` columns to `survey_assignments` and `survey_responses` plus logic in `SurveyService` to assign a default label combining the survey version and current month whenever an assignment is created or updated. `SurveyResponse` now inherits the label from its assignment.
 - `SurveyAnalyticsService::filterResponses()` now honors a `wave` filter by matching against either `survey_version_id` or `assignment.wave_label`, so the new `/dashboard/analytics?wave=...` parameter works immediately.
