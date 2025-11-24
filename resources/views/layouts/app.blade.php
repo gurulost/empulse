@@ -93,29 +93,29 @@
         setYear.textContent = currentYear;
     }
 </script>
-<style>
-    .main-content-wrapper {
-        min-height: 100vh;
-        background-color: #f8fafc;
-        display: flex;
-        flex-direction: column;
-        transition: margin-left 0.3s ease-in-out;
-    }
-    
-    /* Desktop: Sidebar is 280px */
-    @media (min-width: 768px) {
+    <style>
         .main-content-wrapper {
-            margin-left: 280px;
+            min-height: 100vh;
+            background-color: #f1f5f9; /* Slate 100 */
+            display: flex;
+            flex-direction: column;
+            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-    }
-    
-    /* Mobile: Sidebar is hidden/off-canvas */
-    @media (max-width: 767.98px) {
-        .main-content-wrapper {
-            margin-left: 0;
-            padding-top: 60px; /* Space for the toggle button */
+        
+        /* Desktop: Sidebar is 280px */
+        @media (min-width: 768px) {
+            .main-content-wrapper {
+                margin-left: 280px;
+            }
         }
-    }
-</style>
+        
+        /* Mobile: Sidebar is hidden/off-canvas */
+        @media (max-width: 767.98px) {
+            .main-content-wrapper {
+                margin-left: 0;
+                padding-top: 60px; /* Space for the toggle button */
+            }
+        }
+    </style>
 </body>
 </html>
