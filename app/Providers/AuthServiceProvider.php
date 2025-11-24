@@ -8,6 +8,8 @@ use App\Models\User;
 use App\Models\CompanyWorker;
 use App\Policies\UserPolicy;
 use App\Policies\CompanyWorkerPolicy;
+use App\Models\Companies;
+use App\Policies\TeamManagementPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
 class AuthServiceProvider extends ServiceProvider
@@ -20,6 +22,7 @@ class AuthServiceProvider extends ServiceProvider
     protected $policies = [
         User::class => UserPolicy::class,
         CompanyWorker::class => CompanyWorkerPolicy::class,
+        Companies::class => TeamManagementPolicy::class,
     ];
 
     /**

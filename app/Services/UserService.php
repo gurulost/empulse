@@ -2,12 +2,15 @@
 
 namespace App\Services;
 
+use App\Enums\Role;
 use App\Models\User;
 use App\Models\Companies;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use App\Services\EmailService;
+use Illuminate\Support\Str;
 
 class UserService
 {
@@ -31,257 +34,206 @@ class UserService
     }
 
     public function checkStatus($userAuthRole, $status) {
-        if ($userAuthRole == 1) {
-            if (str_contains(strtolower($status), 'chief')) {
-                return true;
-            } elseif (str_contains(strtolower($status), 'manager')) {
-                return true;
-            }
-        } elseif ($userAuthRole == 2) {
-            if (str_contains(strtolower($status), 'teamlead')) {
-                return true;
-            } elseif (str_contains(strtolower($status), 'employee')) {
-                return true;
-            }
-        } elseif ($userAuthRole == 3) {
-            if (str_contains(strtolower($status), 'employee')) {
-                return true;
-            }
+        $targetRole = $this->normalizeStatus($status);
+        if (!$targetRole) {
+            return false;
         }
 
-        return false;
+        return $this->canAssignRole(Role::tryFrom((int) $userAuthRole), $targetRole);
     }
 
     public function addWorker(string $name, string $email, string $password, string $status, ?string $department)
     {
-        $companyId = \Auth::user()->company_id;
-        $company = \Auth::user()->company_title;
-        $tariff = \Auth::user()->tariff;
-        $link = env('LOGIN_URL');
-        $role = 0;
-
-        // Check if user exists (logic migrated from User::ifUserExist)
-        $userExists = User::where('email', $email)->exists();
-        if ($userExists) {
-            // Mimic the session logic if strictly necessary, or just return null/error
-            // For now, assuming we just skip if exists, similar to original logic returning nothing
-            return null;
+        $authUser = Auth::user();
+        if (!$authUser) {
+            throw new \RuntimeException('Unauthorized.');
         }
 
-        if (str_contains(strtolower($status), 'chief')) {
-            $role = 2;
-        } elseif (str_contains(strtolower($status), 'manager')) {
-            $role = 1;
-        } elseif (str_contains(strtolower($status), 'teamlead')) {
-            $role = 3;
-        } elseif (str_contains(strtolower($status), 'employee')) {
-            $role = 4;
+        $targetRole = $this->normalizeStatus($status);
+        if (!$targetRole) {
+            throw new \InvalidArgumentException('Invalid status provided.');
         }
 
-        if ($department !== null) {
-            $ifDepartmentExist = User::ifDepartmentExist($department, $companyId);
-            if ($ifDepartmentExist === false) {
-                $department = 'None department';
-            }
-        } else {
-            $department = 'None department';
+        if (!$this->userCanAssignRole($authUser, $targetRole)) {
+            throw new \RuntimeException('Insufficient permissions to assign this role.');
         }
 
-        DB::table('company_worker')->insert([
-            "company_id" => $companyId,
-            "name" => $name,
-            "email" => $email,
-            'role' => $role,
-            "department" => $department
-        ]);
+        $result = $this->createUser(
+            (int) $authUser->company_id,
+            (string) $authUser->company_title,
+            $authUser->tariff,
+            (string) $authUser->name,
+            (int) $authUser->role,
+            $name,
+            $email,
+            $password,
+            $targetRole->value,
+            $this->roleLabel($targetRole),
+            $this->loginUrl(),
+            $this->testUrl(),
+            $department,
+            null,
+            'company_worker'
+        );
 
-        if ($role == 1) {
-            $ifManagerExists = Companies::where("manager_email", $email)->first();
-
-            if ($ifManagerExists) {
-                DB::table('companies')->where("manager_email", $email)->update([
-                    "title" => \Auth::user()->company_title,
-                    "manager" => $name,
-                    "manager_email" => $email
-                ]);
-            } else {
-                DB::table('companies')->insert([
-                    "title" => $company,
-                    "manager" => $name,
-                    "manager_email" => $email
-                ]);
-            }
+        if (($result['status'] ?? 500) !== 200 || empty($result['user'])) {
+            throw new \RuntimeException($result['message'] ?? 'Unable to add worker.');
         }
 
-        $this->emailService->sendLetter($email, $name, $company, view("admin-msg", [
-            "name" => $name,
-            "link" => $link,
-            "email" => $email,
-            "password" => $password,
-            "company" => $company,
-            "status" => $status,
-            'teamlead' => null,
-            "department" => $department,
-        ])->render());
-
-        return User::create([
-            'name' => $name,
-            'email' => $email,
-            'password' => Hash::make($password),
-            'role' => $role,
-            'company_id' => $companyId,
-            'tariff' => $tariff,
-            'company_title' => $company
-        ]);
+        return $result['user'];
     }
 
     public function addWorkerTeamlead(string $name, string $email, string $teamlead)
     {
-        $companyId = \Auth::user()->company_id;
-        $company = \Auth::user()->company_title;
-        $tariff = \Auth::user()->tariff;
-        $link = env('LOGIN_URL');
-        $status = 'employee';
-        $role = 4;
-        $department = DB::table('company_worker')->where('email', \Auth::user()->email)->value('department');
-
-        $userExists = User::where('email', $email)->exists();
-        if ($userExists) {
-            return null;
+        $authUser = Auth::user();
+        if (!$authUser) {
+            throw new \RuntimeException('Unauthorized.');
         }
 
-        if ($department !== null) {
-            $ifDepartmentExist = User::ifDepartmentExist($department, $companyId);
-            if ($ifDepartmentExist === false) {
-                $department = 'None department';
-            }
-        } else {
-            $department = 'None department';
+        if (!$this->userCanAssignRole($authUser, Role::EMPLOYEE)) {
+            throw new \RuntimeException('Insufficient permissions to add employees.');
         }
 
-        DB::table('company_worker')->insert([
-            "company_id" => $companyId,
-            "name" => $name,
-            "email" => $email,
-            'role' => $role,
-            "supervisor" => $teamlead,
-            "department" => $department,
-        ]);
+        $department = DB::table('company_worker')
+            ->where('email', $authUser->email)
+            ->value('department');
 
-        $this->emailService->sendLetter($email, $name, $company, view("admin-msg", [
-            "name" => $name,
-            "link" => $link,
-            "email" => $email,
-            "password" => null,
-            "company" => $company,
-            "status" => $status,
-            "department" => $department,
-            'teamlead' => $teamlead
-        ])->render());
+        $password = $this->generatePassword();
 
-        return User::create([
-            'name' => $name,
-            'email' => $email,
-            'password' => null,
-            'role' => $role,
-            'company_id' => $companyId,
-            'tariff' => $tariff,
-            'company_title' => $company
-        ]);
+        $result = $this->createUser(
+            (int) $authUser->company_id,
+            (string) $authUser->company_title,
+            $authUser->tariff,
+            (string) $authUser->name,
+            (int) $authUser->role,
+            $name,
+            $email,
+            $password,
+            Role::EMPLOYEE->value,
+            $this->roleLabel(Role::EMPLOYEE),
+            $this->loginUrl(),
+            $this->testUrl(),
+            $department,
+            $teamlead,
+            'company_worker'
+        );
+
+        if (($result['status'] ?? 500) !== 200 || empty($result['user'])) {
+            throw new \RuntimeException($result['message'] ?? 'Unable to add team member.');
+        }
+
+        return $result['user'];
     }
 
     public function updateUser(string $email, int $companyId, string $companyTitle, string $newName, string $newEmail, ?int $newRole, ?string $newDepartment, ?object $userFromUsers, ?object $userFromCompanies, ?object $userFromCompanyWorkers, int $authUserRole, string $authUserName): array
     {
         try {
-            $userOldRole = User::where('email', $email)->value('role');
-            $updatedData = [];
-
-            if ($userFromUsers) {
-                if ($userFromUsers->name !== $newName) {
-                    $userFromUsers->name = $newName;
-                    $updatedData[] = 1;
+            $newRoleEnum = null;
+            if ($newRole !== null) {
+                $newRoleEnum = Role::tryFrom($newRole);
+                if (!$newRoleEnum) {
+                    return ['status' => 500, 'message' => 'Invalid role provided.'];
                 }
-                if ($userFromUsers->email !== $newEmail) {
-                    $userFromUsers->email = $newEmail;
-                    $updatedData[] = 1;
+                if (!$this->canAssignRole(Role::tryFrom($authUserRole), $newRoleEnum)) {
+                    return ['status' => 500, 'message' => 'Insufficient permissions to assign role.'];
                 }
-                if ($newRole !== null) {
-                    $userFromUsers->role = $newRole;
-                    $updatedData[] = 1;
-                }
-                $userFromUsers->save();
             }
 
-            if ($userFromCompanies) {
-                if ($newRole === 2) {
-                    DB::table('companies')->where('manager_email', $email)->delete();
-                }
-            } elseif ($newRole === 1) {
-                DB::table('companies')->updateOrInsert(
-                    ['title' => $companyTitle],
-                    ['manager_email' => $newEmail, 'manager' => $newName]
-                );
-            }
+            $result = DB::transaction(function () use (
+                $email,
+                $companyId,
+                $companyTitle,
+                $newName,
+                $newEmail,
+                $newRole,
+                $newRoleEnum,
+                $newDepartment,
+                $userFromUsers,
+                $userFromCompanies,
+                $userFromCompanyWorkers
+            ) {
+                $userOldRole = User::where('email', $email)->value('role');
+                $updated = false;
 
-            if ($userFromCompanyWorkers) {
-                $updateData = [
-                    'name' => $newName,
-                    'email' => $newEmail,
-                ];
-                if ($newDepartment) {
-                    $updateData['department'] = $newDepartment;
-                    $updatedData[] = 1;
-                } else {
-                    $updateData['department'] = null;
+                if ($userFromUsers) {
+                    if ($userFromUsers->name !== $newName) {
+                        $userFromUsers->name = $newName;
+                        $updated = true;
+                    }
+                    if ($userFromUsers->email !== $newEmail) {
+                        $userFromUsers->email = $newEmail;
+                        $updated = true;
+                    }
+                    if ($newRole !== null) {
+                        $userFromUsers->role = $newRole;
+                        $updated = true;
+                    }
+                    $userFromUsers->save();
                 }
-                if ($newRole) {
-                    $updateData['role'] = $newRole;
-                }
-                DB::table('company_worker')->where('email', $email)->update($updateData);
-            }
 
-            if (count($updatedData) !== 0) {
-                $link = env('TEST_URL') ?: 'http://localhost';
-                $status = 'company manager';
-                if ($newRole !== null) {
-                    if ($newRole == 2) $status = 'department chief';
-                    elseif ($newRole == 3) $status = 'teamlead';
-                    elseif ($newRole == 4) $status = 'employee';
-                } else {
-                    if ($userOldRole == 2) $status = 'department chief';
-                    elseif ($userOldRole == 3) $status = 'teamlead';
-                    elseif ($userOldRole == 4) $status = 'employee';
+                if ($userFromCompanies) {
+                    if ($newRole === Role::CHIEF->value) {
+                        DB::table('companies')->where('manager_email', $email)->delete();
+                        $updated = true;
+                    }
+                } elseif ($newRole === Role::MANAGER->value) {
+                    DB::table('companies')->updateOrInsert(
+                        ['title' => $companyTitle],
+                        ['manager_email' => $newEmail, 'manager' => $newName]
+                    );
+                    $updated = true;
+                }
+
+                if ($userFromCompanyWorkers) {
+                    $updateData = [
+                        'name' => $newName,
+                        'email' => $newEmail,
+                    ];
+                    $updateData['department'] = $newDepartment ?: null;
+                    if ($newDepartment || $userFromCompanyWorkers->department !== $updateData['department']) {
+                        $updated = true;
+                    }
+                    if ($newRole) {
+                        $updateData['role'] = $newRole;
+                        $updated = true;
+                    }
+                    DB::table('company_worker')->where('email', $email)->update($updateData);
                 }
 
                 $targetUser = User::where('email', $newEmail)->first();
-                $surveyLink = $link;
+                $statusRole = $newRoleEnum ?? Role::tryFrom((int) $userOldRole) ?? Role::EMPLOYEE;
 
-                if ($targetUser) {
-                    try {
-                        $surveyLink = $targetUser->surveyLink() ?? $link;
-                    } catch (\Throwable $e) {
-                        Log::warning('Failed to generate survey link during update', [
-                            'user_id' => $targetUser->id,
-                            'company_id' => $companyId,
-                            'error' => $e->getMessage(),
-                        ]);
-                    }
-                }
+                return [
+                    'updated' => $updated,
+                    'target_user' => $targetUser,
+                    'status_role' => $statusRole,
+                ];
+            });
 
-                $sendLetter = $this->emailService->sendLetter($newEmail, $newName, $companyTitle, view('admin-msg', [
-                    'name' => $newName,
-                    'link' => $link,
-                    'email' => $newEmail,
-                    'password' => null,
-                    'company' => $companyTitle,
-                    'status' => $status,
-                    'department' => $newDepartment,
-                    'teamlead' => $authUserRole == 3 ? $authUserName : null,
-                    'surveyLink' => $surveyLink,
-                ])->render());
-                if ($sendLetter['status'] === 500) {
-                    return ['status' => 500, 'message' => $sendLetter['message']];
-                }
+            if (!$result['updated']) {
+                return ['status' => 200];
+            }
+
+            $link = $this->testUrl();
+            $statusLabel = $this->roleLabel($result['status_role']);
+            $surveyLink = $result['target_user']
+                ? $this->resolveSurveyLink($result['target_user'], $link)
+                : $link;
+
+            $sendLetter = $this->emailService->sendLetter($newEmail, $newName, $companyTitle, view('admin-msg', [
+                'name' => $newName,
+                'link' => $link,
+                'email' => $newEmail,
+                'password' => null,
+                'company' => $companyTitle,
+                'status' => $statusLabel,
+                'department' => $newDepartment,
+                'teamlead' => $authUserRole == Role::TEAMLEAD->value ? $authUserName : null,
+                'surveyLink' => $surveyLink,
+            ])->render());
+
+            if ($sendLetter['status'] === 500) {
+                return ['status' => 500, 'message' => $sendLetter['message']];
             }
 
             return ['status' => 200];
@@ -293,65 +245,79 @@ class UserService
     public function createUser(int $companyId, string $companyTitle, $tariff, string $authUserName, int $authUserRole, string $name, string $email, string $password, int $role, string $status, ?string $loginLink, ?string $testLink, ?string $department, ?string $teamlead, string $companyWorkerTable): array
     {
         try {
-            if (User::where('email', $email)->first()) {
+            if (User::where('email', $email)->exists()) {
                 return ['message' => 'User exists!', 'status' => 500];
             }
 
-            $appUrl = rtrim((string) config('app.url', 'http://localhost'), '/');
-            $loginLink = $loginLink ?: "{$appUrl}/login";
-            $testLink = $testLink ?: $appUrl;
-
-            if ($department !== null) {
-                $existsDept = DB::table('company_department')->where(['company_id' => $companyId, 'title' => $department])->exists();
-                if (!$existsDept) {
-                    $department = 'None department';
-                }
+            $roleEnum = Role::tryFrom($role);
+            if (!$roleEnum) {
+                return ['message' => 'Invalid role provided.', 'status' => 500];
             }
 
-            $createdUser = User::create([
-                'name' => $name,
-                'email' => $email,
-                'password' => Hash::make($password),
-                'company_id' => $companyId,
-                'company_title' => $companyTitle,
-                'role' => $role,
-                'tariff' => $tariff,
-            ]);
-
-            DB::table($companyWorkerTable)->insert([
-                'company_id' => $companyId,
-                'name' => $name,
-                'email' => $email,
-                'role' => $role,
-                'supervisor' => $teamlead,
-                'department' => $department,
-            ]);
-
-            if ($role == 1 && $companyId) {
-                $exists = DB::table('companies')->where('id', $companyId)->exists();
-                if (!$exists) {
-                    DB::table('companies')->insert([
-                        'title' => $companyTitle,
-                        'manager' => $name,
-                        'manager_email' => $email,
-                    ]);
-                }
+            $actorRole = Role::tryFrom((int) $authUserRole);
+            if (!$this->canAssignRole($actorRole, $roleEnum)) {
+                return ['message' => 'Insufficient permissions to assign role.', 'status' => 500];
             }
 
-            if ($role == 2) $status = 'department chief';
-            elseif ($role == 3) $status = 'teamlead';
-            elseif ($role == 4) $status = 'employee';
+            $loginLink = $loginLink ?: $this->loginUrl();
+            $testLink = $testLink ?: $this->testUrl();
 
-            try {
-                $surveyLink = $createdUser->surveyLink() ?? $testLink;
-            } catch (\Throwable $e) {
-                Log::warning('Failed to generate survey link', [
-                    'user_id' => $createdUser->id,
+            $createdUser = DB::transaction(function () use (
+                $companyId,
+                $companyTitle,
+                $tariff,
+                $name,
+                $email,
+                $password,
+                $roleEnum,
+                &$department,
+                $teamlead,
+                $companyWorkerTable
+            ) {
+                if ($department !== null) {
+                    $existsDept = DB::table('company_department')
+                        ->where(['company_id' => $companyId, 'title' => $department])
+                        ->exists();
+                    if (!$existsDept) {
+                        $department = 'None department';
+                    }
+                }
+
+                $user = User::create([
+                    'name' => $name,
+                    'email' => $email,
+                    'password' => Hash::make($password),
                     'company_id' => $companyId,
-                    'error' => $e->getMessage(),
+                    'company_title' => $companyTitle,
+                    'role' => $roleEnum->value,
+                    'tariff' => $tariff,
                 ]);
-                $surveyLink = $testLink;
-            }
+
+                DB::table($companyWorkerTable)->insert([
+                    'company_id' => $companyId,
+                    'name' => $name,
+                    'email' => $email,
+                    'role' => $roleEnum->value,
+                    'supervisor' => $teamlead,
+                    'department' => $department,
+                ]);
+
+                if ($roleEnum === Role::MANAGER && $companyId) {
+                    $exists = DB::table('companies')->where('id', $companyId)->exists();
+                    if (!$exists) {
+                        DB::table('companies')->insert([
+                            'title' => $companyTitle,
+                            'manager' => $name,
+                            'manager_email' => $email,
+                        ]);
+                    }
+                }
+
+                return $user;
+            });
+
+            $statusLabel = $status ?: $this->roleLabel($roleEnum);
+            $surveyLink = $this->resolveSurveyLink($createdUser, $testLink);
 
             $sendLetter = $this->emailService->sendLetter($email, $name, $companyTitle, view('admin-msg', [
                 'name' => $name,
@@ -359,7 +325,7 @@ class UserService
                 'email' => $email,
                 'password' => $password,
                 'company' => $companyTitle,
-                'status' => $status,
+                'status' => $statusLabel,
                 'department' => $department,
                 'teamlead' => $teamlead,
                 'surveyLink' => $surveyLink,
@@ -369,7 +335,7 @@ class UserService
                 return ['message' => $sendLetter['message'], 'status' => 500];
             }
 
-            return ['status' => 200];
+            return ['status' => 200, 'user' => $createdUser];
         } catch (\Exception $e) {
             return ['message' => $e->getMessage(), 'status' => 500];
         }
@@ -478,6 +444,84 @@ class UserService
             return ['status' => 200];
         } catch (\Exception $e) {
             return ['status' => 500, 'message' => $e->getMessage()];
+        }
+    }
+
+    protected function normalizeStatus(?string $status): ?Role
+    {
+        if ($status === null) {
+            return null;
+        }
+
+        $slug = (string) Str::of($status)->lower()->replace('-', ' ')->squish();
+
+        return match ($slug) {
+            'admin', 'administrator' => Role::ADMIN,
+            'manager', 'company manager' => Role::MANAGER,
+            'chief', 'department chief' => Role::CHIEF,
+            'team lead', 'teamlead' => Role::TEAMLEAD,
+            'employee' => Role::EMPLOYEE,
+            default => null,
+        };
+    }
+
+    protected function canAssignRole(?Role $actor, Role $target): bool
+    {
+        if (!$actor) {
+            return false;
+        }
+
+        return match ($actor) {
+            Role::ADMIN => true,
+            Role::MANAGER => in_array($target, [Role::MANAGER, Role::CHIEF, Role::TEAMLEAD, Role::EMPLOYEE], true),
+            Role::CHIEF => in_array($target, [Role::TEAMLEAD, Role::EMPLOYEE], true),
+            Role::TEAMLEAD => $target === Role::EMPLOYEE,
+            default => false,
+        };
+    }
+
+    public function userCanAssignRole(User $user, Role $target): bool
+    {
+        if ((int) ($user->is_admin ?? 0) === 1) {
+            return true;
+        }
+
+        return $this->canAssignRole(Role::tryFrom((int) $user->role), $target);
+    }
+
+    public function roleLabel(Role $role): string
+    {
+        return match ($role) {
+            Role::ADMIN => 'admin',
+            Role::MANAGER => 'company manager',
+            Role::CHIEF => 'department chief',
+            Role::TEAMLEAD => 'teamlead',
+            Role::EMPLOYEE => 'employee',
+        };
+    }
+
+    protected function loginUrl(): string
+    {
+        return (string) config('app.login_url', rtrim(config('app.url', 'http://localhost'), '/').'/login');
+    }
+
+    protected function testUrl(): string
+    {
+        return (string) config('app.test_url', config('app.url', 'http://localhost'));
+    }
+
+    protected function resolveSurveyLink(User $user, string $fallback): string
+    {
+        try {
+            return $user->surveyLink() ?? $fallback;
+        } catch (\Throwable $e) {
+            Log::warning('Failed to generate survey link', [
+                'user_id' => $user->id,
+                'company_id' => $user->company_id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return $fallback;
         }
     }
 }

@@ -58,6 +58,10 @@ return [
 
     'asset_url' => env('ASSET_URL', ''),
 
+    'login_url' => env('LOGIN_URL', rtrim(env('APP_URL', 'http://localhost'), '/').'/login'),
+
+    'test_url' => env('TEST_URL', env('APP_URL', 'http://localhost')),
+
     /*
     |--------------------------------------------------------------------------
     | User Invitation URLs
