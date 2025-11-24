@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Companies;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use App\Services\EmailService;
 
 class UserService
@@ -240,7 +241,7 @@ class UserService
             }
 
             if (count($updatedData) !== 0) {
-                $link = env('TEST_URL');
+                $link = env('TEST_URL') ?: 'http://localhost';
                 $status = 'company manager';
                 if ($newRole !== null) {
                     if ($newRole == 2) $status = 'department chief';
@@ -253,7 +254,19 @@ class UserService
                 }
 
                 $targetUser = User::where('email', $newEmail)->first();
-                $surveyLink = $targetUser?->surveyLink() ?? $link;
+                $surveyLink = $link;
+
+                if ($targetUser) {
+                    try {
+                        $surveyLink = $targetUser->surveyLink() ?? $link;
+                    } catch (\Throwable $e) {
+                        Log::warning('Failed to generate survey link during update', [
+                            'user_id' => $targetUser->id,
+                            'company_id' => $companyId,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
 
                 $sendLetter = $this->emailService->sendLetter($newEmail, $newName, $companyTitle, view('admin-msg', [
                     'name' => $newName,
@@ -277,12 +290,16 @@ class UserService
         }
     }
 
-    public function createUser(int $companyId, string $companyTitle, $tariff, string $authUserName, int $authUserRole, string $name, string $email, string $password, int $role, string $status, string $loginLink, string $testLink, ?string $department, ?string $teamlead, string $companyWorkerTable): array
+    public function createUser(int $companyId, string $companyTitle, $tariff, string $authUserName, int $authUserRole, string $name, string $email, string $password, int $role, string $status, ?string $loginLink, ?string $testLink, ?string $department, ?string $teamlead, string $companyWorkerTable): array
     {
         try {
             if (User::where('email', $email)->first()) {
                 return ['message' => 'User exists!', 'status' => 500];
             }
+
+            $appUrl = rtrim((string) config('app.url', 'http://localhost'), '/');
+            $loginLink = $loginLink ?: "{$appUrl}/login";
+            $testLink = $testLink ?: $appUrl;
 
             if ($department !== null) {
                 $existsDept = DB::table('company_department')->where(['company_id' => $companyId, 'title' => $department])->exists();
@@ -325,7 +342,16 @@ class UserService
             elseif ($role == 3) $status = 'teamlead';
             elseif ($role == 4) $status = 'employee';
 
-            $surveyLink = $createdUser->surveyLink() ?? $testLink;
+            try {
+                $surveyLink = $createdUser->surveyLink() ?? $testLink;
+            } catch (\Throwable $e) {
+                Log::warning('Failed to generate survey link', [
+                    'user_id' => $createdUser->id,
+                    'company_id' => $companyId,
+                    'error' => $e->getMessage(),
+                ]);
+                $surveyLink = $testLink;
+            }
 
             $sendLetter = $this->emailService->sendLetter($email, $name, $companyTitle, view('admin-msg', [
                 'name' => $name,

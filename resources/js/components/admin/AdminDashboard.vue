@@ -1,47 +1,50 @@
 <template>
     <div class="admin-layout d-flex min-vh-100">
         <!-- Sidebar -->
-        <aside :class="['sidebar bg-white border-end', { 'collapsed': isSidebarCollapsed }]">
-            <div class="sidebar-header d-flex align-items-center justify-content-center py-4 border-bottom">
-                <div class="d-flex align-items-center gap-2">
-                    <i class="bi bi-graph-up-arrow text-primary fs-4"></i>
-                    <span class="fw-bold fs-5 text-dark" v-if="!isSidebarCollapsed">Empulse</span>
+        <aside :class="['sidebar d-flex flex-column flex-shrink-0 p-4 text-white', { 'collapsed': isSidebarCollapsed }]">
+            <!-- Logo -->
+            <div class="d-flex align-items-center mb-4 px-2" :class="{ 'justify-content-center': isSidebarCollapsed }">
+                <div class="logo-container glass d-flex align-items-center justify-content-center rounded-3" style="width: 40px; height: 40px;">
+                    <i class="bi bi-graph-up-arrow text-white fs-5"></i>
                 </div>
+                <span class="fs-5 fw-bold tracking-tight ms-3" v-if="!isSidebarCollapsed">Empulse</span>
             </div>
 
-            <nav class="p-3">
-                <ul class="nav flex-column gap-2">
+            <div class="nav-spacer mb-4"></div>
+
+            <nav>
+                <ul class="nav nav-pills flex-column gap-2">
                     <li class="nav-item">
                         <a href="#" 
-                           class="nav-link d-flex align-items-center gap-3 rounded-3"
-                           :class="{ 'active': activeTab === 'companies', 'text-primary bg-primary-subtle': activeTab === 'companies', 'text-secondary': activeTab !== 'companies' }"
+                           class="nav-link"
+                           :class="{ 'active': activeTab === 'companies' }"
                            @click.prevent="activeTab = 'companies'">
-                            <i class="bi bi-building fs-5"></i>
+                            <i class="bi bi-building fs-5" :class="{ 'me-3': !isSidebarCollapsed }"></i>
                             <span v-if="!isSidebarCollapsed">Companies</span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a href="#" 
-                           class="nav-link d-flex align-items-center gap-3 rounded-3"
-                           :class="{ 'active': activeTab === 'users', 'text-primary bg-primary-subtle': activeTab === 'users', 'text-secondary': activeTab !== 'users' }"
+                           class="nav-link"
+                           :class="{ 'active': activeTab === 'users' }"
                            @click.prevent="activeTab = 'users'">
-                            <i class="bi bi-people fs-5"></i>
+                            <i class="bi bi-people fs-5" :class="{ 'me-3': !isSidebarCollapsed }"></i>
                             <span v-if="!isSidebarCollapsed">Users</span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a href="#" 
-                           class="nav-link d-flex align-items-center gap-3 rounded-3"
-                           :class="{ 'active': activeTab === 'subscriptions', 'text-primary bg-primary-subtle': activeTab === 'subscriptions', 'text-secondary': activeTab !== 'subscriptions' }"
+                           class="nav-link"
+                           :class="{ 'active': activeTab === 'subscriptions' }"
                            @click.prevent="activeTab = 'subscriptions'">
-                            <i class="bi bi-credit-card fs-5"></i>
+                            <i class="bi bi-credit-card fs-5" :class="{ 'me-3': !isSidebarCollapsed }"></i>
                             <span v-if="!isSidebarCollapsed">Subscriptions</span>
                         </a>
                     </li>
                     <li class="nav-item mt-4">
-                        <div class="text-uppercase small text-muted fw-bold px-3 mb-2" v-if="!isSidebarCollapsed">System</div>
-                        <a href="/home" class="nav-link d-flex align-items-center gap-3 rounded-3 text-secondary">
-                            <i class="bi bi-box-arrow-left fs-5"></i>
+                        <div class="text-uppercase small text-white-50 fw-bold px-3 mb-2" v-if="!isSidebarCollapsed">System</div>
+                        <a href="/home" class="nav-link text-white-50 hover-white">
+                            <i class="bi bi-box-arrow-left fs-5" :class="{ 'me-3': !isSidebarCollapsed }"></i>
                             <span v-if="!isSidebarCollapsed">Back to App</span>
                         </a>
                     </li>
@@ -268,23 +271,49 @@ onMounted(() => {
 <style scoped>
 .sidebar {
     width: 260px;
-    transition: all 0.3s ease;
+    background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.1);
 }
+
 .sidebar.collapsed {
     width: 80px;
 }
+
+.nav-link {
+    color: #94a3b8;
+    font-weight: 500;
+    padding: 0.875rem 1rem;
+    border-radius: 0.75rem;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+}
+
+.nav-link:hover, .hover-white:hover {
+    color: #fff !important;
+    background-color: rgba(255, 255, 255, 0.05);
+    transform: translateX(4px);
+}
+
+.nav-link.active {
+    background-color: #4f46e5;
+    color: white;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+}
+
 .avatar {
     width: 40px;
     height: 40px;
 }
-.nav-link {
-    transition: all 0.2s;
+
+.glass {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
-.nav-link:hover {
-    background-color: #f8f9fa;
-}
-.nav-link.active {
-    background-color: #e0e7ff; /* Light indigo */
-    color: #4f46e5; /* Indigo 600 */
+
+.tracking-tight {
+    letter-spacing: -0.025em;
 }
 </style>

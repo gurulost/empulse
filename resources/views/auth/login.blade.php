@@ -5,14 +5,14 @@
 @endsection
 
 @section('content')
-<div class="auth-page min-vh-100 d-flex align-items-center justify-content-center py-5" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+<div class="auth-page min-vh-100 d-flex align-items-center justify-content-center py-5" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-md-10 col-lg-8 col-xl-6">
                 <div class="card border-0 shadow-2xl rounded-4 overflow-hidden">
                     <div class="row g-0">
                         <!-- Left Side - Branding -->
-                        <div class="col-md-5 d-none d-md-flex flex-column justify-content-center align-items-center text-white p-5" style="background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);">
+                        <div class="col-md-5 d-none d-md-flex flex-column justify-content-center align-items-center text-white p-5" style="background: linear-gradient(180deg, #4f46e5 0%, #4338ca 100%);">
                             <div class="mb-4">
                                 <i class="bi bi-graph-up-arrow" style="font-size: 4rem;"></i>
                             </div>

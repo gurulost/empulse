@@ -60,6 +60,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | User Invitation URLs
+    |--------------------------------------------------------------------------
+    |
+    | These URLs are used in email invitations sent to new team members.
+    | They default to the application URL with appropriate paths.
+    |
+    */
+
+    'login_url' => env('LOGIN_URL', env('APP_URL', 'http://localhost') . '/login'),
+    
+    'test_url' => env('TEST_URL', env('APP_URL', 'http://localhost')),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

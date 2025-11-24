@@ -29,6 +29,7 @@ use App\Http\Controllers\SurveyWaveController;
 use App\Http\Controllers\SurveyBuilderController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\DashboardAnalyticsController;
+use App\Http\Controllers\AnalyticsApiController;
 
 /*
 |--------------------------------------------------------------------------
@@ -52,8 +53,6 @@ Route::get('/facebook/callback', [FacebookController::class, 'facebookLogin']);
 
 Route::get('/survey/{token}', [SurveyController::class, 'show'])->name('survey.take');
 Route::get('/survey/{token}/definition', [SurveyController::class, 'definition'])->name('survey.definition');
-Route::get('/dashboard/analytics', [DashboardController::class, 'analytics'])->name('dashboard.analytics');
-
 // Reports
 Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
 Route::get('/reports/trends', [App\Http\Controllers\ReportsApiController::class, 'getTrends']);

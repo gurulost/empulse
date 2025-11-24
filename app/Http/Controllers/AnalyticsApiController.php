@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\SurveyResponse;
 use App\Services\SurveyAnalyticsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,14 +20,23 @@ class AnalyticsApiController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
+        
+        if (!$user || !$user->company_id) {
+            return response()->json(['message' => 'User must be associated with a company.'], 422);
+        }
+
         $companyId = $request->integer('company_id') ?: $user->company_id;
 
         if (!$companyId) {
             return response()->json(['message' => 'Company is required.'], 422);
         }
 
-        // Allow admins (role 0) to fetch any company. Everyone else limited to their own company.
-        if ($user->role !== 0 && (int) $user->company_id !== (int) $companyId) {
+        // Authorization: Super Admins (role 0) can view any company
+        // All other users can only view their own company
+        $isSuperAdmin = (int) $user->role === 0;
+        $isOwnCompany = (int) $user->company_id === (int) $companyId;
+
+        if (!$isSuperAdmin && !$isOwnCompany) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
@@ -39,21 +49,28 @@ class AnalyticsApiController extends Controller
 
         $data = $this->analytics->companyDashboardAnalytics($filters);
         
-        // Also fetch available filter options
-        $exist_departments = \DB::table('company_department')->where('company_id', $companyId)->pluck('title')->toArray();
+        // Fetch available filter options - all scoped to authorized company
+        $exist_departments = \DB::table('company_department')
+            ->where('company_id', $companyId)
+            ->pluck('title')
+            ->toArray();
+            
         $departments = \DB::table('company_worker')
-            ->where([["company_id", '=', $companyId], ["department", "!=", NULL], ["department", "!=", ""]])
+            ->where('company_id', $companyId)
+            ->whereNotNull('department')
+            ->where('department', '!=', '')
             ->select('department')
             ->distinct()
             ->get();
             
         $teamleads = \DB::table('company_worker')
-            ->where(["company_id" => $companyId, "role" => 3])
+            ->where('company_id', $companyId)
+            ->where('role', 3)
             ->select('name')
             ->distinct()
             ->get();
 
-        $waves = $this->analytics->availableWavesForCompany($companyId);
+        $waves = $this->availableWavesForCompany($companyId);
 
         return response()->json([
             'data' => $data,
@@ -64,5 +81,29 @@ class AnalyticsApiController extends Controller
                 'exist_departments' => $exist_departments
             ]
         ]);
+    }
+
+    protected function availableWavesForCompany(int $companyId): array
+    {
+        return SurveyResponse::with('surveyWave')
+            ->select('survey_version_id', 'wave_label', 'survey_wave_id')
+            ->whereHas('user', fn ($q) => $q->where('company_id', $companyId))
+            ->whereNotNull('submitted_at')
+            ->orderByDesc('submitted_at')
+            ->limit(200)
+            ->get()
+            ->map(function ($response) {
+                $wave = $response->surveyWave;
+                $label = $wave->label ?? $response->wave_label ?? "Version {$response->survey_version_id}";
+                $key = $wave?->id ?? $response->wave_label ?? (string) $response->survey_version_id;
+
+                return [
+                    'key' => (string) $key,
+                    'label' => $label,
+                ];
+            })
+            ->unique('key')
+            ->pluck('label', 'key')
+            ->toArray();
     }
 }
