@@ -113,8 +113,8 @@ class TeamController extends Controller
         $teamlead = ($authUserRole == 3) ? $authUserName : null;
         
         $status = "company manager"; // Default, logic inside UserService handles specific roles
-        $link = env('LOGIN_URL') ?: 'http://localhost/login';
-        $test = env('TEST_URL') ?: 'http://localhost';
+        $link = config('app.login_url');
+        $test = config('app.test_url');
         $companyWorkerTable = 'company_worker';
 
         $result = $this->userService->createUser(

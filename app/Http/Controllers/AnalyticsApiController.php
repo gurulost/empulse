@@ -20,14 +20,23 @@ class AnalyticsApiController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
+        
+        if (!$user || !$user->company_id) {
+            return response()->json(['message' => 'User must be associated with a company.'], 422);
+        }
+
         $companyId = $request->integer('company_id') ?: $user->company_id;
 
         if (!$companyId) {
             return response()->json(['message' => 'Company is required.'], 422);
         }
 
-        // Allow admins (role 0) to fetch any company. Everyone else limited to their own company.
-        if ($user->role !== 0 && (int) $user->company_id !== (int) $companyId) {
+        // Authorization: Super Admins (role 0) can view any company
+        // All other users can only view their own company
+        $isSuperAdmin = (int) $user->role === 0;
+        $isOwnCompany = (int) $user->company_id === (int) $companyId;
+
+        if (!$isSuperAdmin && !$isOwnCompany) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
@@ -40,16 +49,23 @@ class AnalyticsApiController extends Controller
 
         $data = $this->analytics->companyDashboardAnalytics($filters);
         
-        // Also fetch available filter options
-        $exist_departments = \DB::table('company_department')->where('company_id', $companyId)->pluck('title')->toArray();
+        // Fetch available filter options - all scoped to authorized company
+        $exist_departments = \DB::table('company_department')
+            ->where('company_id', $companyId)
+            ->pluck('title')
+            ->toArray();
+            
         $departments = \DB::table('company_worker')
-            ->where([["company_id", '=', $companyId], ["department", "!=", NULL], ["department", "!=", ""]])
+            ->where('company_id', $companyId)
+            ->whereNotNull('department')
+            ->where('department', '!=', '')
             ->select('department')
             ->distinct()
             ->get();
             
         $teamleads = \DB::table('company_worker')
-            ->where(["company_id" => $companyId, "role" => 3])
+            ->where('company_id', $companyId)
+            ->where('role', 3)
             ->select('name')
             ->distinct()
             ->get();

@@ -32,8 +32,6 @@ class RegisterController extends Controller
         register as baseRegister;
     }
 
-    use RegistersUsers;
-
     /**
      * Where to redirect users after registration.
      *
