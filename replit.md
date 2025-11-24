@@ -3,7 +3,7 @@
 ## Overview
 Multi-tenant Laravel 11 application with Vue.js frontend for company onboarding, employee management, survey engine, and Stripe subscriptions.
 
-## Recent Changes (November 19-21, 2025)
+## Recent Changes (November 19-24, 2025)
 - ✅ Imported from GitHub and configured for Replit environment
 - ✅ Installed PHP 8.2 and Composer dependencies  
 - ✅ Installed Node.js dependencies and built frontend assets
@@ -25,6 +25,13 @@ Multi-tenant Laravel 11 application with Vue.js frontend for company onboarding,
   - Email verification page
 - ✅ Added Bootstrap Icons CDN for professional icon support across all pages
 - ✅ All guest-facing authentication pages now have consistent purple gradient design
+- ✅ **November 24 Security Audit & Fixes:**
+  - Fixed RegisterController duplicate trait import (fatal error)
+  - Hardened AnalyticsApiController tenant authorization
+  - Created UserRole enum for type-safe role management
+  - Added login_url/test_url configuration with sensible defaults
+  - Replaced env() calls with config() in TeamController
+  - ⚠️ **Remaining Security Issues** (see Technical Debt section below)
 
 ## Project Architecture
 
@@ -181,6 +188,44 @@ Configured for autoscale deployment with:
 - Rebuild assets: `npm run build`
 - Check `public/build/` directory exists
 - Ensure Vite manifest exists: `public/build/manifest.json`
+
+## Technical Debt & Security Concerns
+
+### 🚨 Critical Issues Requiring Attention Before Production
+
+**1. Privilege Escalation Vulnerability**
+- `UserService::checkStatus()` and role assignment use string matching
+- Attackers could craft status strings to gain elevated permissions
+- **Fix Required**: Integrate `UserRole` enum and validate role assignments
+
+**2. Data Integrity Risk**
+- User creation/update operations span multiple tables without transactions
+- Partial failures can create inconsistent data (users without company_worker records, etc.)
+- **Fix Required**: Wrap all UserService mutators in `DB::transaction` blocks
+
+**3. Missing Authorization Policies**
+- TeamController mutations lack Laravel authorization gates
+- No server-side validation for role escalation attempts
+- **Fix Required**: Create authorization policies for user management operations
+
+**4. UserRole Enum Not Integrated**
+- Created `app/Enums/UserRole.php` but not yet wired into existing code
+- Legacy magic numbers (0, 1, 2, 3, 4) still used throughout
+- **Fix Required**: Replace all role integer literals with enum references
+
+### Development vs Production Status
+
+✅ **Ready for Development/Testing:**
+- All features functional
+- Modern UI/UX across authentication and dashboards
+- Database schema stable
+- Test accounts working
+
+❌ **Not Yet Production-Ready:**
+- Critical security vulnerabilities remain
+- Stripe integration incomplete (missing live keys)
+- Brevo email not configured
+- Transaction safety needed for data integrity
 
 ## Notes
 - The application uses an internal survey engine (Qualtrics fully replaced)
