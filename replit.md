@@ -33,6 +33,12 @@ Multi-tenant Laravel 11 application with Vue.js frontend for company onboarding,
   - Replaced env() calls with config() in TeamController
   - ⚠️ **Remaining Security Issues** (see Technical Debt section below)
 
+## Recent Changes (December 3, 2025)
+- ✅ **Fixed Pagination Styling:** Configured Bootstrap 5 as default pagination in AppServiceProvider
+  - Pagination now renders correctly with Bootstrap 5 styles instead of broken Tailwind classes
+- ✅ **Cleaned Up Tailwind Templates:** Removed unused Tailwind pagination templates from `resources/views/vendor/pagination/`
+- ✅ **Enhanced Vite Config:** Added `allowedHosts: true` for better Replit iframe compatibility
+
 ## Project Architecture
 
 ### Stack
