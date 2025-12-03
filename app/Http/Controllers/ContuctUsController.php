@@ -16,7 +16,7 @@ class ContuctUsController extends Controller
 
     public function send_letter($subject, $content) {
         $response = Http::withHeaders([
-            'api-key' => "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",
+            'api-key' => config('services.brevo.key'),
             'Content-Type' => 'application/json',
         ])->post('https://api.brevo.com/v3/smtp/email', [
             "sender" => [
