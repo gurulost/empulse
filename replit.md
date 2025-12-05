@@ -15,6 +15,11 @@ Empulse (Workfitdx) is a multi-tenant Laravel 11 application with a Vue.js front
 7. **TeamController Authorization**: Restored authorization check for CompanyWorker updates.
 8. **Legacy JS Fixes**: Fixed undefined `apiDomain` variable in home.js, created symlink for /js directory.
 9. **Contact Form**: Fixed ContuctUs.blade.php to handle both authenticated and guest users.
+10. **Legacy Routes Restoration (Dec 2024)**: Added missing routes for /users/delete, /users/list, /users/import, /departments POST/list/delete that legacy JS files depend on. Routes use auth-only middleware with policy-based authorization in controller.
+11. **User Model Fixes**: Fixed undefined `$this->companyWorkerTable` property, eliminated global variable declarations (`global $users`, `global $departments`), added null safety to `user_role()` method.
+12. **BillingController Safety**: Added try/catch and null checks for Stripe configuration to prevent errors when Stripe is not configured.
+13. **SurveyBuilderController Access**: Changed middleware from 'admin' to 'workfit_admin' for proper access control.
+14. **JavaScript Fixes**: Fixed implicit global `parent` variable in usersPagination.js, removed infinite `requestAnimationFrame` loop, fixed null checks in profile.js using proper jQuery `.length` checks.
 
 ### Known Issues / Technical Debt
 - **CRITICAL SECURITY**: Brevo API key should be rotated quarterly (rotation pending)
