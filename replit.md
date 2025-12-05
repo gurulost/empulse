@@ -3,6 +3,25 @@
 ## Overview
 Empulse (Workfitdx) is a multi-tenant Laravel 11 application with a Vue.js frontend designed for comprehensive employee lifecycle management. Its core purpose is to streamline company onboarding, employee management, and facilitate employee feedback through an integrated survey engine. The platform also includes a robust subscription billing system powered by Stripe. The project aims to provide a modern, scalable solution for businesses to manage their workforce and gather insights effectively.
 
+## Recent Changes (December 2024)
+
+### Critical Fixes Applied
+1. **PlanController Multi-Tenancy Fix**: Fixed hardcoded `company === 1` check that blocked billing for all companies except ID 1. Now uses `company_id !== null` for proper multi-tenant support.
+2. **Password Reset Flow**: Fixed broken password reset - corrected endpoints to use Laravel's default `/password/email` and `/password/reset`, fixed success detection logic.
+3. **SurveyBuilder.vue API Endpoints**: Fixed all `/builder/*` endpoints to correctly use `/admin/builder/*` prefix.
+4. **OAuth Security Hardening**: Fixed Google/Facebook login to properly link social IDs to existing accounts, added null email validation.
+5. **PaymentController**: Added missing Auth facade, moved Stripe API calls from view to controller, added failure logging.
+6. **WorkfitAdminController**: Added missing methods (getCompanyList, getUsersList, getCompany) referenced by routes.
+7. **TeamController Authorization**: Restored authorization check for CompanyWorker updates.
+8. **Legacy JS Fixes**: Fixed undefined `apiDomain` variable in home.js, created symlink for /js directory.
+9. **Contact Form**: Fixed ContuctUs.blade.php to handle both authenticated and guest users.
+
+### Known Issues / Technical Debt
+- **CRITICAL SECURITY**: Brevo API key should be rotated quarterly (rotation pending)
+- **Architecture**: Mixed frontend (legacy jQuery + Vue.js) - migration to Vue recommended
+- **Typo**: "Contuct" exists throughout codebase but requires extensive refactoring
+- **Queue Workers**: Survey wave automation requires queue workers (`php artisan queue:work`)
+
 ## User Preferences
 - Not yet configured
 
