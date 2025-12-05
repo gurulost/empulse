@@ -12,8 +12,8 @@ class PlanController extends Controller
 {
     public function stripePay()
     {
-        // Only company owners/managers should access subscription purchase
-        abort_unless(auth()->check() && (int)auth()->user()->role === 1 && (int)auth()->user()->company === 1, 403);
+        $user = auth()->user();
+        abort_unless($user && (int)$user->role === 1 && $user->company_id !== null, 403);
         $plans = Plan::get();
 
         return view("stripe.plans", compact("plans"));
@@ -21,15 +21,17 @@ class PlanController extends Controller
 
     public function show(Plan $plan, Request $request)
     {
-        abort_unless(auth()->check() && (int)auth()->user()->role === 1 && (int)auth()->user()->company === 1, 403);
-        $intent = auth()->user()->createSetupIntent();
+        $user = auth()->user();
+        abort_unless($user && (int)$user->role === 1 && $user->company_id !== null, 403);
+        $intent = $user->createSetupIntent();
 
         return view("subscription.subscription", compact("plan", "intent"));
     }
 
     public function subscription(Request $request)
     {
-        abort_unless(auth()->check() && (int)auth()->user()->role === 1 && (int)auth()->user()->company === 1, 403);
+        $user = auth()->user();
+        abort_unless($user && (int)$user->role === 1 && $user->company_id !== null, 403);
         $plan = Plan::find($request->plan);
 
         // Create or update the user's default subscription

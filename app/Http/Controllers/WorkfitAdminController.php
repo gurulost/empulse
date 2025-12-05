@@ -101,4 +101,38 @@ class WorkfitAdminController extends Controller
 
         return response()->json($subscriptions);
     }
+
+    public function getCompanyList()
+    {
+        return $this->getCompanies();
+    }
+
+    public function getUsersList()
+    {
+        return $this->getUsers(request());
+    }
+
+    public function getCompany($id)
+    {
+        $company = Companies::findOrFail($id);
+        
+        $manager = User::where('email', $company->manager_email)
+            ->where('role', 1)
+            ->first();
+        
+        $workerCount = DB::table('company_worker')
+            ->where('company_id', $id)
+            ->count();
+            
+        $departmentCount = DB::table('company_department')
+            ->where('company_id', $id)
+            ->count();
+
+        return response()->json([
+            'company' => $company,
+            'manager' => $manager,
+            'worker_count' => $workerCount,
+            'department_count' => $departmentCount,
+        ]);
+    }
 }

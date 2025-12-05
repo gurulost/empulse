@@ -19,39 +19,37 @@ class SocialController extends Controller
     public function loginWithGoogle()
     {
         try {
-
-            $user = Socialite::driver('google')->user();
-            $isUser = User::where('google_id', $user->id)->first();
-            $email = User::where('email', $user->email)->first();
-
-            if ($isUser)
-            {
-                Auth::login($isUser);
+            $googleUser = Socialite::driver('google')->user();
+            
+            if (empty($googleUser->email)) {
+                \Session::put('google_auth_error', "Unable to retrieve email from Google account.");
+                return redirect()->back();
+            }
+            
+            $existingUser = User::where('google_id', $googleUser->id)->first();
+            if ($existingUser) {
+                Auth::login($existingUser);
                 return redirect('/home');
             }
 
-            else if($email)
-            {
-                Auth::login($email);
+            $userByEmail = User::where('email', $googleUser->email)->first();
+            if ($userByEmail) {
+                $userByEmail->update(['google_id' => $googleUser->id]);
+                Auth::login($userByEmail);
                 return redirect('/home');
             }
 
-            else
-            {
-                // Create a basic account without elevating privileges; onboarding will attach company later
-                $createUser = User::create([
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'google_id' => $user->id,
-                    'role' => 4,
-                    'company' => null,
-                    'password' => null,
-                ]);
+            $newUser = User::create([
+                'name' => $googleUser->name,
+                'email' => $googleUser->email,
+                'google_id' => $googleUser->id,
+                'role' => 4,
+                'company_id' => null,
+                'password' => null,
+            ]);
 
-                Auth::login($createUser);
-
-                return redirect('/home');
-            }
+            Auth::login($newUser);
+            return redirect('/home');
 
         } catch (Exception $exception) {
             \Session::put('google_auth_error', "Google authentication is currently unavailable.");

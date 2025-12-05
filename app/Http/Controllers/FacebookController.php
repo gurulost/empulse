@@ -72,40 +72,39 @@ class FacebookController extends Controller
     public function facebookLogin()
     {
         try {
-
-            $user = Socialite::driver('facebook')->user();
-            $isUser = User::where('fb_id', $user->id)->first();
-            $email = User::where('email', $user->email)->first();
-
-            if($isUser)
-            {
-                Auth::login($isUser);
+            $fbUser = Socialite::driver('facebook')->user();
+            
+            if (empty($fbUser->email)) {
+                \Session::put('facebook_auth_error', "Unable to retrieve email from Facebook account. Please ensure email permissions are granted.");
+                return redirect()->back();
+            }
+            
+            $existingUser = User::where('fb_id', $fbUser->id)->first();
+            if ($existingUser) {
+                Auth::login($existingUser);
                 return redirect('/home');
             }
 
-            else if($email)
-            {
-                Auth::login($email);
+            $userByEmail = User::where('email', $fbUser->email)->first();
+            if ($userByEmail) {
+                $userByEmail->update(['fb_id' => $fbUser->id]);
+                Auth::login($userByEmail);
                 return redirect('/home');
             }
 
-            else
-            {
-                $createUser = User::create([
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'fb_id' => $user->id,
-                    'password' => Hash::make(\Illuminate\Support\Str::random(32)),
-                    'role' => 4,
-                    'company' => null,
-                ]);
+            $newUser = User::create([
+                'name' => $fbUser->name,
+                'email' => $fbUser->email,
+                'fb_id' => $fbUser->id,
+                'password' => Hash::make(\Illuminate\Support\Str::random(32)),
+                'role' => 4,
+                'company_id' => null,
+            ]);
 
-                Auth::login($createUser);
-                return redirect('/home');
-            }
-        }
+            Auth::login($newUser);
+            return redirect('/home');
 
-        catch(\Exception $e) {
+        } catch (\Exception $e) {
             \Session::put('facebook_auth_error', "Facebook authentication is currently unavailable.");
             return redirect()->back();
         }

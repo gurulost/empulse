@@ -158,7 +158,9 @@ class TeamController extends Controller
         if ($userFromUsers) {
             $this->authorize('update', $userFromUsers);
         } elseif ($userFromCompanyWorkers) {
-            // $this->authorize('update', new CompanyWorker((array)$userFromCompanyWorkers));
+            $workerModel = new CompanyWorker((array)$userFromCompanyWorkers);
+            $workerModel->exists = true;
+            $this->authorize('update', $workerModel);
         } else {
             return response()->json(['message' => 'User not found'], 404);
         }

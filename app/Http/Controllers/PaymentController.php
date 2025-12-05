@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use App\Models\User;
 
 class PaymentController extends Controller
@@ -14,6 +15,9 @@ class PaymentController extends Controller
         $stripeSecret = config('services.stripe.secret');
         
         if (empty($stripeSecret)) {
+            Log::warning('Stripe payment attempted without API key configured', [
+                'user_id' => Auth::id(),
+            ]);
             return view('errors.payment')->with('message', 'Payment system is not configured.');
         }
         
@@ -41,6 +45,11 @@ class PaymentController extends Controller
                 'checkoutSessionId' => $checkoutSessionManagement->id,
             ]);
         } catch (\Exception $e) {
+            Log::error('Stripe checkout session creation failed', [
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             return view('errors.payment')->with('message', 'Failed to initialize payment session.');
         }
     }
