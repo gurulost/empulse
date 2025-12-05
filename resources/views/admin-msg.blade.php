@@ -56,7 +56,7 @@
 </style>
 
 @php
-    $surveyLink = $surveyLink ?? (env('TEST_URL') ?? '#');
+    $surveyLink = $surveyLink ?? (config('app.test_url') ?? '#');
 @endphp
 
 <div class="greetings">

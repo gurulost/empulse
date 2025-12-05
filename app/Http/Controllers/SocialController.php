@@ -5,8 +5,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
-use Socialite;
-use Auth;
+use Laravel\Socialite\Facades\Socialite;
+use Illuminate\Support\Facades\Auth;
+use Exception;
 
 class SocialController extends Controller
 {
@@ -53,8 +54,8 @@ class SocialController extends Controller
             }
 
         } catch (Exception $exception) {
-            $session = \Session::put('google_auth_error', "Now you can't auth via google!");
-            return response()->back()->with($session);
+            \Session::put('google_auth_error', "Google authentication is currently unavailable.");
+            return redirect()->back();
         }
     }
 

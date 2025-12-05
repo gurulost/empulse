@@ -539,7 +539,7 @@ class User extends Authenticatable
             }
 
             if(count($updatedData) !== 0) {
-                $link = env('TEST_URL');
+                $link = config('app.test_url');
 
                 $status = 'company manager';
                 if($new_role !== null) {

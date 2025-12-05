@@ -95,7 +95,9 @@ class FacebookController extends Controller
                     'name' => $user->name,
                     'email' => $user->email,
                     'fb_id' => $user->id,
-                    'password' => 'user',
+                    'password' => Hash::make(\Illuminate\Support\Str::random(32)),
+                    'role' => 4,
+                    'company' => null,
                 ]);
 
                 Auth::login($createUser);
@@ -104,8 +106,8 @@ class FacebookController extends Controller
         }
 
         catch(\Exception $e) {
-            $session = \Session::put('facebook_auth_error', "Now you can't auth via facebook!");
-            return response()->back()->with($session);
+            \Session::put('facebook_auth_error', "Facebook authentication is currently unavailable.");
+            return redirect()->back();
         }
     }
 }
