@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class Admin
 {
@@ -18,16 +19,16 @@ class Admin
     public function handle(Request $request, Closure $next)
     {
         try {
-            if (\Auth::check()) {
-                if(\Auth::user()->role !== 4) {
+            if (Auth::check()) {
+                if (Auth::user()->role !== 4) {
                     return $next($request);
                 } else {
-                    \Auth::logout();
+                    Auth::logout();
                 }
             }
 
             return redirect()->route('login');
-        } catch(\Exception $e) {
+        } catch (\Exception $e) {
             return redirect()->route('login');
         }
     }

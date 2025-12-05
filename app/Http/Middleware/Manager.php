@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class Manager
 {
@@ -16,14 +17,10 @@ class Manager
      */
     public function handle(Request $request, Closure $next)
     {
-        if(\Auth::user()->manager === 1)
-        {
+        if (Auth::check() && (int)Auth::user()->role === 1) {
             return $next($request);
         }
         
-        else
-        {
-            return redirect('/error_page');
-        }
+        return redirect('/home');
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class Teamlead
 {
@@ -16,14 +17,10 @@ class Teamlead
      */
     public function handle(Request $request, Closure $next)
     {
-        if(\Auth::user()->teamlead === 1)
-        {
+        if (Auth::check() && (int)Auth::user()->role === 3) {
             return $next($request);
         }
         
-        else
-        {
-            return redirect('/error_page');
-        }
+        return redirect('/home');
     }
 }

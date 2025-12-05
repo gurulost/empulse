@@ -17,6 +17,7 @@ use App\Imports\TeamleadImport;
 use App\Exports\ManagerTableTemplate;
 use App\Exports\ChiefTableTemplate;
 use App\Exports\TeamleadTableTemplate;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class UserController extends Controller
 {
