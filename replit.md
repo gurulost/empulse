@@ -21,10 +21,27 @@ Empulse (Workfitdx) is a multi-tenant Laravel 11 application with a Vue.js front
 13. **SurveyBuilderController Access**: Changed middleware from 'admin' to 'workfit_admin' for proper access control.
 14. **JavaScript Fixes**: Fixed implicit global `parent` variable in usersPagination.js, removed infinite `requestAnimationFrame` loop, fixed null checks in profile.js using proper jQuery `.length` checks.
 
+### Code Quality Refactoring (December 2024)
+15. **"Contuct" Typo Fix**: Renamed all misspelled files to proper "Contact" naming:
+    - `ContuctUsController.php` → `ContactUsController.php`
+    - `ContuctUs.blade.php` → `contact-us.blade.php`
+    - `ContuctUs.php` (Mail) → `ContactUs.php`
+    - Routes changed from `/contuctUs` to `/contact` (with redirects for backwards compatibility)
+    - CSS class references updated from `.contuctUs-window` to `.contact-us-window`
+16. **EmailService Consolidation**: Enhanced `app/Services/EmailService.php` with centralized email methods:
+    - `sendContactForm()` - Contact form submissions
+    - `sendPasswordReset()` - Password reset emails
+    - `sendSurveyInvitation()` - Survey invites
+    - `sendToAdmin()` - Admin notifications
+    - Updated `UserController.sendLetter()` to use EmailService
+17. **SocialAuthService**: Created `app/Services/SocialAuthService.php` to eliminate duplicate social login logic:
+    - `handleGoogleLogin()` and `handleFacebookLogin()` methods
+    - Updated `SocialController` and `FacebookController` to use the service
+18. **Theme.js Performance Fix**: Replaced infinite `requestAnimationFrame` loop with proper event listeners and MutationObserver (auto-disconnects after 5 seconds)
+
 ### Known Issues / Technical Debt
 - **CRITICAL SECURITY**: Brevo API key should be rotated quarterly (rotation pending)
 - **Architecture**: Mixed frontend (legacy jQuery + Vue.js) - migration to Vue recommended
-- **Typo**: "Contuct" exists throughout codebase but requires extensive refactoring
 - **Queue Workers**: Survey wave automation requires queue workers (`php artisan queue:work`)
 
 ## User Preferences

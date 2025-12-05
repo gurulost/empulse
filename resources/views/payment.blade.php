@@ -63,7 +63,7 @@
                         <ul class="list-unstyled mt-3 mb-4">
                             <li>Contact us for even lower prices based on your needs</li>
                         </ul>
-                        <a href="/contuctUs" type="button" class="w-100 btn btn-lg btn-light">Contact us!</a>
+                        <a href="{{ route('contact.form') }}" type="button" class="w-100 btn btn-lg btn-light">Contact us!</a>
                     </div>
                 </div>
             </div>

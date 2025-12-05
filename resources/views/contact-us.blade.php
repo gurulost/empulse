@@ -1,12 +1,12 @@
 @extends('layouts.app')
 @section('title')
-    Contuct us!
+    Contact Us
 @endsection
 @section('content')
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.css" />
     <div class="d-flex align-items-center justify-content-center" style="height: 100vh; margin-left: 140px;">
         <div class="modal-dialog" role="document">
-            <div class="rounded-4 shadow contuctUs-window border" style="width: 500px;">
+            <div class="rounded-4 shadow contact-us-window border" style="width: 500px;">
                 <div class="modal-header p-5 pb-4 border-bottom-0">
                     <h1 class="fw-bold mb-0 fs-2">Send your data to us</h1>
                 </div>
@@ -36,5 +36,5 @@
     </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    <script src='{{asset('/js/contuctUs.js')}}' type="module"></script>
+    <script src='{{asset('/js/contactUs.js')}}' type="module"></script>
 @endsection

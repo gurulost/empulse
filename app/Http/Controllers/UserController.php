@@ -130,29 +130,9 @@ class UserController extends Controller
     }
 
     public function sendLetter($email, $name, $token) {
-        try {
-            $request = Http::withHeaders([
-                "api-key" => config('services.brevo.key'),
-                "Content-Type" => "application/json"
-            ])->post('https://api.brevo.com/v3/smtp/email', [
-                'sender' => [
-                    'name' => 'Workfitdx',
-                    'email' => 'billing@workfitdx.com'
-                ],
-                'to' => [
-                    [
-                        'email' => $email,
-                        'name' => $name
-                    ]
-                ],
-                'subject' => "Reset password",
-                'htmlContent' => view('auth.passwords.letter', ['name' => $name, 'email' => $email, 'token' => $token])->render()
-            ]);
-
-            return true;
-        } catch(\Exception $e) {
-            return $e->getMessage();
-        }
+        $emailService = app(\App\Services\EmailService::class);
+        $result = $emailService->sendPasswordReset($email, $name, $token);
+        return $result['status'] === 200 ? true : ($result['message'] ?? 'Email send failed');
     }
 
     // Removed custom password reset methods (using Laravel's Password Broker)
