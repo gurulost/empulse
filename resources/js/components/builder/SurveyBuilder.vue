@@ -152,9 +152,8 @@ const selectedType = ref(null); // 'page' or 'item'
 const refreshStructure = async () => {
     loading.value = true;
     try {
-        // Use prop or fallback to latest
         const id = structure.value.id || props.initialVersionId;
-        const { data } = await axios.get(`/builder/structure/${id}`);
+        const { data } = await axios.get(`/admin/builder/structure/${id}`);
         structure.value = data;
     } catch (e) {
         console.error(e);
@@ -177,9 +176,8 @@ const selectPage = (page) => {
 const saveItem = async (updatedItem) => {
     saving.value = true;
     try {
-        await axios.post(`/builder/item/${updatedItem.id}`, updatedItem);
-        await refreshStructure(); // Reload to see changes
-        // Re-select logic omitted for brevity, user will re-click
+        await axios.post(`/admin/builder/item/${updatedItem.id}`, updatedItem);
+        await refreshStructure();
         selectedItem.value = null; 
     } catch (e) {
         console.error(e);
@@ -192,9 +190,8 @@ const saveItem = async (updatedItem) => {
 const createDraft = async () => {
     if (!confirm('Create a new editable draft from this version?')) return;
     try {
-        const { data } = await axios.post(`/builder/draft/${props.surveyId}`);
-        // Switch to new draft
-        const { data: newStructure } = await axios.get(`/builder/structure/${data.draft_id}`);
+        const { data } = await axios.post(`/admin/builder/draft/${props.surveyId}`);
+        const { data: newStructure } = await axios.get(`/admin/builder/structure/${data.draft_id}`);
         structure.value = newStructure;
         selectedItem.value = null;
     } catch (e) {
@@ -206,7 +203,7 @@ const createDraft = async () => {
 const publishVersion = async () => {
     if (!confirm('Are you sure? This will make this version LIVE and collect real data.')) return;
     try {
-        await axios.post(`/builder/publish/${structure.value.id}`);
+        await axios.post(`/admin/builder/publish/${structure.value.id}`);
         refreshStructure();
     } catch (e) {
         console.error(e);
@@ -230,13 +227,13 @@ const moveItem = async (page, index, direction) => {
     page.items = items;
     
     try {
-        await axios.post('/builder/reorder', {
+        await axios.post('/admin/builder/reorder', {
             items: items.map(i => ({ id: i.id, sort_order: i.sort_order }))
         });
     } catch (e) {
         console.error(e);
         alert('Failed to reorder');
-        refreshStructure(); // Revert on failure
+        refreshStructure();
     }
 };
 

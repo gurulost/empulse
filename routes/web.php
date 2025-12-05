@@ -47,6 +47,10 @@ Auth::routes();
 Route::get('/', [WelcomeController::class, 'welcome'])->name('welcome');
 Route::get('/logout', [LoginController::class, 'logout'])->name('logout');
 
+Route::get('/contuctUs', [ContuctUsController::class, 'index'])->name('contact.form');
+Route::post('/contuctUs', [ContuctUsController::class, 'sendForm'])->name('contact.send');
+Route::get('/contuctUs/response', [ContuctUsController::class, 'response'])->name('contact.response');
+
 Route::get('/google', [SocialController::class, 'googleRedirect'])->name('auth.google');
 Route::get('/auth/google/callback', [SocialController::class, 'loginWithGoogle']);
 Route::get('/facebook', [FacebookController::class, 'facebookRedirect'])->name('auth.facebook');

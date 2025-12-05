@@ -52,28 +52,36 @@ function resetOldPassword() {
         const pass = $('#password').val();
         const confirm_pass = $('#password-confirm').val();
 
-        fetch(`https://empulse.workfitdx.com/users/resetPassword/confirm`, {
+        const token = window.location.pathname.split('/').pop();
+        fetch('/password/reset', {
             method: 'POST',
             headers: {
                 'Content-Type': "application/json",
-                'X-CSRF-TOKEN': $("meta[name='csrf-token']").attr('content')
+                'X-CSRF-TOKEN': $("meta[name='csrf-token']").attr('content'),
+                'Accept': 'application/json'
             },
             body: JSON.stringify({
                 email: email,
-                password: pass
+                password: pass,
+                password_confirmation: confirm_pass,
+                token: token
             })
         })
-            .then(response => response.json())
-            .then(result => {
-                if(result.status === 200) {
-                    toastr["success"]("Your password reset!", "SUCCESS!")
+            .then(response => {
+                const isSuccess = response.ok;
+                return response.json().then(data => ({ isSuccess, data }));
+            })
+            .then(({ isSuccess, data }) => {
+                if (isSuccess || data.status === 'passwords.reset') {
+                    toastr["success"]("Your password has been reset!", "SUCCESS!")
                     setTimeout(() => { window.location = '/login'; }, 1500);
                 } else {
-                    toastr["error"](result.message, "ERROR!")
+                    const errorMsg = data.message || data.errors?.password?.[0] || data.errors?.email?.[0] || "Failed to reset password";
+                    toastr["error"](errorMsg, "ERROR!")
                 }
             })
             .catch(error => {
-                toastr["error"](error, "ERROR!")
+                toastr["error"]("An error occurred. Please try again.", "ERROR!")
                 console.error(error)
             })
     })
