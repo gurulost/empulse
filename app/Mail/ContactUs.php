@@ -9,19 +9,14 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class ContuctUs extends Mailable
+class ContactUs extends Mailable
 {
     use Queueable, SerializesModels;
 
-
-    /**
-     * Create a new message instance.
-     *
-     * @return void
-     */
     public $name;
     public $email;
     public $phone;
+
     public function __construct($name, $email, $phone)
     {
         $this->name = $name;
@@ -31,19 +26,13 @@ class ContuctUs extends Mailable
 
     public function build()
     {
-        return $this->view('mail',
-            [
-                "name" => $this->name,
-                "email" => $this->email,
-                "phone" => $this->phone,
-            ]);
+        return $this->view('mail', [
+            "name" => $this->name,
+            "email" => $this->email,
+            "phone" => $this->phone,
+        ]);
     }
 
-    /**
-     * Get the message envelope.
-     *
-     * @return \Illuminate\Mail\Mailables\Envelope
-     */
     public function envelope()
     {
         return new Envelope(
@@ -51,11 +40,6 @@ class ContuctUs extends Mailable
         );
     }
 
-    /**
-     * Get the message content definition.
-     *
-     * @return \Illuminate\Mail\Mailables\Content
-     */
     public function content()
     {
         return new Content(
@@ -63,11 +47,6 @@ class ContuctUs extends Mailable
         );
     }
 
-    /**
-     * Get the attachments for the message.
-     *
-     * @return array
-     */
     public function attachments()
     {
         return [];

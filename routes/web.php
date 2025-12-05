@@ -19,7 +19,7 @@ use App\Http\Controllers\TeamleadController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\CompanyMainPageController;
 use App\Http\Controllers\PaymentController;
-use App\Http\Controllers\ContuctUsController;
+use App\Http\Controllers\ContactUsController;
 use App\Http\Controllers\WorkfitAdminController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\StripeWebhookController;
@@ -47,9 +47,12 @@ Auth::routes();
 Route::get('/', [WelcomeController::class, 'welcome'])->name('welcome');
 Route::get('/logout', [LoginController::class, 'logout'])->name('logout');
 
-Route::get('/contuctUs', [ContuctUsController::class, 'index'])->name('contact.form');
-Route::post('/contuctUs', [ContuctUsController::class, 'sendForm'])->name('contact.send');
-Route::get('/contuctUs/response', [ContuctUsController::class, 'response'])->name('contact.response');
+Route::get('/contact', [ContactUsController::class, 'index'])->name('contact.form');
+Route::post('/contact', [ContactUsController::class, 'sendForm'])->name('contact.send');
+Route::get('/contact/response', [ContactUsController::class, 'response'])->name('contact.response');
+
+Route::redirect('/contuctUs', '/contact');
+Route::redirect('/contuctUs/response', '/contact/response');
 
 Route::get('/google', [SocialController::class, 'googleRedirect'])->name('auth.google');
 Route::get('/auth/google/callback', [SocialController::class, 'loginWithGoogle']);

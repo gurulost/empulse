@@ -4,15 +4,19 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Validator;
-use App\Models\User;
+use App\Services\SocialAuthService;
 use Laravel\Socialite\Facades\Socialite;
 use Exception;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 
 class FacebookController extends Controller
 {
+    protected SocialAuthService $socialAuth;
+
+    public function __construct(SocialAuthService $socialAuth)
+    {
+        $this->socialAuth = $socialAuth;
+    }
+
     public function createCompanyId($email, $name, $companyTitle) {
         $companyId = DB::table("companies")->where("manager_email", $email)->first();
         if($companyId == null) {
@@ -74,34 +78,17 @@ class FacebookController extends Controller
         try {
             $fbUser = Socialite::driver('facebook')->user();
             
-            if (empty($fbUser->email)) {
-                \Session::put('facebook_auth_error', "Unable to retrieve email from Facebook account. Please ensure email permissions are granted.");
+            $result = $this->socialAuth->handleFacebookLogin(
+                $fbUser->id,
+                $fbUser->email,
+                $fbUser->name
+            );
+
+            if (!$result['success']) {
+                \Session::put('facebook_auth_error', $result['error']);
                 return redirect()->back();
             }
-            
-            $existingUser = User::where('fb_id', $fbUser->id)->first();
-            if ($existingUser) {
-                Auth::login($existingUser);
-                return redirect('/home');
-            }
 
-            $userByEmail = User::where('email', $fbUser->email)->first();
-            if ($userByEmail) {
-                $userByEmail->update(['fb_id' => $fbUser->id]);
-                Auth::login($userByEmail);
-                return redirect('/home');
-            }
-
-            $newUser = User::create([
-                'name' => $fbUser->name,
-                'email' => $fbUser->email,
-                'fb_id' => $fbUser->id,
-                'password' => Hash::make(\Illuminate\Support\Str::random(32)),
-                'role' => 4,
-                'company_id' => null,
-            ]);
-
-            Auth::login($newUser);
             return redirect('/home');
 
         } catch (\Exception $e) {

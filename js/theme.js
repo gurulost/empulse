@@ -12,9 +12,9 @@ function checkingBackColor() {
         $('.avatar-main').addClass('bg-black');
         $('.avatar-content').addClass(['bg-dark', 'text-white']);
         $('.payment-card').addClass('border-white').removeClass('border-dark');
-        $('.contuctUs-window').addClass(['bg-dark', 'text-white', 'border-white']);
-        $('.contuctUs-window').removeClass(['bg-white', 'text-dark', 'border-dark']);
-        $('.contuctUs-window .modal-body').addClass(['text-dark']);
+        $('.contact-us-window').addClass(['bg-dark', 'text-white', 'border-white']);
+        $('.contact-us-window').removeClass(['bg-white', 'text-dark', 'border-dark']);
+        $('.contact-us-window .modal-body').addClass(['text-dark']);
         $('.avatar-header-title').addClass(['bg-dark', 'text-white']);
         $('.avatar-card').addClass(['border', 'border-white', 'rounded-0']);
 
@@ -67,9 +67,9 @@ function checkingBackColor() {
         $(".sidebar-button-on-text").css("color", "#FFFFFF");
     } else {
         $('.payment-card').addClass('border-dark').removeClass('border-white');
-        $('.contuctUs-window').removeClass(['bg-dark', 'text-white', 'border-white']);
-        $('.contuctUs-window').addClass(['bg-white', 'text-dark', 'border-dark']);
-        $('.contuctUs-window .modal-body').addClass(['text-dark']);
+        $('.contact-us-window').removeClass(['bg-dark', 'text-white', 'border-white']);
+        $('.contact-us-window').addClass(['bg-white', 'text-dark', 'border-dark']);
+        $('.contact-us-window .modal-body').addClass(['text-dark']);
         $('.avatar-header-title').removeClass(['bg-dark', 'text-white']);
         $('.avatar-card').removeClass(['border', 'border-white', 'rounded-0']);
         $('.avatar-content').removeClass(['bg-dark', 'text-white']);
@@ -120,8 +120,47 @@ function checkingBackColor() {
         $(".box3-title").css("color", "black");
         $(".sidebar-button-on-text").css("color", "black");
     }
+}
 
-    requestAnimationFrame(checkingBackColor)
+window.addEventListener('storage', function(e) {
+    if (e.key === 'checked' || e.key === 'img') {
+        checkingBackColor();
+    }
+});
+
+$(document).on('change', 'input[name="xxx"], #xxx2', function() {
+    setTimeout(checkingBackColor, 50);
+});
+
+$(document).ready(function() {
+    checkingBackColor();
+    
+    var pendingThemeUpdate = null;
+    var observer = new MutationObserver(function(mutations) {
+        if (pendingThemeUpdate) {
+            clearTimeout(pendingThemeUpdate);
+        }
+        pendingThemeUpdate = setTimeout(function() {
+            checkingBackColor();
+            pendingThemeUpdate = null;
+        }, 100);
+    });
+    
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['class', 'style', 'data-bs-theme']
+    });
+    
+    $(document).ajaxComplete(function() {
+        checkingBackColor();
+    });
+    
+    $(document).on('shown.bs.modal hidden.bs.modal shown.bs.collapse hidden.bs.collapse', function() {
+        checkingBackColor();
+    });
+});
 
     // if (btn !== null) {
     //     $('head link[href="/css/theme-light.css"]').remove();
