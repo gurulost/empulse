@@ -1,0 +1,481 @@
+STACK
+CONTEXT
+FLARE
+SHARE
+Share with Flare
+Docs
+
+STACK
+
+CONTEXT
+
+DEBUG
+CREATE SHARE
+DOCS
+
+Ignition Settings
+Docs
+EDITOR
+
+
+THEME
+
+
+
+Auto
+SAVE SETTINGS
+Settings will be saved locally in ~/.ignition.json.
+SQLSTATE[HY000]: General error: 1 no such table: users (Connection: sqlite, SQL: select * from "users" where "email" = manager@acme.com limit 1)
+Illuminate
+ \ 
+Database
+ \ 
+QueryException
+PHP 8.2.23
+11.46.1
+SQLSTATE[HY000]: General error: 1 no such table: users
+SELECT * FROM "users" WHERE "email" = manager@acme.com limit 1
+
+
+
+
+Expand vendor frames
+44 vendor frames
+App
+ \ 
+Http
+ \ 
+Middleware
+ \ 
+RewriteAssetUrls
+ 
+: 19
+handle
+Illuminate
+ \ 
+Pipeline
+ \ 
+Pipeline
+ 
+: 209
+Illuminate\Pipeline\{closure}
+Illuminate
+ \ 
+Foundation
+ \ 
+Http
+ \ 
+Middleware
+ \ 
+TransformsRequest
+ 
+: 21
+handle
+Illuminate
+ \ 
+Foundation
+ \ 
+Http
+ \ 
+Middleware
+ \ 
+ConvertEmptyStringsToNull
+ 
+: 31
+handle
+Illuminate
+ \ 
+Pipeline
+ \ 
+Pipeline
+ 
+: 209
+Illuminate\Pipeline\{closure}
+Illuminate
+ \ 
+Foundation
+ \ 
+Http
+ \ 
+Middleware
+ \ 
+TransformsRequest
+ 
+: 21
+handle
+Illuminate
+ \ 
+Foundation
+ \ 
+Http
+ \ 
+Middleware
+ \ 
+TrimStrings
+ 
+: 51
+handle
+Illuminate
+ \ 
+Pipeline
+ \ 
+Pipeline
+ 
+: 209
+Illuminate\Pipeline\{closure}
+Illuminate
+ \ 
+Http
+ \ 
+Middleware
+ \ 
+ValidatePostSize
+ 
+: 27
+handle
+Illuminate
+ \ 
+Pipeline
+ \ 
+Pipeline
+ 
+: 209
+Illuminate\Pipeline\{closure}
+Illuminate
+ \ 
+Foundation
+ \ 
+Http
+ \ 
+Middleware
+ \ 
+PreventRequestsDuringMaintenance
+ 
+: 110
+handle
+Illuminate
+ \ 
+Pipeline
+ \ 
+Pipeline
+ 
+: 209
+Illuminate\Pipeline\{closure}
+Illuminate
+ \ 
+Http
+ \ 
+Middleware
+ \ 
+HandleCors
+ 
+: 49
+handle
+Illuminate
+ \ 
+Pipeline
+ \ 
+Pipeline
+ 
+: 209
+Illuminate\Pipeline\{closure}
+Illuminate
+ \ 
+Http
+ \ 
+Middleware
+ \ 
+TrustProxies
+ 
+: 58
+handle
+Illuminate
+ \ 
+Pipeline
+ \ 
+Pipeline
+ 
+: 209
+Illuminate\Pipeline\{closure}
+Illuminate
+ \ 
+Foundation
+ \ 
+Http
+ \ 
+Middleware
+ \ 
+InvokeDeferredCallbacks
+ 
+: 22
+handle
+Illuminate
+ \ 
+Pipeline
+ \ 
+Pipeline
+ 
+: 209
+Illuminate\Pipeline\{closure}
+Illuminate
+ \ 
+Pipeline
+ \ 
+Pipeline
+ 
+: 127
+then
+Illuminate
+ \ 
+Foundation
+ \ 
+Http
+ \ 
+Kernel
+ 
+: 176
+sendRequestThroughRouter
+Illuminate
+ \ 
+Foundation
+ \ 
+Http
+ \ 
+Kernel
+ 
+: 145
+handle
+public
+ / 
+index
+.php
+ 
+: 51
+require_once
+1 vendor frame
+app
+ / 
+Http
+ / 
+Middleware
+ / 
+RewriteAssetUrls
+.php
+ 
+: 19
+
+
+
+use Closure;
+
+use Illuminate\Contracts\View\View;
+
+use Illuminate\Http\Request;
+
+use Symfony\Component\HttpFoundation\Response;
+
+
+
+class RewriteAssetUrls
+
+{
+
+    /**
+
+     * Handle an incoming request.
+
+     *
+
+     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+
+     */
+
+    public function handle(Request $request, Closure $next): Response
+
+    {
+
+        $response = $next($request);
+
+
+
+        if (!$this->shouldRewrite($response)) {
+
+            return $response;
+
+        }
+
+
+
+        $content = $response->getContent();
+
+        if ($content === false || $content === null) {
+
+            return $response;
+
+        }
+
+
+
+        $original = method_exists($response, 'getOriginalContent')
+
+            ? $response->getOriginalContent()
+
+            : null;
+
+ARGUMENTS
+$arg0:Illuminate\Http\Request
+POST http://2f4bcbb6-840b-4541-acf0-aebf9a63cd35-00-tdkek61qrrj7.spock.replit.dev/login
+
+APP
+
+Routing
+REQUEST
+
+Browser
+
+Headers
+
+Body
+CONTEXT
+
+Git
+
+Versions
+
+Exception
+APP
+Routing
+
+Controller
+App\Http\Controllers\Auth\LoginController@login
+
+Middleware
+web
+
+guest
+
+REQUEST
+http://2f4bcbb6-840b-4541-acf0-aebf9a63cd35-00-tdkek61qrrj7.spock.replit.dev/login
+POST
+curl "http://2f4bcbb6-840b-4541-acf0-aebf9a63cd35-00-tdkek61qrrj7.spock.replit.dev/login" \
+   -X POST \
+   -H 'host: 2f4bcbb6-840b-4541-acf0-aebf9a63cd35-00-tdkek61qrrj7.spock.replit.dev' \
+   -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Safari/605.1.15' \
+   -H 'content-length: 90' \
+   -H 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' \
+   -H 'accept-encoding: gzip, deflate, br' \
+   -H 'accept-language: en-US,en;q=0.9' \
+   -H 'content-type: application/x-www-form-urlencoded' \
+   -H 'cookie: <CENSORED>' \
+   -H 'origin: https://2f4bcbb6-840b-4541-acf0-aebf9a63cd35-00-tdkek61qrrj7.spock.replit.dev' \
+   -H 'priority: u=0, i' \
+   -H 'sec-fetch-dest: document' \
+   -H 'sec-fetch-mode: navigate' \
+   -H 'sec-fetch-site: same-origin' \
+   -H 'upgrade-insecure-requests: 1' \
+   -H 'x-forwarded-for: 104.28.57.72, 10.82.11.35' \
+   -H 'x-forwarded-proto: https' \
+   -F '_token=3xb1t0Zn6q01tszenkt53Ld7Itw9loZMoWw1eNMq' -F 'email=manager@acme.com' -F 'password=<CENSORED>'
+
+
+Browser
+
+Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Safari/605.1.15
+
+Headers
+
+host
+2f4bcbb6-840b-4541-acf0-aebf9a63cd35-00-tdkek61qrrj7.spock.replit.dev
+
+user-agent
+Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Safari/605.1.15
+
+content-length
+90
+
+accept
+text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+
+accept-encoding
+gzip, deflate, br
+
+accept-language
+en-US,en;q=0.9
+
+content-type
+application/x-www-form-urlencoded
+
+cookie
+<CENSORED>
+
+origin
+https://2f4bcbb6-840b-4541-acf0-aebf9a63cd35-00-tdkek61qrrj7.spock.replit.dev
+
+priority
+u=0, i
+
+sec-fetch-dest
+document
+
+sec-fetch-mode
+navigate
+
+sec-fetch-site
+same-origin
+
+upgrade-insecure-requests
+1
+
+x-forwarded-for
+104.28.57.72, 10.82.11.35
+
+x-forwarded-proto
+https
+
+Body
+
+{
+    "_token": "3xb1t0Zn6q01tszenkt53Ld7Itw9loZMoWw1eNMq",
+    "email": "manager@acme.com",
+    "password": "<CENSORED>"
+}
+
+CONTEXT
+Git
+
+Securely handle API keys and improve UI consistency
+9827c0652b9504934580620484931025e1e42481
+
+View commit 9827c06
+Versions
+
+Php Version
+8.2.23
+
+Laravel Version
+11.46.1
+
+Laravel Locale
+en
+
+Laravel Config Cached
+
+false
+App Debug
+
+true
+App Env
+local
+
+Exception
+
+Raw Sql
+select * from "users" where "email" = ? limit 1
+
+·
+SOURCE
+·
+DOCS
+·
+LARAVEL
+Ignition is built byFlare, the Laravel error reporting service.
