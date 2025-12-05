@@ -14,8 +14,17 @@ class BillingController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $intent = $user->createSetupIntent();
-        $activeSubscription = $user->subscriptions()->active()->first();
+        $intent = null;
+        $activeSubscription = null;
+        
+        try {
+            if (config('services.stripe.secret')) {
+                $intent = $user->createSetupIntent();
+                $activeSubscription = $user->subscriptions()->active()->first();
+            }
+        } catch (\Exception $e) {
+            \Log::warning('Stripe billing setup failed', ['error' => $e->getMessage()]);
+        }
 
         return view('billing.index', [
             'user' => $user,

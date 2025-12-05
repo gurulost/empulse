@@ -286,4 +286,111 @@ class TeamController extends Controller
 
         return $company;
     }
+
+    public function deleteMemberLegacy($email)
+    {
+        try {
+            $company = $this->authorizeCompany('manageMembers');
+            $companyId = $company->id;
+            $companyTitle = $company->title ?? Auth::user()->company_title;
+
+            $user = User::where('email', $email)->first();
+            if ($user) {
+                $this->authorize('delete', $user);
+            }
+
+            $success = $this->userService->deleteByEmail($email, $companyId, $companyTitle, 'company_department', 'company_worker');
+
+            if ($success) {
+                return response()->json(['status' => 200, 'message' => 'Member deleted successfully']);
+            }
+
+            return response()->json(['status' => 500, 'message' => 'Failed to delete member']);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 500, 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function getMembersLegacy(Request $request)
+    {
+        try {
+            $company = $this->authorizeCompany('manageMembers');
+            $companyId = $company->id;
+            $authRole = Auth::user()->role;
+            $authEmail = Auth::user()->email;
+            $authName = Auth::user()->name;
+
+            $query = DB::table('company_worker')
+                ->where('company_id', $companyId)
+                ->select('id', 'name', 'email', 'role', 'department');
+
+            if ($authRole == 1) {
+                // Manager sees all
+            } elseif ($authRole == 2) {
+                $department = DB::table('company_worker')->where(['company_id' => $companyId, 'email' => $authEmail])->value('department');
+                $query->where('department', $department)->whereIn('role', [3, 4]);
+            } elseif ($authRole == 3) {
+                $query->where(['role' => 4, 'supervisor' => $authName]);
+            }
+
+            $members = $query->orderBy('name', 'asc')->paginate(25);
+
+            return view('team.partials.members-table', ['users' => $members]);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 500, 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function getDepartmentsLegacy(Request $request)
+    {
+        try {
+            $company = $this->authorizeCompany('manageDepartments');
+            $departments = DB::table('company_department')
+                ->where('company_id', $company->id)
+                ->orderBy('id', 'desc')
+                ->paginate(10);
+
+            return view('team.partials.departments-table', ['departments' => $departments]);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 500, 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function addDepartmentLegacy(Request $request)
+    {
+        try {
+            $company = $this->authorizeCompany('manageDepartments');
+            $title = $request->input('title');
+
+            if (empty($title) || strlen($title) > 30) {
+                return response()->json(['status' => 500, 'message' => 'Invalid department title']);
+            }
+
+            $result = $this->departmentService->add($company->id, $title);
+
+            if ($result['status'] === 500) {
+                return response()->json(['status' => 500, 'message' => $result['message']]);
+            }
+
+            return response()->json(['status' => 200, 'message' => 'Department added successfully']);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 500, 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function deleteDepartmentLegacy($title)
+    {
+        try {
+            $company = $this->authorizeCompany('manageDepartments');
+            $result = $this->departmentService->delete($company->id, $title);
+
+            if ($result['status'] === 500) {
+                return redirect()->back()->with('error', $result['message']);
+            }
+
+            return redirect()->back()->with('success', 'Department deleted successfully');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+    }
 }

@@ -70,14 +70,14 @@ function form_validation() {
     const buttonForConfirm = $(".form-confirm-pass-btn");
 
     function disabledForm() {
-        const new_pass_value = new_pass.val();
-        const conf_new_pass_value = conf_new_pass.val();
-        const name_value = name.val();
-        const email_value = email.val();
+        const new_pass_value = new_pass.val() || '';
+        const conf_new_pass_value = conf_new_pass.val() || '';
+        const name_value = name.val() || '';
+        const email_value = email.val() || '';
 
 
-        if(companyTitle !== null) {
-            const companyTitle_value = companyTitle.val();
+        if(companyTitle.length > 0) {
+            const companyTitle_value = companyTitle.val() || '';
 
             if (companyTitle_value.replace(/\s/g, "").length === 0 && name_value.replace(/\s/g, "").length === 0 && email_value.replace(/\s/g, "").length === 0 && new_pass_value.replace(/\s/g, "").length === 0 && conf_new_pass_value.replace(/\s/g, "").length === 0) {
                 buttonForConfirm.prop("disabled", true);
@@ -97,7 +97,7 @@ function form_validation() {
     new_pass.on("input", disabledForm);
     name.on("input", disabledForm);
     email.on("input", disabledForm);
-    companyTitle !== null ? companyTitle.on("input", disabledForm) : false;
+    if (companyTitle.length > 0) { companyTitle.on("input", disabledForm); }
 }
 
 function emptyFields() {

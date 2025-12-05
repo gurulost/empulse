@@ -2,7 +2,7 @@ var deleteWorkerEmail = null;
 $(document).on('click', '.confirmDeleteWorker', function (){
     setTimeout(function (){$('#bootModal').removeClass('d-none').css('z-index', 10000);}, 250);
     deleteWorkerEmail = $(this).attr('item_value');
-    parent = $(this).parent().parent();
+    var parentRow = $(this).parent().parent();
     // $(".modal-content").css("margin-left", "100px");
     if (deleteWorkerEmail) {
         $('#bootModal .modal-title').text('Delete employee');
@@ -129,14 +129,12 @@ function cutTextIfTooLong(className) {
             $cell.text(text);
         }
     });
-
-    requestAnimationFrame(function () {
-        cutTextIfTooLong(className);
-    });
 }
 
-cutTextIfTooLong('p-name');
-cutTextIfTooLong('p-email');
+$(document).ready(function() {
+    cutTextIfTooLong('p-name');
+    cutTextIfTooLong('p-email');
+});
 
 window.onload = () => {
     $('.table-responsive').removeClass('d-none').addClass('d-block');

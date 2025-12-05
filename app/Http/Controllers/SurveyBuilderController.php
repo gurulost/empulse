@@ -15,7 +15,7 @@ class SurveyBuilderController extends Controller
 
     public function __construct(SurveyService $surveyService)
     {
-        $this->middleware(['auth', 'admin']);
+        $this->middleware(['auth', 'workfit_admin']);
         $this->surveyService = $surveyService;
     }
 
