@@ -39,6 +39,23 @@ Multi-tenant Laravel 11 application with Vue.js frontend for company onboarding,
 - ✅ **Cleaned Up Tailwind Templates:** Removed unused Tailwind pagination templates from `resources/views/vendor/pagination/`
 - ✅ **Enhanced Vite Config:** Added `allowedHosts: true` for better Replit iframe compatibility
 
+## Recent Changes (December 5, 2025)
+- ✅ **Fixed Database Connection:** Created PostgreSQL database and configured proper connection
+  - Application was incorrectly trying to use SQLite; now properly uses PostgreSQL via DATABASE_URL
+  - Cleared configuration cache to apply new database settings
+  - All 29 tables present with 7 test users seeded
+- ✅ **Security Fix - Removed Hardcoded API Key:** 
+  - Moved Brevo API key from hardcoded value to environment variable
+  - Updated `ContuctUsController.php` to use `config('services.brevo.key')`
+  - Added Brevo configuration to `config/services.php`
+  - ⚠️ **IMPORTANT:** The exposed API key must be rotated in Brevo dashboard
+- ✅ **Code Quality Fixes:**
+  - Fixed `env()` usage in `EmailService.php` - now uses `config('services.brevo.key')`
+  - Fixed `env()` usage in `UserController.php` - now uses `config('services.brevo.key')`
+  - Using `config()` instead of `env()` is Laravel best practice (works with config caching)
+- ✅ **Cleanup:**
+  - Removed unused `js_old/` directory
+
 ## Project Architecture
 
 ### Stack

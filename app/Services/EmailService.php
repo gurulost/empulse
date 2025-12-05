@@ -9,13 +9,13 @@ class EmailService
 {
     public function sendLetter(string $email, string $name, string $subject, string $content): array
     {
-        if (App::environment('testing') || empty(env('BREVO_API_KEY'))) {
+        if (App::environment('testing') || empty(config('services.brevo.key'))) {
             return ['status' => 200];
         }
 
         try {
             $response = Http::withHeaders([
-                'api-key' => env("BREVO_API_KEY"),
+                'api-key' => config('services.brevo.key'),
                 'Content-Type' => 'application/json'
             ])->post('https://api.brevo.com/v3/smtp/email', [
                 'sender' => [
