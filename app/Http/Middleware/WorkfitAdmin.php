@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class WorkfitAdmin
 {
@@ -16,8 +17,7 @@ class WorkfitAdmin
      */
     public function handle(Request $request, Closure $next)
     {
-        // Allow only authenticated users with is_admin === 1
-        if (!\Auth::check() || (int)\Auth::user()->is_admin !== 1) {
+        if (!Auth::check() || (int)Auth::user()->is_admin !== 1) {
             return redirect('/home');
         }
 

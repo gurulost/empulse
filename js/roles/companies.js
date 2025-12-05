@@ -1,3 +1,10 @@
+/**
+ * DEPRECATED: This file is legacy code. The routes it references
+ * (/companies/delete, /companies/delete/manager) no longer exist.
+ * Modern company management uses Vue components in AdminDashboard.vue.
+ * This file is kept for reference but should not be used in production.
+ */
+
 $(document).on("click", ".addNewCompany", function(e) {
     $('#bootModal').addClass('d-none').css('z-index', 0);
     e.preventDefault();
@@ -21,7 +28,9 @@ $(document).on('click', '.confirmDeleteCompany', function (){
         }
         onConfirmModal = function () {
             if (deleteCompanyName !== null && deleteCompanyName != '') {
-                window.location.href = `/companies/delete/${deleteCompanyName}`;
+                console.warn('DEPRECATED: /companies/delete route no longer exists. Use Admin Dashboard instead.');
+                alert('This feature has been moved to the Admin Dashboard. Please use the modern interface.');
+                $('#bootModal').addClass('d-none').css('z-index', 0);
             }
         }
         setModalListeners();
@@ -42,7 +51,9 @@ $(document).on('click', '.confirmDeleteManager', function (){
         }
         onConfirmModal = function () {
             if (deleteCompanyManagerName !== null && deleteCompanyManagerName != '') {
-                window.location.href = `/companies/delete/manager/${deleteCompanyManagerName}`;
+                console.warn('DEPRECATED: /companies/delete/manager route no longer exists. Use Admin Dashboard instead.');
+                alert('This feature has been moved to the Admin Dashboard. Please use the modern interface.');
+                $('#bootModal').addClass('d-none').css('z-index', 0);
             }
         }
         setModalListeners();
