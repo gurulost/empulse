@@ -38,6 +38,11 @@ Empulse (Workfitdx) is a multi-tenant Laravel 11 application with a Vue.js front
     - `handleGoogleLogin()` and `handleFacebookLogin()` methods
     - Updated `SocialController` and `FacebookController` to use the service
 18. **Theme.js Performance Fix**: Replaced infinite `requestAnimationFrame` loop with proper event listeners and MutationObserver (auto-disconnects after 5 seconds)
+19. **Auth Facade Imports (Dec 2024)**: Added missing Auth facade imports to all middleware files (Admin, Chief, Manager, Teamlead, WorkfitAdmin) - critical fix that would cause 500 errors on all authenticated routes.
+20. **Middleware Role Modernization**: Updated Chief, Manager, Teamlead middleware to use integer role field instead of deprecated boolean properties (chief, manager, teamlead).
+21. **Legacy Companies.js Deprecation**: Marked js/roles/companies.js as deprecated with warnings - orphaned routes (/companies/delete, /companies/delete/manager) replaced by Vue AdminDashboard.
+22. **UserController Import Fix**: Added missing ModelNotFoundException import for proper error handling.
+23. **User Model SurveyService Fix**: Added missing SurveyService import for surveyLink() method.
 
 ### Known Issues / Technical Debt
 - **CRITICAL SECURITY**: Brevo API key should be rotated quarterly (rotation pending)
