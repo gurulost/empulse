@@ -99,6 +99,18 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('/export/{role}', [UserController::class, 'exportTable']);
     });
 
+    Route::group(['prefix' => 'users'], function () {
+        Route::get('/delete/{email}', [TeamController::class, 'deleteMemberLegacy'])->name('users.delete');
+        Route::get('/list', [TeamController::class, 'getMembersLegacy'])->name('users.list');
+        Route::post('/import', [TeamController::class, 'importUsers'])->name('users.import');
+    });
+
+    Route::group(['prefix' => 'departments'], function () {
+        Route::get('/list', [TeamController::class, 'getDepartmentsLegacy'])->name('departments.list');
+        Route::post('/', [TeamController::class, 'addDepartmentLegacy'])->name('departments.store');
+        Route::get('/delete/{title}', [TeamController::class, 'deleteDepartmentLegacy'])->name('departments.delete');
+    });
+
     Route::group(['prefix' => 'payment', 'middleware' => 'admin'], function() {
         Route::get('/', [PaymentController::class, 'payment'])->name('payment')->middleware('payment');
         Route::get('/payment-success', [PaymentController::class, 'payment_success'])->name('payment-success');

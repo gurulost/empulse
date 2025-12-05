@@ -61,10 +61,8 @@ class User extends Authenticatable
     }
 
     public function user_role($email) {
-        global $role;
-
         $user = User::where("email", $email)->first();
-        $role = $user["role"];
+        $role = $user ? $user->role : null;
 
         return $role;
     }
@@ -72,12 +70,12 @@ class User extends Authenticatable
     public function uploadCoworkers($name, $email, $companyId, $company, $companyDepartmentTable, $companyWorkerTable)
     {
         $role = $this->user_role($email);
-        global $users;
-        global $departments;
-        global $manager;
-        global $department;
-        global $chief;
-        global $teamlead_department;
+        $users = null;
+        $departments = null;
+        $manager = null;
+        $department = null;
+        $chief = null;
+        $teamlead_department = null;
 
         if(!$company) {
             return [
@@ -156,8 +154,8 @@ class User extends Authenticatable
 
     public function usersPagination($name, $email, $companyId, $company, $companyDepartmentTable, $companyWorkerTable) {
         $role = $this->user_role($email);
-        global $users;
-        global $departments;
+        $users = null;
+        $departments = null;
 
         if(!$company) {
             return [
@@ -169,7 +167,7 @@ class User extends Authenticatable
         $departments = DB::table($companyDepartmentTable)->where(['company_id'=>$companyId])->select("title")->get();
 
         if($role == 1) {
-            $users = DB::table($this->companyWorkerTable)
+            $users = DB::table($companyWorkerTable)
                 ->select('*')
                 ->where(function ($query) use ($companyId, $email) {
                     $query->where('company_id', $companyId)

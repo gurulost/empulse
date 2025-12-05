@@ -49,7 +49,12 @@ class ContuctUsController extends Controller
         );
 
         sleep(4);
-        return redirect('home');
+        
+        if (\Auth::check()) {
+            return redirect('home');
+        }
+        
+        return redirect()->route('contact.response');
     }
 
     public function response()
