@@ -12,14 +12,14 @@
                 </div>
 
                 <div class="modal-body p-5 pt-0">
-                    <form method="POST" action="">
+                    <form method="POST" action="{{ route('contact.send') }}">
                         @csrf
                         <div class="form-floating mb-3">
-                            <input id="name" type="text" name="name" class="form-control" value="{{Auth::user()->name}}">
+                            <input id="name" type="text" name="name" class="form-control" value="{{ Auth::check() ? Auth::user()->name : '' }}" required>
                             <label for="floatingInput">Name</label>
                         </div>
                         <div class="form-floating mb-3">
-                            <input id="email" type="text" name="email" class="form-control" value="{{Auth::user()->email}}" >
+                            <input id="email" type="email" name="email" class="form-control" value="{{ Auth::check() ? Auth::user()->email : '' }}" required>
                             <label for="floatingPassword">Email</label>
                         </div>
                         <div class="form-floating mb-3">

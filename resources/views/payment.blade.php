@@ -3,31 +3,6 @@
     Our offers
 @endsection
 @section('content')
-    <?php
-
-    require_once __DIR__.'/../../../vendor/autoload.php';
-
-    $stripe_secret = config('services.stripe.secret');
-    $stripe = new \Stripe\StripeClient($stripe_secret);
-
-    $checkout_session_management = $stripe->checkout->sessions->create([
-        'payment_method_types' => ['card'],
-        'line_items' => [[
-            'price_data' => [
-                'currency' => 'usd',
-                'product_data' => [
-                    'name' => 'Management Subscription',
-                ],
-                'unit_amount' => 19900,
-            ],
-            'quantity' => 1,
-        ]],
-        'mode' => 'payment',
-        'success_url' => route('payment-success'),
-        'cancel_url' => route('payment_error'),
-    ]);
-
-    ?>
 
 
 
@@ -104,18 +79,15 @@
 
     <script src="https://js.stripe.com/v3/"></script>
     <script type="text/javascript">
-
         $(document).ready(function() {
-
             const stripe = Stripe("{{ config('services.stripe.key') }}");
             $(".checkout-management").on("click", function(e) {
                 e.preventDefault();
                 stripe.redirectToCheckout({
-                    sessionId: "<?php echo $checkout_session_management->id ?>"
+                    sessionId: "{{ $checkoutSessionId }}"
                 });
             });
         });
-
     </script>
 
     <!-- end stripe -->

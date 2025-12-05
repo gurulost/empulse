@@ -42,13 +42,23 @@ $("form").submit(async (e) => {
     }
 
     var email = document.getElementById("email").value;
-    var request = await fetch(`/users/resetPassword/${email}`);
+    var csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    
+    var request = await fetch('/password/email', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': csrfToken,
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({ email: email })
+    });
     var response = await request.json();
 
-    if(response.status === 200) {
+    if(request.ok || response.status === 'We have emailed your password reset link.') {
         toastr["success"]("Message sent to your email!", "SUCCESS!")
         setTimeout(() => { window.location = '/login'; }, 1500);
     } else {
-        toastr["error"](response.message, "WARNING!")
+        toastr["error"](response.message || response.email?.[0] || "Failed to send reset email", "WARNING!")
     }
 })

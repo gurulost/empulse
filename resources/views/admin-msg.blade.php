@@ -75,7 +75,7 @@
             <div class="lp-block">
                 <p>Your personal login: <span>{{$email}}</span></p>
                 @if($password !== null) <p>Your personal password: <span>{{$password}}</span></p> @endif
-                <a href="https://empulse.workfitdx.com/login" class='href' target="_blank">You can authorize yourself here!</a>
+                <a href="{{ config('app.url') }}/login" class='href' target="_blank">You can authorize yourself here!</a>
             </div>
 
             @if($status !== 'company manager')
