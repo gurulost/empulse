@@ -3,6 +3,6 @@
 
     <p><strong>To reset your password, click on the button below.</strong></p>
 
-    <a href="{{env('APP_URL')}}users/reset/{{$email}}/{{$token}}" target="_blank" style="border: 1px solid orange; border-radius: 10px; padding: 5px; background-color: orange; color: white; text-decoration: none;">Reset</a>
+    <a href="{{ config('app.url') }}/password/reset/{{ $token }}?email={{ urlencode($email) }}" target="_blank" style="border: 1px solid orange; border-radius: 10px; padding: 5px; background-color: orange; color: white; text-decoration: none;">Reset</a>
 </div>
 

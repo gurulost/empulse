@@ -7,8 +7,8 @@
 
     require_once __DIR__.'/../../../vendor/autoload.php';
 
-    $stripe_secret = env('STRIPE_SECRET');
-    $stripe = new \Stripe\StripeClient("$stripe_secret");
+    $stripe_secret = config('services.stripe.secret');
+    $stripe = new \Stripe\StripeClient($stripe_secret);
 
     $checkout_session_management = $stripe->checkout->sessions->create([
         'payment_method_types' => ['card'],
@@ -107,7 +107,7 @@
 
         $(document).ready(function() {
 
-            const stripe = Stripe("{{env('STRIPE_KEY')}}");
+            const stripe = Stripe("{{ config('services.stripe.key') }}");
             $(".checkout-management").on("click", function(e) {
                 e.preventDefault();
                 stripe.redirectToCheckout({

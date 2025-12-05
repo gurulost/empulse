@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Request;
+use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\WelcomeController;

@@ -5,7 +5,7 @@ Your department: {{$department}}.
 <br />
 
 @php
-    $link = $link ?? (env('TEST_URL') ?? '#');
+    $link = $link ?? (config('app.test_url') ?? '#');
 @endphp
 
 <p><i>This is where you need to take <a href="{{ $link }}" target="_blank" rel="noreferrer">the test</a></i></p><br />
