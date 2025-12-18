@@ -23,7 +23,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "php artisan serve --host=0.0.0.0 --port=5000"
+args = "php artisan app:install --seed-if-empty --force && php artisan serve --host=0.0.0.0 --port=5000"
 waitForPort = 5000
 
 [workflows.workflow.metadata]
@@ -43,5 +43,5 @@ externalPort = 3001
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["php", "artisan", "serve", "--host=0.0.0.0", "--port=5000"]
+run = ["bash", "-lc", "APP_DEBUG=false php artisan app:install --seed-if-empty --force && APP_DEBUG=false php artisan serve --host=0.0.0.0 --port=5000"]
 build = ["npm", "run", "build"]

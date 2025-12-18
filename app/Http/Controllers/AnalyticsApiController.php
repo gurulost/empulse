@@ -20,8 +20,13 @@ class AnalyticsApiController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-        
-        if (!$user || !$user->company_id) {
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        $isSuperAdmin = (int) $user->role === 0;
+
+        if (!$isSuperAdmin && !$user->company_id) {
             return response()->json(['message' => 'User must be associated with a company.'], 422);
         }
 
@@ -33,7 +38,6 @@ class AnalyticsApiController extends Controller
 
         // Authorization: Super Admins (role 0) can view any company
         // All other users can only view their own company
-        $isSuperAdmin = (int) $user->role === 0;
         $isOwnCompany = (int) $user->company_id === (int) $companyId;
 
         if (!$isSuperAdmin && !$isOwnCompany) {
