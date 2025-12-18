@@ -48,13 +48,13 @@
                     </a>
                 </li>
                 <li v-if="isManager">
-                    <a href="/builder" class="nav-link" :class="{ active: currentRoute.startsWith('builder') }">
+                    <a href="/admin/builder" class="nav-link" :class="{ active: currentRoute.startsWith('admin.builder') }">
                         <i class="bi bi-ui-checks me-3"></i>
                         Survey Builder
                     </a>
                 </li>
                 <li>
-                    <a href="/users" class="nav-link" :class="{ active: currentRoute === 'users' }">
+                    <a href="/team/manage" class="nav-link" :class="{ active: currentRoute.startsWith('team.') }">
                         <i class="bi bi-people me-3"></i>
                         Team
                     </a>
