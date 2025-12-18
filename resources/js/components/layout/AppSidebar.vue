@@ -15,7 +15,7 @@
             <!-- Logo -->
             <div class="d-flex align-items-center mb-4 px-2">
                 <a href="/" class="d-flex align-items-center text-white text-decoration-none">
-                    <img src="/images/empulse-logo.png" alt="Empulse" height="40">
+                    <img :src="empulseLogo" alt="Empulse" height="40">
                 </a>
                 <button class="btn btn-sm btn-link text-white-50 d-md-none ms-auto" @click="closeSidebar">
                     <i class="bi bi-x-lg"></i>
@@ -81,6 +81,7 @@
 
 <script setup>
 import { ref } from 'vue';
+import empulseLogo from '@assets/empulse-logo.png';
 
 const props = defineProps({
     user: { type: Object, required: true },
