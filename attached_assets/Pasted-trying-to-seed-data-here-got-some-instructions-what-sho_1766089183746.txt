@@ -1,0 +1,44 @@
+trying to seed data here, got some instructions, what should we do? I did it locally be we need it to be on the deployed site: 
+  Commands to get everything “show-off ready”
+
+  cd "/Users/davedixon/Downloads/empulse code"
+
+  php artisan app:install --seed-if-empty --force
+  php artisan demo:seed --import-instrument --employees=120 --months=6 --force
+  npm run build
+
+If you ran php artisan demo:seed ... on your Mac, it populated your local Postgres
+    (DB_HOST=127.0.0.1), so only your local app sees that data.
+  - For “anyone from anywhere” to log into the hosted site and see the full demo company
+    data, you must run the demo seed on the hosted environment against its database
+    (Replit/production Postgres).
+
+  Run this on the server (Replit Shell / production console) in the deployed app
+  directory:
+
+  php artisan app:install --force
+  php artisan demo:seed --import-instrument --employees=120 --months=6 --force
+
+  After that, those logins (all password password) will exist in that server DB and will
+  be shared for anyone who logs into that same deployed site:
+  admin@workfit.com, manager@acme.com, chief@acme.com, lead@acme.com, employee1@acme.com,
+  employee2@acme.com, employee3@acme.com.
+
+• That output means: your local database (empulse_dev on 127.0.0.1) is now populated with
+  the full Acme demo company + waves/responses, and those logins should work on your local
+  app.
+
+  For “anyone from anywhere” to see the same fully-populated data using those logins,
+  they must be hitting a deployed site that’s connected to the same seeded database. If
+  your public site is on Replit/Heroku/etc, you need to run the same seed there (in that
+  environment’s shell) so it populates that Postgres:
+
+  php artisan app:install --force
+  php artisan demo:seed --import-instrument --employees=120 --months=6 --force
+
+  Notes:
+
+  - app:install --seed-if-empty said “Skipping seeders.” because your DB already had
+    users; that’s expected and fine since demo:seed did the real demo population.
+  - The Sass deprecation warnings during npm run build are not breaking errors; build
+    succeeded.
