@@ -44,3 +44,10 @@ build = ["npm", "run", "build"]
 DB_CONNECTION = "pgsql"
 
 [userenv.production]
+
+[userenv.development]
+DB_HOST = "helium"
+DB_DATABASE = "heliumdb"
+DB_USERNAME = "postgres"
+DB_PASSWORD = "password"
+DB_PORT = "5432"
