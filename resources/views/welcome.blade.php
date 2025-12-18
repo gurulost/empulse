@@ -162,7 +162,7 @@
     <section class="py-5 bg-dark text-white position-relative overflow-hidden">
         <div class="position-absolute top-0 start-0 w-100 h-100 opacity-10" style="background: radial-gradient(circle at top right, #4f46e5, transparent 40%), radial-gradient(circle at bottom left, #06b6d4, transparent 40%);"></div>
         <div class="container py-5 position-relative z-2 text-center">
-            <h2 class="display-4 fw-bold mb-4">Ready to transform your workplace?</h2>
+            <h2 class="display-4 fw-bold mb-4 text-white">Ready to transform your workplace?</h2>
             <p class="lead text-white-50 mb-5 mx-auto" style="max-width: 600px;">
                 Join thousands of companies using Empulse to build happier, more productive teams.
             </p>
