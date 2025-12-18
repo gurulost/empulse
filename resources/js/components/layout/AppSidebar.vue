@@ -27,30 +27,30 @@
             <!-- Navigation -->
             <ul class="nav nav-pills flex-column mb-auto gap-2">
                 <li class="nav-item">
-                    <a href="/home" class="nav-link" :class="{ active: currentRoute === 'home' }">
+                    <a :href="dashboardHref" class="nav-link" :class="{ active: isEmployee ? currentRoute.startsWith('employee') : currentRoute === 'home' }">
                         <i class="bi bi-speedometer2 me-3"></i>
                         Dashboard
                     </a>
                 </li>
-                <li>
+                <li v-if="!isEmployee">
                     <a href="/reports" class="nav-link" :class="{ active: currentRoute.startsWith('reports') }">
                         <i class="bi bi-graph-up me-3"></i>
                         Analytics & Reports
                     </a>
                 </li>
-                <li v-if="isAdmin">
+                <li v-if="isWorkfitAdmin">
                     <a href="/admin" class="nav-link" :class="{ active: currentRoute.startsWith('admin') }">
                         <i class="bi bi-shield-lock me-3"></i>
                         Admin Panel
                     </a>
                 </li>
-                <li v-if="isManager">
+                <li v-if="isWorkfitAdmin">
                     <a href="/admin/builder" class="nav-link" :class="{ active: currentRoute.startsWith('admin.builder') }">
                         <i class="bi bi-ui-checks me-3"></i>
                         Survey Builder
                     </a>
                 </li>
-                <li>
+                <li v-if="!isEmployee">
                     <a href="/team/manage" class="nav-link" :class="{ active: currentRoute.startsWith('team.') }">
                         <i class="bi bi-people me-3"></i>
                         Team
@@ -80,7 +80,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import empulseLogo from '@assets/empulse-logo.png';
 
 const props = defineProps({
@@ -88,10 +88,12 @@ const props = defineProps({
     currentRoute: { type: String, default: '' }
 });
 
-const userName = ref(props.user.name);
-const userAvatar = ref(props.user.image ? `/upload/${props.user.image}` : '/upload/no_image.jpg');
-const isAdmin = ref(props.user.role === 0);
-const isManager = ref(props.user.role === 1 || props.user.role === 0);
+const role = computed(() => Number(props.user?.role ?? 0));
+const isWorkfitAdmin = computed(() => Number(props.user?.is_admin ?? 0) === 1);
+const userName = computed(() => props.user?.name ?? '');
+const userAvatar = computed(() => (props.user?.image ? `/upload/${props.user.image}` : '/upload/no_image.jpg'));
+const isEmployee = computed(() => role.value === 4);
+const dashboardHref = computed(() => (isEmployee.value ? '/employee' : '/home'));
 const isOpen = ref(false);
 
 const toggleSidebar = () => {

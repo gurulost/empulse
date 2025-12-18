@@ -23,6 +23,17 @@ Seeded Logins (when using `--seed` or `--seed-if-empty`)
 - Company manager: `manager@acme.com` / `password`
 - Workfit admin: `admin@workfit.com` / `password`
 
+Demo Data (Recommended for Demos)
+- Populates Acme with a realistic “mid-size company” dataset: departments, team leads, 100+ employees, survey waves across multiple months, and enough responses/answers to power the dashboard + reports.
+- Command:
+  - `php artisan demo:seed --import-instrument --employees=120 --months=6 --force`
+- Demo logins (password: `password`):
+  - `admin@workfit.com` (Super Admin)
+  - `manager@acme.com` (Manager)
+  - `chief@acme.com` (Chief)
+  - `lead@acme.com` (Team Lead)
+  - `employee1@acme.com`, `employee2@acme.com`, `employee3@acme.com` (Employees)
+
 Survey Waves & Automation
 - Admins can create waves at `/survey-waves` (full send or drip). Status, cadence, logs, and per-assignment progress are surfaced directly in the UI with pause/resume + manual run buttons.
 - The scheduler command `php artisan survey:waves:schedule` (scheduled in `routes/console.php`) enforces drip cadences per assignment, respects billing status, and logs every action to `survey_wave_logs` for auditability.

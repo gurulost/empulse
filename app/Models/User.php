@@ -33,6 +33,7 @@ class User extends Authenticatable
         'role',
         'google_id',
         'fb_id',
+        'is_admin',
         'tariff',
         'company'
     ];
@@ -321,10 +322,25 @@ class User extends Authenticatable
             $non_updated[] = 'name';
         }
 
-        if (strlen($email) > 0 && $userFromUsers->email !== $userEmail) {
-            $userFromUsers->email = $email;
-            \DB::table("company_worker")->where("email", $userEmail)->update(["email" => $email]);
-            $updated[] = 'email';
+        if (strlen($email) > 0 && $userFromUsers->email !== $email) {
+            $emailExists = User::where('email', $email)
+                ->where('id', '!=', $userFromUsers->id)
+                ->exists();
+
+            if ($emailExists) {
+                $non_updated[] = 'email';
+            } else {
+                $userFromUsers->email = $email;
+                \DB::table("company_worker")->where("email", $userEmail)->update(["email" => $email]);
+
+                if ((int) $userRole === 1) {
+                    \DB::table('companies')->where('manager_email', $userEmail)->update([
+                        'manager_email' => $email,
+                    ]);
+                }
+
+                $updated[] = 'email';
+            }
         } else {
             $non_updated[] = 'email';
         }
