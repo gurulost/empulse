@@ -48,8 +48,3 @@ APP_ENV = "production"
 APP_DEBUG = "false"
 
 [userenv.development]
-DB_HOST = "helium"
-DB_DATABASE = "heliumdb"
-DB_USERNAME = "postgres"
-DB_PASSWORD = "password"
-DB_PORT = "5432"
