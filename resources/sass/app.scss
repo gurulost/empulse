@@ -108,3 +108,38 @@ h6 {
 .cursor-pointer {
     cursor: pointer;
 }
+
+// Guest Navigation Bar
+.container-nav {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    padding: 0.5rem 1rem;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+}
+
+.navbar-main {
+    display: flex;
+    justify-content: flex-end;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.navbar-content {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.navbar-link {
+    color: #94a3b8;
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: color 0.2s ease;
+    
+    &:hover {
+        color: #fff;
+    }
+}
