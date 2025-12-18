@@ -44,8 +44,3 @@ build = ["npm", "run", "build"]
 DB_CONNECTION = "pgsql"
 
 [userenv.production]
-DB_HOST = "${PGHOST}"
-DB_DATABASE = "${PGDATABASE}"
-DB_USERNAME = "${PGUSER}"
-DB_PASSWORD = "${PGPASSWORD}"
-DB_PORT = "${PGPORT}"
