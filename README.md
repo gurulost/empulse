@@ -1,7 +1,7 @@
 # Empulse (Workfitdx)
 
 Overview
-- Multi-tenant Laravel 9 app to onboard companies, manage employees by role (manager/chief/teamlead/employee), integrate Qualtrics survey data, and handle paid subscriptions via Stripe.
+- Multi-tenant Laravel (v11) app to onboard companies, manage employees by role (manager/chief/teamlead/employee), run the in-app pulse survey, and handle paid subscriptions via Stripe.
 
 Key Features
 - Company and department management, CSV/XLSX import/export
@@ -10,15 +10,22 @@ Key Features
 - Stripe subscriptions powered by Laravel Cashier
 
 Quick Start
-- PHP >= 8.0, Composer, Node 16+
+- PHP >= 8.2, Composer, Node 20+
 - cp .env.example .env and configure DB, Redis, Mail (Brevo), Socialite, Stripe
-- composer install && php artisan key:generate && php artisan migrate --seed
-- npm install && npm run dev
+- composer install && php artisan key:generate
+- php artisan app:install --seed-if-empty
+- npm install
+  - dev: npm run dev (runs Vite HMR)
+  - prod: npm run build (writes to public/build)
 - Keep a queue worker (`php artisan queue:work --tries=1`) and the scheduler (`* * * * * php artisan schedule:run >> storage/logs/schedule.log 2>&1`) running so survey automations and drip cadences execute without manual CLI intervention.
+
+Seeded Logins (when using `--seed` or `--seed-if-empty`)
+- Company manager: `manager@acme.com` / `password`
+- Workfit admin: `admin@workfit.com` / `password`
 
 Survey Waves & Automation
 - Admins can create waves at `/survey-waves` (full send or drip). Status, cadence, logs, and per-assignment progress are surfaced directly in the UI with pause/resume + manual run buttons.
-- The scheduler command `php artisan survey:waves:schedule` (already registered in `App\Console\Kernel`) enforces drip cadences per assignment, respects billing status, and logs every action to `survey_wave_logs` for auditability.
+- The scheduler command `php artisan survey:waves:schedule` (scheduled in `routes/console.php`) enforces drip cadences per assignment, respects billing status, and logs every action to `survey_wave_logs` for auditability.
 - Drip cadences are gated to the Pulse plan (tariff `1`). The mapping lives in `config/survey.php` under the `automation` key; downgrade or past-due billing automatically pauses waves until the subscription is active again.
 - Feature tests (`tests/Feature/SurveyWaveTest.php`, `tests/Feature/DashboardAnalyticsTest.php`) cover wave creation, cadence gating, billing pauses, and analytics filters so future changes remain safe.
 
