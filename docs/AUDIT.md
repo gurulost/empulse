@@ -50,6 +50,7 @@ Testing
 
 Frontend & Assets
 - Vite: Remove public/js_old and public/css_old; consolidate under resources with Vite.
+- Vite build artifacts: `public/build` is tracked; run `npm run build` after JS/CSS changes so the manifest + hashed assets stay in sync (prevents blank pages when loading production assets).
 - Accessibility: Audit Blade templates for a11y and responsiveness; remove inline styles.
 
 Roadmap (Phased)

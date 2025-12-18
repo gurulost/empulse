@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\Request;
-use Lang;
+use Illuminate\Validation\ValidationException;
 
 class LoginController extends Controller
 {
@@ -41,21 +41,19 @@ class LoginController extends Controller
     }
 
 
-    public function validateLogin(Request $request)
+    protected function validateLogin(Request $request)
     {
-        $validateData = $request->validate([
-            "password" => "required|string",
-//            "g-recaptcha-response" => "required|captcha",
-            "email" => "required"
+        $request->validate([
+            $this->username() => ['required', 'string', 'email'],
+            'password' => ['required', 'string'],
+            // 'g-recaptcha-response' => ['required', 'captcha'],
         ]);
     }
 
     protected function sendFailedLoginResponse(Request $request)
     {
-        $notification = array(
-            'message' => 'Login or Password is incorrect',
-            'alert-type' => 'error'
-        );
-        return view('auth.login', compact('notification'));
+        throw ValidationException::withMessages([
+            $this->username() => [__('auth.failed')],
+        ]);
     }
 }

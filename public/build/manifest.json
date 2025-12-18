@@ -4,12 +4,12 @@
     "src": "materials/images/workfitdxr_logo_1.png"
   },
   "resources/js/app.js": {
-    "file": "assets/app-DjKKUi9l.js",
+    "file": "assets/app-DVtp2_SD.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
     "css": [
-      "assets/app-3uNf6SSt.css"
+      "assets/app-tfb4yqQE.css"
     ],
     "assets": [
       "assets/workfitdxr_logo_1-C9kGZCg7.png"

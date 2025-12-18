@@ -7,13 +7,10 @@ use App\Providers\RouteServiceProvider;
 use App\Models\User;
 use Illuminate\Foundation\Auth\RegistersUsers;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Session;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Database\Migrations\Migration;
-use Schema;
 use DB;
+use Illuminate\Validation\ValidationException;
 
 class RegisterController extends Controller
 {
@@ -28,9 +25,7 @@ class RegisterController extends Controller
     |
     */
 
-    use RegistersUsers {
-        register as baseRegister;
-    }
+    use RegistersUsers;
 
     /**
      * Where to redirect users after registration.
@@ -59,7 +54,15 @@ class RegisterController extends Controller
     {
         return Validator::make($data, [
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'email' => [
+                'required',
+                'string',
+                'email',
+                'max:255',
+                'unique:users,email',
+                'unique:company_worker,email',
+                Rule::unique('companies', 'manager_email'),
+            ],
             'company_title' => ['required', 'string', 'max:255'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
@@ -78,74 +81,58 @@ class RegisterController extends Controller
         $ifWorkerExist = DB::table('company_worker')->where("email", $data["email"])->first();
         $ifCompanyExist = DB::table("companies")->where("manager_email", $data["email"])->first();
 
-        if (!$user && !$ifWorkerExist && !$ifCompanyExist) {
-            $companyId = DB::table("companies")->insertGetId([
-                "title" => $data['company_title'],
-                "manager" => $data["name"],
-                "manager_email" => $data["email"],
-            ]);
-
-            $default_department = [
-                ['company_id' => $companyId, 'title' => "Marketing & Proposals Department"],
-                ['company_id' => $companyId, 'title' => "Sales Department"],
-                ['company_id' => $companyId, 'title' => "Project Department"],
-                ['company_id' => $companyId, 'title' => "Designing Department"],
-                ['company_id' => $companyId, 'title' => "Production Department"],
-                ['company_id' => $companyId, 'title' => "Maintenance Department"],
-                ['company_id' => $companyId, 'title' => "Store Department"],
-                ['company_id' => $companyId, 'title' => "Procurement Department"],
-                ['company_id' => $companyId, 'title' => "Quality Department"],
-                ['company_id' => $companyId, 'title' => "Inspection department"],
-                ['company_id' => $companyId, 'title' => "Packaging Department"],
-                ['company_id' => $companyId, 'title' => "Finance Department"],
-                ['company_id' => $companyId, 'title' => "Dispatch Department"],
-                ['company_id' => $companyId, 'title' => "Account Department"],
-                ['company_id' => $companyId, 'title' => "Research & Development Department"],
-                ['company_id' => $companyId, 'title' => "Information Technology Department"],
-                ['company_id' => $companyId, 'title' => "Human Resource Department"],
-                ['company_id' => $companyId, 'title' => "Security Department"],
-                ['company_id' => $companyId, 'title' => "Administration department"],
-            ];
-
-            DB::table("company_department")->insert($default_department);
-
-            DB::table('company_worker')->insert([
-                "company_id" => $companyId,
-                "name" => $data["name"],
-                "email" => $data["email"],
-                "role" => 1
-            ]);
-
-            return User::create([
-                'name' => $data['name'],
-                'email' => $data['email'],
-                'company_id' => $companyId,
-                'company_title' => $data['company_title'],
-                'role' => 1,
-                'company' => 1,
-                'password' => Hash::make($data['password']),
+        if ($user || $ifWorkerExist || $ifCompanyExist) {
+            throw ValidationException::withMessages([
+                'email' => [__('validation.unique', ['attribute' => 'email'])],
             ]);
         }
+
+        $companyId = DB::table("companies")->insertGetId([
+            "title" => $data['company_title'],
+            "manager" => $data["name"],
+            "manager_email" => $data["email"],
+        ]);
+
+        $default_department = [
+            ['company_id' => $companyId, 'title' => "Marketing & Proposals Department"],
+            ['company_id' => $companyId, 'title' => "Sales Department"],
+            ['company_id' => $companyId, 'title' => "Project Department"],
+            ['company_id' => $companyId, 'title' => "Designing Department"],
+            ['company_id' => $companyId, 'title' => "Production Department"],
+            ['company_id' => $companyId, 'title' => "Maintenance Department"],
+            ['company_id' => $companyId, 'title' => "Store Department"],
+            ['company_id' => $companyId, 'title' => "Procurement Department"],
+            ['company_id' => $companyId, 'title' => "Quality Department"],
+            ['company_id' => $companyId, 'title' => "Inspection department"],
+            ['company_id' => $companyId, 'title' => "Packaging Department"],
+            ['company_id' => $companyId, 'title' => "Finance Department"],
+            ['company_id' => $companyId, 'title' => "Dispatch Department"],
+            ['company_id' => $companyId, 'title' => "Account Department"],
+            ['company_id' => $companyId, 'title' => "Research & Development Department"],
+            ['company_id' => $companyId, 'title' => "Information Technology Department"],
+            ['company_id' => $companyId, 'title' => "Human Resource Department"],
+            ['company_id' => $companyId, 'title' => "Security Department"],
+            ['company_id' => $companyId, 'title' => "Administration department"],
+        ];
+
+        DB::table("company_department")->insert($default_department);
+
+        DB::table('company_worker')->insert([
+            "company_id" => $companyId,
+            "name" => $data["name"],
+            "email" => $data["email"],
+            "role" => 1
+        ]);
+
+        return User::create([
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'company_id' => $companyId,
+            'company_title' => $data['company_title'],
+            'role' => 1,
+            'company' => 1,
+            'password' => Hash::make($data['password']),
+        ]);
     }
 
-    public function terminate($request, $response)
-    {
-        if ($this->sessionHandled() && $this->sessionConfigured() && ! $this->usingCookieSessions())
-        {
-            $this->manager->driver()->save();
-        }
-    }
-
-    public function register(Request $request)
-    {
-        $notification = array(
-            'message' => "Existed Email or Incorrect Password",
-            'alert-type' => 'error'
-        );
-        try {
-            return $this->baseRegister($request);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return view('auth.register', compact('notification'));
-        }
-    }
 }

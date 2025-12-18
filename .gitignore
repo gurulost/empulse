@@ -23,6 +23,7 @@ Thumbs.db
 # Logs
 npm-debug.log*
 yarn-error.log*
+.phpunit.result.cache
 
 # Project-specific
 /upload/

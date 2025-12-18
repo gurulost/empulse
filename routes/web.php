@@ -45,7 +45,6 @@ use App\Http\Controllers\AnalyticsApiController;
 
 Auth::routes();
 Route::get('/', [WelcomeController::class, 'welcome'])->name('welcome');
-Route::get('/logout', [LoginController::class, 'logout'])->name('logout');
 
 Route::get('/contact', [ContactUsController::class, 'index'])->name('contact.form');
 Route::post('/contact', [ContactUsController::class, 'sendForm'])->name('contact.send');
