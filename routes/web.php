@@ -31,6 +31,7 @@ use App\Http\Controllers\SurveyBuilderController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\DashboardAnalyticsController;
 use App\Http\Controllers\AnalyticsApiController;
+use App\Http\Controllers\EmployeeDashboardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -61,14 +62,16 @@ Route::get('/facebook/callback', [FacebookController::class, 'facebookLogin']);
 Route::get('/survey/{token}', [SurveyController::class, 'show'])->name('survey.take');
 Route::get('/survey/{token}/definition', [SurveyController::class, 'definition'])->name('survey.definition');
 // Reports
-Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
-Route::get('/reports/trends', [App\Http\Controllers\ReportsApiController::class, 'getTrends']);
-Route::get('/reports/comparison', [App\Http\Controllers\ReportsApiController::class, 'getComparison'])->name('reports.comparison');
+Route::get('/reports', [ReportController::class, 'index'])->middleware('auth')->name('reports.index');
+Route::get('/reports/trends', [App\Http\Controllers\ReportsApiController::class, 'getTrends'])->middleware('auth');
+Route::get('/reports/comparison', [App\Http\Controllers\ReportsApiController::class, 'getComparison'])->middleware('auth')->name('reports.comparison');
 
 Route::post('/survey/{token}/autosave', [SurveyController::class, 'autosave'])->name('survey.autosave');
 Route::post('/survey/{token}', [SurveyController::class, 'submit'])->name('survey.submit');
 
 Route::group(['middleware' => 'auth'], function () {
+    Route::get('/employee', [EmployeeDashboardController::class, 'index'])->name('employee.dashboard');
+
     Route::group(['prefix' => 'home', 'middleware' => 'admin'], function () {
         Route::get('/', [HomeController::class, 'index'])->name('home');
         Route::post('/updatePassword/{email}', [HomeController::class, 'updatePassword']);

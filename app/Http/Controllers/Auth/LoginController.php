@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
 class LoginController extends Controller
@@ -55,5 +56,15 @@ class LoginController extends Controller
         throw ValidationException::withMessages([
             $this->username() => [__('auth.failed')],
         ]);
+    }
+
+    protected function redirectTo(): string
+    {
+        $user = Auth::user();
+        if ($user && (int) $user->role === 4) {
+            return '/employee';
+        }
+
+        return RouteServiceProvider::HOME;
     }
 }

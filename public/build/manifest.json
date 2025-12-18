@@ -4,12 +4,12 @@
     "src": "resources/images/empulse-logo.png"
   },
   "resources/js/app.js": {
-    "file": "assets/app-Cv5rw32q.js",
+    "file": "assets/app-ExPv2jfv.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
     "css": [
-      "assets/app-Cg416qVP.css"
+      "assets/app-qPtRqcCr.css"
     ],
     "assets": [
       "assets/empulse-logo-CZ9eJs8T.png"

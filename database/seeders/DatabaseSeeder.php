@@ -36,7 +36,8 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin@workfit.com',
             'password' => $password,
             'role' => 0,
-            'company_id' => 0,
+            'company_id' => null,
+            'is_admin' => 1,
         ]);
 
         // Company Manager
@@ -47,6 +48,16 @@ class DatabaseSeeder extends Seeder
             'role' => 1,
             'company_id' => $company->id,
             'tariff' => 1, // Premium
+            'company' => 1,
+        ]);
+
+        // Chief
+        User::create([
+            'name' => 'Chief User',
+            'email' => 'chief@acme.com',
+            'password' => $password,
+            'role' => 2,
+            'company_id' => $company->id,
         ]);
 
         // Team Lead
