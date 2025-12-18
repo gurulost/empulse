@@ -15,10 +15,7 @@
             <!-- Logo -->
             <div class="d-flex align-items-center mb-4 px-2">
                 <a href="/" class="d-flex align-items-center text-white text-decoration-none">
-                    <div class="logo-container me-3 glass d-flex align-items-center justify-content-center rounded-3" style="width: 40px; height: 40px;">
-                        <img src="/materials/images/workfitdxr_logo_1.png" alt="Logo" height="24">
-                    </div>
-                    <span class="fs-5 fw-bold tracking-tight">Empulse</span>
+                    <img src="/images/empulse-logo.png" alt="Empulse" height="40">
                 </a>
                 <button class="btn btn-sm btn-link text-white-50 d-md-none ms-auto" @click="closeSidebar">
                     <i class="bi bi-x-lg"></i>
