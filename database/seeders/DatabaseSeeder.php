@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Companies;
 use App\Models\Survey;
 use App\Models\SurveyAssignment;
+use App\Models\SurveyAnswer;
 use App\Models\SurveyItem;
 use App\Models\SurveyPage;
 use App\Models\SurveyResponse;
@@ -70,12 +71,12 @@ class DatabaseSeeder extends Seeder
         }
 
         // 3. Create Survey & Version
-        $survey = Survey::create([
-            'company_id' => $company->id,
-            'title' => 'Employee Engagement',
-            'is_default' => true,
-            'status' => 'active',
-        ]);
+        $survey = Survey::where('is_default', true)->orderBy('id')->first()
+            ?? Survey::create([
+                'title' => 'Employee Pulse (Default)',
+                'is_default' => true,
+                'status' => 'published',
+            ]);
 
         $version = SurveyVersion::create([
             'instrument_id' => 'eng_v1',
@@ -113,6 +114,8 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
+        $itemsByQid = collect($items)->keyBy('qid');
+
         // 5. Create Completed Wave (Last Month)
         $pastWave = SurveyWave::create([
             'company_id' => $company->id,
@@ -135,6 +138,7 @@ class DatabaseSeeder extends Seeder
                 'user_id' => $emp->id,
                 'token' => Str::random(32),
                 'status' => 'completed',
+                'wave_label' => $pastWave->label,
                 'last_dispatched_at' => now()->subMonth(),
                 'completed_at' => now()->subMonth()->addDays(rand(1, 5)),
             ]);
@@ -145,13 +149,37 @@ class DatabaseSeeder extends Seeder
                 $answers[$qid] = rand(3, 5); // Mostly positive
             }
 
-            SurveyResponse::create([
+            $response = SurveyResponse::create([
+                'survey_id' => $survey->id,
                 'assignment_id' => $assignment->id,
                 'survey_version_id' => $version->id,
-                'data' => $answers,
-                'started_at' => $assignment->last_dispatched_at,
-                'completed_at' => $assignment->completed_at,
+                'survey_wave_id' => $pastWave->id,
+                'user_id' => $emp->id,
+                'wave_label' => $pastWave->label,
+                'submitted_at' => $assignment->completed_at,
+                'duration_ms' => rand(45_000, 180_000),
             ]);
+
+            foreach ($answers as $qid => $value) {
+                $item = $itemsByQid->get($qid);
+                if (!$item) {
+                    continue;
+                }
+
+                SurveyAnswer::create([
+                    'response_id' => $response->id,
+                    'question_id' => $item->id,
+                    'survey_item_id' => $item->id,
+                    'question_key' => $qid,
+                    'value' => (string) $value,
+                    'value_numeric' => (float) $value,
+                    'metadata' => [
+                        'type' => $item->type,
+                        'page_id' => $item->survey_page_id,
+                        'section_id' => $item->survey_section_id,
+                    ],
+                ]);
+            }
         }
 
         // 6. Create Active Wave (Current)
@@ -176,6 +204,7 @@ class DatabaseSeeder extends Seeder
                 'user_id' => $emp->id,
                 'token' => Str::random(32),
                 'status' => $index < 2 ? 'completed' : 'invited', // First 2 completed
+                'wave_label' => $currentWave->label,
                 'last_dispatched_at' => now(),
             ]);
         }

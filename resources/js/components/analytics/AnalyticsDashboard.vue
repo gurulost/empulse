@@ -145,9 +145,23 @@
 import { ref, reactive, onMounted, watch } from 'vue';
 import { useAnalyticsApi } from '../../composables/useAnalyticsApi';
 import { debounce } from 'lodash';
+import GapChart from '../dashboard/GapChart.vue';
+import ImpactSnapshot from '../dashboard/ImpactSnapshot.vue';
+import IndicatorList from '../dashboard/IndicatorList.vue';
+import TeamCulturePulse from '../dashboard/TeamCulturePulse.vue';
+import TeamScatter from '../dashboard/TeamScatter.vue';
+import TemperatureGauge from '../dashboard/TemperatureGauge.vue';
 
 export default {
     name: 'AnalyticsDashboard',
+    components: {
+        GapChart,
+        ImpactSnapshot,
+        IndicatorList,
+        TeamCulturePulse,
+        TeamScatter,
+        TemperatureGauge,
+    },
     props: {
         user: {
             type: Object,

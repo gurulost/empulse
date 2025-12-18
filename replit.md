@@ -43,6 +43,8 @@ Empulse (Workfitdx) is a multi-tenant Laravel 11 application with a Vue.js front
 21. **Legacy Companies.js Deprecation**: Marked js/roles/companies.js as deprecated with warnings - orphaned routes (/companies/delete, /companies/delete/manager) replaced by Vue AdminDashboard.
 22. **UserController Import Fix**: Added missing ModelNotFoundException import for proper error handling.
 23. **User Model SurveyService Fix**: Added missing SurveyService import for surveyLink() method.
+24. **Vue Mounting Architecture Fix (Dec 2024)**: Completely rewrote `resources/js/app.js` to fix blank page issue. The old approach mounted a single empty Vue app to `#app` which wiped all Blade-rendered HTML. New approach uses `mountByTagName()` and `mountById()` helper functions to mount Vue components individually to their custom elements (`<app-sidebar>`, `<analytics-dashboard>`, etc.) without clearing the surrounding Blade content.
+25. **Session Configuration for Replit (Dec 2024)**: Configured database sessions with `same_site=lax` and `secure=false` for compatibility with Replit's iframe preview. Sessions now persist correctly after login.
 
 ### Known Issues / Technical Debt
 - **CRITICAL SECURITY**: Brevo API key should be rotated quarterly (rotation pending)
