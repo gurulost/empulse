@@ -62,12 +62,15 @@ Route::get('/facebook/callback', [FacebookController::class, 'facebookLogin']);
 Route::get('/survey/{token}', [SurveyController::class, 'show'])->name('survey.take');
 Route::get('/survey/{token}/definition', [SurveyController::class, 'definition'])->name('survey.definition');
 // Reports
-Route::get('/reports', [ReportController::class, 'index'])->middleware('auth')->name('reports.index');
-Route::get('/reports/trends', [App\Http\Controllers\ReportsApiController::class, 'getTrends'])->middleware('auth');
-Route::get('/reports/comparison', [App\Http\Controllers\ReportsApiController::class, 'getComparison'])->middleware('auth')->name('reports.comparison');
+Route::get('/reports', [ReportController::class, 'index'])->middleware(['auth', 'admin'])->name('reports.index');
+Route::get('/reports/trends', [App\Http\Controllers\ReportsApiController::class, 'getTrends'])->middleware(['auth', 'admin']);
+Route::get('/reports/comparison', [App\Http\Controllers\ReportsApiController::class, 'getComparison'])->middleware(['auth', 'admin'])->name('reports.comparison');
 
 Route::post('/survey/{token}/autosave', [SurveyController::class, 'autosave'])->name('survey.autosave');
 Route::post('/survey/{token}', [SurveyController::class, 'submit'])->name('survey.submit');
+
+// Stripe webhook endpoint (Cashier) - must be publicly accessible (Stripe won't be authenticated)
+Route::post('/stripe/webhook', [StripeWebhookController::class, 'handleWebhook'])->name('stripe.webhook');
 
 Route::group(['middleware' => 'auth'], function () {
     Route::get('/employee', [EmployeeDashboardController::class, 'index'])->name('employee.dashboard');
@@ -77,9 +80,6 @@ Route::group(['middleware' => 'auth'], function () {
         Route::post('/updatePassword/{email}', [HomeController::class, 'updatePassword']);
         Route::get('/response_error', [PaymentController::class, 'responses_error']);
     });
-
-    // Stripe webhook endpoint (Cashier)
-    Route::post('/stripe/webhook', [StripeWebhookController::class, 'handleWebhook']);
 
     // Team Management (Vue Dashboard)
     Route::get('/team/manage', [TeamController::class, 'index'])->middleware('admin')->name('team.manage');
@@ -104,26 +104,26 @@ Route::group(['middleware' => 'auth'], function () {
         Route::get('/export/{role}', [UserController::class, 'exportTable']);
     });
 
-    Route::group(['prefix' => 'users'], function () {
+    Route::group(['prefix' => 'users', 'middleware' => 'admin'], function () {
         Route::get('/delete/{email}', [TeamController::class, 'deleteMemberLegacy'])->name('users.delete');
         Route::get('/list', [TeamController::class, 'getMembersLegacy'])->name('users.list');
         Route::post('/import', [TeamController::class, 'importUsers'])->name('users.import');
     });
 
-    Route::group(['prefix' => 'departments'], function () {
+    Route::group(['prefix' => 'departments', 'middleware' => 'admin'], function () {
         Route::get('/list', [TeamController::class, 'getDepartmentsLegacy'])->name('departments.list');
         Route::post('/', [TeamController::class, 'addDepartmentLegacy'])->name('departments.store');
         Route::get('/delete/{title}', [TeamController::class, 'deleteDepartmentLegacy'])->name('departments.delete');
     });
 
-    Route::group(['prefix' => 'payment', 'middleware' => 'admin'], function() {
+    Route::group(['prefix' => 'payment', 'middleware' => 'manager'], function() {
         Route::get('/', [PaymentController::class, 'payment'])->name('payment')->middleware('payment');
         Route::get('/payment-success', [PaymentController::class, 'payment_success'])->name('payment-success');
         Route::get('/error', [PaymentController::class, 'payment_error'])->name('payment_error');
     });
 
     // Stripe subscription (Laravel Cashier) routes
-    Route::group(['middleware' => 'admin'], function () {
+    Route::group(['middleware' => 'manager'], function () {
         Route::get('/plans', [PlanController::class, 'stripePay'])->name('plans.index');
         Route::get('/plans/{plan}', [PlanController::class, 'show'])->name('plans.show');
         Route::post('/subscription', [PlanController::class, 'subscription'])->name('subscription.create');
@@ -138,12 +138,16 @@ Route::group(['middleware' => 'auth'], function () {
         });
     });
 
-    Route::group(['middleware' => 'admin'], function() {
+    // Profile is available to any authenticated user, including employees.
+    Route::group([], function() {
         Route::get('/profile', [UserController::class, 'profile'])->name('profile');
         Route::post("/profile/edit_password", [UserController::class, 'editPassword'])->name("edit-password");
         Route::get('/add/avatar', [UserController::class, 'addAvatar'])->name('add.avatar');
         Route::post('/store/avatar', [UserController::class, 'storeAvatar'])->name('store.avatar');
         Route::get('/delete/avatar/{id}', [UserController::class, 'deleteAvatar'])->name('delete.avatar');
+    });
+
+    Route::group(['middleware' => 'manager'], function() {
         Route::get('/surveys/manage', [SurveyManagementController::class, 'index'])->name('surveys.manage');
         Route::get('/survey-waves', [SurveyWaveController::class, 'index'])->name('survey-waves.index');
         Route::post('/survey-waves', [SurveyWaveController::class, 'store'])->name('survey-waves.store');
@@ -186,9 +190,9 @@ Route::group(['middleware' => 'auth'], function () {
         });
     });
 
-    Route::get('/dashboard/analytics', DashboardAnalyticsController::class)
+    Route::get('/dashboard/analytics', DashboardAnalyticsController::class)->middleware('admin')
         ->name('dashboard.analytics');
 
-    Route::get('/analytics/api/dashboard', [AnalyticsApiController::class, 'index'])
+    Route::get('/analytics/api/dashboard', [AnalyticsApiController::class, 'index'])->middleware('admin')
         ->name('analytics.api.dashboard');
 });

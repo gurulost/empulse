@@ -92,6 +92,14 @@ class UserController extends Controller
 
     public function deleteAvatar($id)
     {
+        if (!Auth::check()) {
+            abort(401);
+        }
+
+        if ((int) $id !== (int) Auth::id() && (int) (Auth::user()->is_admin ?? 0) !== 1) {
+            abort(403);
+        }
+
         $model = new User();
         $deleteAvatar = $model->deleteAvatarFunc($id);
 

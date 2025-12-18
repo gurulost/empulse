@@ -38,13 +38,13 @@
                         Analytics & Reports
                     </a>
                 </li>
-                <li v-if="isAdmin">
+                <li v-if="isWorkfitAdmin">
                     <a href="/admin" class="nav-link" :class="{ active: currentRoute.startsWith('admin') }">
                         <i class="bi bi-shield-lock me-3"></i>
                         Admin Panel
                     </a>
                 </li>
-                <li v-if="isManager">
+                <li v-if="isWorkfitAdmin">
                     <a href="/admin/builder" class="nav-link" :class="{ active: currentRoute.startsWith('admin.builder') }">
                         <i class="bi bi-ui-checks me-3"></i>
                         Survey Builder
@@ -89,10 +89,9 @@ const props = defineProps({
 });
 
 const role = computed(() => Number(props.user?.role ?? 0));
+const isWorkfitAdmin = computed(() => Number(props.user?.is_admin ?? 0) === 1);
 const userName = computed(() => props.user?.name ?? '');
 const userAvatar = computed(() => (props.user?.image ? `/upload/${props.user.image}` : '/upload/no_image.jpg'));
-const isAdmin = computed(() => role.value === 0);
-const isManager = computed(() => role.value === 1 || role.value === 0);
 const isEmployee = computed(() => role.value === 4);
 const dashboardHref = computed(() => (isEmployee.value ? '/employee' : '/home'));
 const isOpen = ref(false);
