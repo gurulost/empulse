@@ -35,10 +35,19 @@ externalPort = 80
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["bash", "-lc", "APP_DEBUG=false php artisan app:install --seed-if-empty --force && APP_DEBUG=false php artisan serve --host=0.0.0.0 --port=5000"]
-build = ["npm", "run", "build"]
+run = ["php", "artisan", "serve", "--host=0.0.0.0", "--port=5000"]
+build = ["php", "artisan", "config:cache"]
 
 [userenv]
 
 [userenv.shared]
 DB_CONNECTION = "pgsql"
+
+[userenv.production]
+
+[userenv.development]
+DB_HOST = "helium"
+DB_DATABASE = "heliumdb"
+DB_USERNAME = "postgres"
+DB_PASSWORD = "password"
+DB_PORT = "5432"
