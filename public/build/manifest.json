@@ -1,18 +1,18 @@
 {
-  "materials/images/workfitdxr_logo_1.png": {
-    "file": "assets/workfitdxr_logo_1-C9kGZCg7.png",
-    "src": "materials/images/workfitdxr_logo_1.png"
+  "resources/images/empulse-logo.png": {
+    "file": "assets/empulse-logo-CZ9eJs8T.png",
+    "src": "resources/images/empulse-logo.png"
   },
   "resources/js/app.js": {
-    "file": "assets/app-DVtp2_SD.js",
+    "file": "assets/app-Cv5rw32q.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
     "css": [
-      "assets/app-tfb4yqQE.css"
+      "assets/app-Cg416qVP.css"
     ],
     "assets": [
-      "assets/workfitdxr_logo_1-C9kGZCg7.png"
+      "assets/empulse-logo-CZ9eJs8T.png"
     ]
   },
   "resources/sass/app.scss": {
