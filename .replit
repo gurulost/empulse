@@ -44,6 +44,8 @@ build = ["echo", "Build complete"]
 DB_CONNECTION = "pgsql"
 
 [userenv.production]
+APP_ENV = "production"
+APP_DEBUG = "false"
 
 [userenv.development]
 DB_HOST = "helium"
