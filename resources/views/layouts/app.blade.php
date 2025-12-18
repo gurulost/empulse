@@ -25,11 +25,12 @@
         @if (!Route::has('login') || (Route::has('register')))
             <div class="container-nav">
                 <nav class="navbar-main">
+                    <a href="/" class="navbar-brand">
+                        <img src="/images/empulse-logo.png" alt="Empulse" height="28">
+                    </a>
                     <div class="navbar-content">
-                        <a class="navbar-link" href="https://workfitdx.com/about/"  target="_blank">About Us</a>
-{{--                        <a class="navbar-link" href="#" target="_blank">FAQ</a>--}}
+                        <a class="navbar-link" href="https://workfitdx.com/about/" target="_blank">About Us</a>
                         <a class="navbar-link" href="https://workfitdx.com/contact/" target="_blank">Help</a>
-{{--                        <a class="navbar-link" href="#" target="_blank">Contact Us</a>--}}
                     </div>
                 </nav>
             </div>
