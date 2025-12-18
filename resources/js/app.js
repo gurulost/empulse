@@ -78,7 +78,7 @@ mountByTagName('analytics-dashboard', AnalyticsDashboard, (element) =>
 );
 
 // Workfit admin dashboard (modern layout)
-mountById('admin-dashboard-root', AdminDashboard, (element) =>
+mountByTagName('admin-dashboard', AdminDashboard, (element) =>
     getPropsFromAttributes(element, {
         user: ':user',
     }),
