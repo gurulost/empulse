@@ -3,5 +3,5 @@
 @section('title', 'Super Admin Dashboard')
 
 @section('content')
-    <div id="admin-dashboard-root"></div>
+    <admin-dashboard :user="{{ Auth::user() }}"></admin-dashboard>
 @endsection
