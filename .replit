@@ -47,5 +47,6 @@ DB_CONNECTION = "pgsql"
 APP_ENV = "production"
 APP_DEBUG = "false"
 SESSION_DRIVER = "file"
+REPLIT_DEPLOYMENT = "1"
 
 [userenv.development]
