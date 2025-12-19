@@ -44,6 +44,8 @@ use App\Http\Controllers\EmployeeDashboardController;
 |
 */
 
+Route::get('/healthz', fn() => response('OK', 200))->withoutMiddleware(\Illuminate\Session\Middleware\StartSession::class);
+
 Auth::routes();
 Route::get('/', [WelcomeController::class, 'welcome'])->name('welcome');
 
