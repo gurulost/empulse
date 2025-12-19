@@ -85,14 +85,12 @@
 
           'pgsql' => [
               'driver' => 'pgsql',
-              'url' => env('DATABASE_URL'),
-              // Prefer standard Laravel `DB_*` variables, but fall back to `PG*` (common on
-  some hosts).
-              'host' => env('DB_HOST', env('PGHOST', '127.0.0.1')),
-              'port' => env('DB_PORT', env('PGPORT', '5432')),
-              'database' => env('DB_DATABASE', env('PGDATABASE', 'forge')),
-              'username' => env('DB_USERNAME', env('PGUSER', 'forge')),
-              'password' => env('DB_PASSWORD', env('PGPASSWORD', '')),
+              'url' => env('REPLIT_DEPLOYMENT') ? env('DATABASE_URL') : null,
+              'host' => env('REPLIT_DEPLOYMENT') ? null : env('DB_HOST', '127.0.0.1'),
+              'port' => env('REPLIT_DEPLOYMENT') ? null : env('DB_PORT', '5432'),
+              'database' => env('REPLIT_DEPLOYMENT') ? null : env('DB_DATABASE', 'forge'),
+              'username' => env('REPLIT_DEPLOYMENT') ? null : env('DB_USERNAME', 'forge'),
+              'password' => env('REPLIT_DEPLOYMENT') ? null : env('DB_PASSWORD', ''),
               'charset' => 'utf8',
               'prefix' => '',
               'prefix_indexes' => true,
