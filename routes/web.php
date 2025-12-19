@@ -44,8 +44,6 @@ use App\Http\Controllers\EmployeeDashboardController;
 |
 */
 
-Route::get('/healthz', fn() => response('OK', 200));
-
 Auth::routes();
 Route::get('/', [WelcomeController::class, 'welcome'])->name('welcome');
 
