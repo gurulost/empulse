@@ -86,11 +86,12 @@ return [
         'pgsql' => [
             'driver' => 'pgsql',
             'url' => env('DATABASE_URL'),
-            'host' => env('REPLIT_DEPLOYMENT') ? env('PGHOST', '127.0.0.1') : env('DB_HOST', env('PGHOST', '127.0.0.1')),
-            'port' => env('REPLIT_DEPLOYMENT') ? env('PGPORT', '5432') : env('DB_PORT', env('PGPORT', '5432')),
-            'database' => env('REPLIT_DEPLOYMENT') ? env('PGDATABASE', 'forge') : env('DB_DATABASE', env('PGDATABASE', 'forge')),
-            'username' => env('REPLIT_DEPLOYMENT') ? env('PGUSER', 'forge') : env('DB_USERNAME', env('PGUSER', 'forge')),
-            'password' => env('REPLIT_DEPLOYMENT') ? env('PGPASSWORD', '') : env('DB_PASSWORD', env('PGPASSWORD', '')),
+            // Prefer standard Laravel `DB_*` variables, but fall back to `PG*` (common on some hosts).
+            'host' => env('DB_HOST', env('PGHOST', '127.0.0.1')),
+            'port' => env('DB_PORT', env('PGPORT', '5432')),
+            'database' => env('DB_DATABASE', env('PGDATABASE', 'forge')),
+            'username' => env('DB_USERNAME', env('PGUSER', 'forge')),
+            'password' => env('DB_PASSWORD', env('PGPASSWORD', '')),
             'charset' => 'utf8',
             'prefix' => '',
             'prefix_indexes' => true,
