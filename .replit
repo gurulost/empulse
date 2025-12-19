@@ -46,5 +46,6 @@ DB_CONNECTION = "pgsql"
 [userenv.production]
 APP_ENV = "production"
 APP_DEBUG = "false"
+SESSION_DRIVER = "file"
 
 [userenv.development]

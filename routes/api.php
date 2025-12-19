@@ -15,6 +15,8 @@ use App\Http\Controllers\ApiController;
 |
 */
 
+Route::get('/healthz', fn() => response('OK', 200));
+
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
