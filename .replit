@@ -34,7 +34,7 @@ localPort = 5000
 externalPort = 80
 
 [deployment]
-deploymentTarget = "vm"
+deploymentTarget = "cloudrun"
 run = ["bash", "-c", "php artisan config:clear && php artisan serve --host=0.0.0.0 --port=${PORT:-5000}"]
 build = ["bash", "-c", "composer install --no-dev --optimize-autoloader && npm install && npm run build && php artisan migrate --force"]
 
