@@ -13,6 +13,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class SeedDemoData extends Command
@@ -21,12 +22,20 @@ class SeedDemoData extends Command
         {--employees=120 : Number of employees for Acme (includes employee1-3)}
         {--months=6 : Number of past months to generate survey waves for (plus current month)}
         {--import-instrument : Import survey_instrument.json into survey_* schema (if missing)}
+        {--if-empty : Skip demo seeding when users table already has data}
         {--force : Do not prompt for confirmation}';
 
     protected $description = 'Populate the app with realistic synthetic demo data (Acme Corp + waves + responses) for showing off full functionality.';
 
     public function handle(): int
     {
+        if ((bool) $this->option('if-empty')) {
+            if (Schema::hasTable('users') && DB::table('users')->count() > 0) {
+                $this->info('Users table already has data — skipping demo seed (--if-empty).');
+                return self::SUCCESS;
+            }
+        }
+
         if (!(bool) $this->option('force')) {
             if (!$this->confirm('This will add/update a lot of demo data in your current database. Continue?', true)) {
                 return self::SUCCESS;
