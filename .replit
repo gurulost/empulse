@@ -36,21 +36,21 @@ externalPort = 80
 [deployment]
 deploymentTarget = "vm"
 healthCheckPath = "/up"
-run = ["bash", "-lc", "php artisan optimize:clear && php artisan serve --host=0.0.0.0 --port=5000"]
-build = ["bash", "-lc", "composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist && npm ci && npm run build && mkdir -p storage/framework/{sessions,views,cache} storage/logs && chmod -R 775 storage bootstrap/cache"]
+run = ["bash", "-lc", "php artisan serve --host=0.0.0.0 --port=5000"]
+build = ["bash", "-lc", "composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist && npm ci && npm run build"]
 
 [userenv]
 
 [userenv.shared]
 DB_CONNECTION = "pgsql"
 SURVEY_STRICT_VALIDATION_ENABLED = "false"
+SESSION_DRIVER = "database"
+QUEUE_CONNECTION = "database"
 
 [userenv.production]
 APP_ENV = "production"
 APP_DEBUG = "false"
-SESSION_DRIVER = "file"
 REPLIT_DEPLOYMENT = "1"
-QUEUE_CONNECTION = "database"
 
 [userenv.development]
 healthCheckPath = "/up"
