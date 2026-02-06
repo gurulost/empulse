@@ -42,6 +42,7 @@ build = ["bash", "-c", "composer install --no-dev --optimize-autoloader && npm i
 
 [userenv.shared]
 DB_CONNECTION = "pgsql"
+SURVEY_STRICT_VALIDATION_ENABLED = "false"
 
 [userenv.production]
 APP_ENV = "production"

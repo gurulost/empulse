@@ -8,20 +8,6 @@ use Illuminate\Validation\ValidationException;
 
 class SurveyResponseValidationService
 {
-    protected array $requiredByDefaultTypes = [
-        'slider',
-        'single_select',
-        'single_select_text',
-        'dropdown',
-        'multi_select',
-        'number_integer',
-    ];
-
-    public function __construct(
-        protected SurveyDefinitionService $definitionService
-    ) {
-    }
-
     /**
      * @throws ValidationException
      */
@@ -29,18 +15,15 @@ class SurveyResponseValidationService
     {
         $definition = $this->definitionService->definitionForAssignment($assignment);
         $items = $this->flattenItems($definition['pages'] ?? []);
-        $validQids = collect($items)
-            ->pluck('qid')
-            ->filter(fn ($qid) => is_string($qid) && $qid !== '')
-            ->values()
-            ->all();
+        $itemsByQid = $this->itemsByQid($items);
+        $visibilityCache = [];
 
         $errors = [];
         $sanitized = [];
 
-        foreach (array_keys($responses) as $qid) {
-            $qid = (string) $qid;
-            if (!in_array($qid, $validQids, true)) {
+        foreach ($responses as $rawQid => $_) {
+            $qid = (string) $rawQid;
+            if (!array_key_exists($qid, $itemsByQid)) {
                 $errors["responses.{$qid}"][] = 'Unknown question key.';
             }
         }
@@ -51,23 +34,26 @@ class SurveyResponseValidationService
                 continue;
             }
 
-            if (!$this->isItemVisible($item, $responses)) {
+            if (!$this->isVisible($item, $responses, $itemsByQid, $visibilityCache)) {
                 continue;
             }
 
-            $rawValue = $responses[$qid] ?? null;
-            [$value, $error] = $this->validateItemValue($item, $rawValue);
+            $value = $responses[$qid] ?? null;
+            if ($this->isEmptyValue($value)) {
+                if ($this->isRequired($item)) {
+                    $errors["responses.{$qid}"][] = 'Please provide an answer.';
+                }
 
-            if ($error) {
+                continue;
+            }
+
+            [$cleanValue, $error] = $this->sanitizeValue($item, $value);
+            if ($error !== null) {
                 $errors["responses.{$qid}"][] = $error;
                 continue;
             }
 
-            if ($this->isEmptyValue($value)) {
-                continue;
-            }
-
-            $sanitized[$qid] = $value;
+            $sanitized[$qid] = $cleanValue;
         }
 
         if (!empty($errors)) {
@@ -75,6 +61,26 @@ class SurveyResponseValidationService
         }
 
         return $sanitized;
+    }
+
+    public function __construct(
+        protected SurveyDefinitionService $definitionService
+    ) {
+    }
+
+    protected function itemsByQid(array $items): array
+    {
+        $map = [];
+        foreach ($items as $item) {
+            $qid = $item['qid'] ?? null;
+            if (!$qid) {
+                continue;
+            }
+
+            $map[$qid] = $item;
+        }
+
+        return $map;
     }
 
     protected function flattenItems(array $pages): array
@@ -96,280 +102,172 @@ class SurveyResponseValidationService
         return $items;
     }
 
-    protected function isItemVisible(array $item, array $responses): bool
+    protected function isVisible(
+        array $item,
+        array $responses,
+        array $itemsByQid = [],
+        array &$visibilityCache = [],
+        array $stack = []
+    ): bool
     {
+        $itemQid = $item['qid'] ?? null;
+        if ($itemQid && array_key_exists($itemQid, $visibilityCache)) {
+            return $visibilityCache[$itemQid];
+        }
+
+        if ($itemQid && in_array($itemQid, $stack, true)) {
+            return false;
+        }
+
+        if ($itemQid) {
+            $stack[] = $itemQid;
+        }
+
         $logic = $item['display_logic'] ?? null;
         if (!$logic || (is_array($logic) && empty($logic))) {
+            if ($itemQid) {
+                $visibilityCache[$itemQid] = true;
+            }
+
             return true;
         }
 
-        $conditions = is_array($logic) && array_is_list($logic)
-            ? $logic
-            : ($logic['when'] ?? []);
+        if (is_array($logic) && array_is_list($logic)) {
+            $conditions = $logic;
+            $operator = 'and';
+        } else {
+            $conditions = Arr::get($logic, 'when', []);
+            $operator = strtolower((string) Arr::get($logic, 'operator', Arr::get($logic, 'mode', Arr::get($logic, 'combinator', 'and'))));
+        }
 
         if (empty($conditions)) {
+            if ($itemQid) {
+                $visibilityCache[$itemQid] = true;
+            }
+
             return true;
         }
 
-        $operator = strtolower((string) ($logic['operator'] ?? $logic['combinator'] ?? 'and'));
-        $evaluator = fn (array $condition): bool => $this->conditionMatches($condition, $responses);
+        $matches = array_map(
+            fn ($condition) => $this->conditionMatches($condition, $responses, $itemsByQid, $visibilityCache, $stack),
+            $conditions
+        );
 
         if (in_array($operator, ['or', 'any'], true)) {
-            foreach ($conditions as $condition) {
-                if ($evaluator($condition)) {
-                    return true;
-                }
+            $visible = in_array(true, $matches, true);
+            if ($itemQid) {
+                $visibilityCache[$itemQid] = $visible;
             }
 
+            return $visible;
+        }
+
+        $visible = !in_array(false, $matches, true);
+        if ($itemQid) {
+            $visibilityCache[$itemQid] = $visible;
+        }
+
+        return $visible;
+    }
+
+    protected function conditionMatches(
+        array $condition,
+        array $responses,
+        array $itemsByQid,
+        array &$visibilityCache,
+        array $stack
+    ): bool
+    {
+        $qid = Arr::get($condition, 'qid');
+        if (!$qid) {
             return false;
         }
 
-        foreach ($conditions as $condition) {
-            if (!$evaluator($condition)) {
-                return false;
-            }
+        if (!array_key_exists($qid, $itemsByQid)) {
+            return false;
         }
 
-        return true;
-    }
+        if (!$this->isVisible($itemsByQid[$qid], $responses, $itemsByQid, $visibilityCache, $stack)) {
+            return false;
+        }
 
-    protected function conditionMatches(array $condition, array $responses): bool
-    {
-        $qid = $condition['qid'] ?? null;
-        if (!$qid) {
+        if (!array_key_exists($qid, $responses)) {
+            return false;
+        }
+
+        $allowed = Arr::get($condition, 'equals_any', []);
+        if (!is_array($allowed) || empty($allowed)) {
             return true;
         }
 
-        $currentValue = $responses[$qid] ?? null;
-        if ($this->isEmptyValue($currentValue)) {
-            return false;
+        $allowedValues = array_map([$this, 'normalizeComparable'], $allowed);
+        $actualValues = $this->extractComparableValues($responses[$qid]);
+
+        foreach ($actualValues as $actual) {
+            if (in_array($this->normalizeComparable($actual), $allowedValues, true)) {
+                return true;
+            }
         }
 
-        $equalsAny = $condition['equals_any'] ?? null;
-        if (is_array($equalsAny) && !empty($equalsAny)) {
-            return $this->valueMatchesAny($currentValue, $equalsAny);
-        }
-
-        if (array_key_exists('equals', $condition)) {
-            return $this->valueMatchesAny($currentValue, [(string) $condition['equals']]);
-        }
-
-        return true;
+        return false;
     }
 
-    protected function valueMatchesAny($value, array $candidates): bool
+    protected function extractComparableValues(mixed $value): array
     {
-        $candidateSet = array_map('strval', $candidates);
-
         if (is_array($value)) {
             if (array_is_list($value)) {
-                foreach ($value as $entry) {
-                    if (in_array((string) $entry, $candidateSet, true)) {
-                        return true;
-                    }
+                return array_values($value);
+            }
+
+            $candidates = [];
+            foreach (['selected', 'value', 'text'] as $key) {
+                if (array_key_exists($key, $value)) {
+                    $candidates[] = $value[$key];
                 }
-
-                return false;
             }
 
-            $selected = $value['selected'] ?? $value['value'] ?? $value['text'] ?? null;
-            return $selected !== null && in_array((string) $selected, $candidateSet, true);
+            return !empty($candidates) ? $candidates : array_values($value);
         }
 
-        return in_array((string) $value, $candidateSet, true);
+        return [$value];
     }
 
-    protected function validateItemValue(array $item, $rawValue): array
+    protected function normalizeComparable(mixed $value): string
     {
-        $type = (string) ($item['type'] ?? '');
-        $required = $this->isRequired($item);
-
-        if ($required && $this->isEmptyValue($rawValue)) {
-            return [null, 'Please provide an answer.'];
+        if ($value === null) {
+            return '';
         }
 
-        if ($this->isEmptyValue($rawValue)) {
-            return [null, null];
+        if (is_bool($value)) {
+            return $value ? '1' : '0';
         }
 
-        return match ($type) {
-            'slider' => $this->validateSlider($item, $rawValue),
-            'single_select', 'dropdown' => $this->validateSingleSelect($item, $rawValue),
-            'single_select_text' => $this->validateSingleSelectText($item, $rawValue),
-            'multi_select' => $this->validateMultiSelect($item, $rawValue),
-            'number_integer' => $this->validateInteger($item, $rawValue),
-            'text_short', 'text', 'text_long' => $this->validateText($item, $rawValue),
-            default => [$rawValue, null],
-        };
-    }
-
-    protected function validateSlider(array $item, $rawValue): array
-    {
-        if (!is_numeric($rawValue)) {
-            return [null, 'Value must be a whole number within range.'];
-        }
-
-        $scale = $item['scale'] ?? [];
-        $min = (int) ($scale['min'] ?? 1);
-        $max = (int) ($scale['max'] ?? 5);
-        $step = (float) ($scale['step'] ?? 1);
-
-        $value = (float) $rawValue;
-        if (floor($value) !== $value) {
-            return [null, 'Value must be a whole number within range.'];
-        }
-
-        if ($value < $min || $value > $max) {
-            return [null, "Value must be between {$min} and {$max}."];
-        }
-
-        if ($step > 0) {
-            $offset = ($value - $min) / $step;
-            if (abs($offset - round($offset)) > 1e-9) {
-                return [null, 'Value is not on a valid step.'];
-            }
-        }
-
-        return [(int) $value, null];
-    }
-
-    protected function validateSingleSelect(array $item, $rawValue): array
-    {
-        $allowed = $this->allowedOptionValues($item);
-        $value = (string) $rawValue;
-
-        if (!in_array($value, $allowed, true)) {
-            return [null, 'Selected option is invalid.'];
-        }
-
-        return [$value, null];
-    }
-
-    protected function validateSingleSelectText(array $item, $rawValue): array
-    {
-        $optionsByValue = collect($item['options'] ?? [])->keyBy(fn ($option) => (string) ($option['value'] ?? ''));
-
-        $selected = is_array($rawValue) ? ($rawValue['selected'] ?? null) : $rawValue;
-        if ($selected === null || $selected === '') {
-            return [null, 'Please provide an answer.'];
-        }
-
-        $selected = (string) $selected;
-        if (!$optionsByValue->has($selected)) {
-            return [null, 'Selected option is invalid.'];
-        }
-
-        $selectedOption = $optionsByValue->get($selected);
-        $meta = Arr::get($selectedOption, 'meta', []);
-        $expectsText = is_array($meta) && array_key_exists('freetext_placeholder', $meta);
-
-        if (!$expectsText) {
-            return [$selected, null];
-        }
-
-        $text = is_array($rawValue) ? trim((string) ($rawValue['text'] ?? '')) : '';
-        if ($text === '') {
-            return [null, 'Please provide the additional text.'];
-        }
-
-        return [[
-            'selected' => $selected,
-            'text' => $text,
-        ], null];
-    }
-
-    protected function validateMultiSelect(array $item, $rawValue): array
-    {
-        if (!is_array($rawValue) || !array_is_list($rawValue)) {
-            return [null, 'Please select one or more valid options.'];
-        }
-
-        $selected = array_values(array_unique(array_map('strval', $rawValue)));
-        $allowed = $this->allowedOptionValues($item);
-        foreach ($selected as $value) {
-            if (!in_array($value, $allowed, true)) {
-                return [null, 'Please select one or more valid options.'];
-            }
-        }
-
-        $exclusiveValues = collect($item['options'] ?? [])
-            ->filter(fn ($option) => (bool) ($option['exclusive'] ?? false))
-            ->map(fn ($option) => (string) ($option['value'] ?? ''))
-            ->filter()
-            ->values()
-            ->all();
-
-        $selectedExclusive = array_values(array_intersect($selected, $exclusiveValues));
-        if (count($selectedExclusive) > 1 || (count($selectedExclusive) === 1 && count($selected) > 1)) {
-            return [null, 'Exclusive option cannot be combined with other selections.'];
-        }
-
-        return [$selected, null];
-    }
-
-    protected function validateInteger(array $item, $rawValue): array
-    {
-        if (!is_numeric($rawValue)) {
-            return [null, 'Value must be a whole number.'];
-        }
-
-        $value = (float) $rawValue;
-        if (floor($value) !== $value) {
-            return [null, 'Value must be a whole number.'];
-        }
-
-        $min = Arr::get($item, 'response.min');
-        if (is_numeric($min) && $value < (int) $min) {
-            return [null, 'Value is below the allowed minimum.'];
-        }
-
-        return [(int) $value, null];
-    }
-
-    protected function validateText(array $item, $rawValue): array
-    {
-        $value = trim((string) $rawValue);
-        $formatHint = Arr::get($item, 'response.format_hint');
-
-        if ($formatHint === 'email' && $value !== '' && filter_var($value, FILTER_VALIDATE_EMAIL) === false) {
-            return [null, 'Please enter a valid email address.'];
-        }
-
-        $maxLength = Arr::get($item, 'response.max_length');
-        if (is_numeric($maxLength) && mb_strlen($value) > (int) $maxLength) {
-            return [null, "Answer exceeds max length of {$maxLength} characters."];
-        }
-
-        return [$value, null];
-    }
-
-    protected function allowedOptionValues(array $item): array
-    {
-        return collect($item['options'] ?? [])
-            ->map(fn ($option) => (string) ($option['value'] ?? ''))
-            ->filter()
-            ->values()
-            ->all();
+        return (string) $value;
     }
 
     protected function isRequired(array $item): bool
     {
-        $required = Arr::get($item, 'response.required');
-        if ($required === true) {
-            return true;
+        $response = $this->responseConfig($item);
+        if (array_key_exists('required', $response)) {
+            return (bool) $response['required'];
         }
 
-        if ($required === false) {
+        if (($response['optional'] ?? false) || ($response['nullable'] ?? false)) {
             return false;
         }
 
-        return in_array((string) ($item['type'] ?? ''), $this->requiredByDefaultTypes, true);
+        $requiredTypes = config('survey.validation.default_required_types', []);
+        return in_array($item['type'] ?? '', $requiredTypes, true);
     }
 
-    protected function isEmptyValue($value): bool
+    protected function isEmptyValue(mixed $value): bool
     {
-        if ($value === null || $value === '') {
+        if ($value === null) {
             return true;
+        }
+
+        if (is_string($value)) {
+            return trim($value) === '';
         }
 
         if (is_array($value)) {
@@ -377,8 +275,8 @@ class SurveyResponseValidationService
                 return count($value) === 0;
             }
 
-            foreach ($value as $entry) {
-                if ($entry !== null && $entry !== '') {
+            foreach ($value as $nestedValue) {
+                if (!$this->isEmptyValue($nestedValue)) {
                     return false;
                 }
             }
@@ -387,5 +285,219 @@ class SurveyResponseValidationService
         }
 
         return false;
+    }
+
+    protected function sanitizeValue(array $item, mixed $value): array
+    {
+        return match ($item['type'] ?? null) {
+            'slider' => $this->sanitizeSlider($item, $value),
+            'number_integer' => $this->sanitizeInteger($item, $value),
+            'dropdown', 'single_select' => $this->sanitizeSingleSelect($item, $value),
+            'single_select_text' => $this->sanitizeSingleSelectText($item, $value),
+            'multi_select' => $this->sanitizeMultiSelect($item, $value),
+            'text', 'text_short', 'text_long' => $this->sanitizeText($item, $value),
+            default => [is_scalar($value) ? (string) $value : null, is_scalar($value) ? null : 'Invalid answer format.'],
+        };
+    }
+
+    protected function sanitizeSlider(array $item, mixed $value): array
+    {
+        if (!is_numeric($value)) {
+            return [null, 'Please provide a valid number.'];
+        }
+
+        $numeric = (float) $value;
+        if (abs($numeric - round($numeric)) > 0.000001) {
+            return [null, 'Please provide a whole number.'];
+        }
+
+        $scale = is_array($item['scale'] ?? null) ? $item['scale'] : [];
+        $min = (float) ($scale['min'] ?? 1);
+        $max = (float) ($scale['max'] ?? 5);
+        $step = (float) ($scale['step'] ?? 1);
+
+        if ($numeric < $min || $numeric > $max) {
+            return [null, sprintf('Please select a value between %s and %s.', $min, $max)];
+        }
+
+        if ($step > 0) {
+            $delta = ($numeric - $min) / $step;
+            if (abs($delta - round($delta)) > 0.000001) {
+                return [null, sprintf('Please select a value in increments of %s.', $step)];
+            }
+        }
+
+        return [(int) round($numeric), null];
+    }
+
+    protected function sanitizeInteger(array $item, mixed $value): array
+    {
+        if (!is_numeric($value)) {
+            return [null, 'Please provide a valid number.'];
+        }
+
+        $numeric = (float) $value;
+        if (abs($numeric - round($numeric)) > 0.000001) {
+            return [null, 'Please provide a whole number.'];
+        }
+
+        $response = $this->responseConfig($item);
+        $min = array_key_exists('min', $response) ? (int) $response['min'] : null;
+        $max = array_key_exists('max', $response) ? (int) $response['max'] : null;
+        $intValue = (int) round($numeric);
+
+        if ($min !== null && $intValue < $min) {
+            return [null, sprintf('Please enter a value of at least %d.', $min)];
+        }
+
+        if ($max !== null && $intValue > $max) {
+            return [null, sprintf('Please enter a value no greater than %d.', $max)];
+        }
+
+        return [$intValue, null];
+    }
+
+    protected function sanitizeSingleSelect(array $item, mixed $value): array
+    {
+        if (!is_scalar($value)) {
+            return [null, 'Please select a valid option.'];
+        }
+
+        $selected = (string) $value;
+        $options = $this->optionMap($item);
+        if (!array_key_exists($selected, $options)) {
+            return [null, 'Please select a valid option.'];
+        }
+
+        return [$selected, null];
+    }
+
+    protected function sanitizeSingleSelectText(array $item, mixed $value): array
+    {
+        $selected = null;
+        $text = null;
+
+        if (is_array($value)) {
+            $selected = array_key_exists('selected', $value) ? $value['selected'] : ($value['value'] ?? null);
+            $text = $value['text'] ?? null;
+        } elseif (is_scalar($value)) {
+            $selected = $value;
+        }
+
+        if (!is_scalar($selected)) {
+            return [null, 'Please select a valid option.'];
+        }
+
+        $selectedValue = (string) $selected;
+        $options = $this->optionMap($item);
+        if (!array_key_exists($selectedValue, $options)) {
+            return [null, 'Please select a valid option.'];
+        }
+
+        $selectedOption = $options[$selectedValue];
+        $meta = is_array($selectedOption['meta'] ?? null) ? $selectedOption['meta'] : [];
+        $requiresFreeText = array_key_exists('freetext_placeholder', $meta);
+
+        if ($requiresFreeText) {
+            if (!is_scalar($text) || trim((string) $text) === '') {
+                return [null, 'Please provide details for the selected option.'];
+            }
+
+            [$cleanText, $error] = $this->sanitizeText($item, $text);
+            if ($error !== null) {
+                return [null, $error];
+            }
+
+            return [[
+                'selected' => $selectedValue,
+                'text' => $cleanText,
+            ], null];
+        }
+
+        return [$selectedValue, null];
+    }
+
+    protected function sanitizeMultiSelect(array $item, mixed $value): array
+    {
+        if (!is_array($value) || !array_is_list($value)) {
+            return [null, 'Please select valid options.'];
+        }
+
+        $options = $this->optionMap($item);
+        $selected = [];
+
+        foreach ($value as $candidate) {
+            if (!is_scalar($candidate)) {
+                return [null, 'Please select valid options.'];
+            }
+
+            $candidateValue = (string) $candidate;
+            if (!array_key_exists($candidateValue, $options)) {
+                return [null, 'Please select valid options.'];
+            }
+
+            if (!in_array($candidateValue, $selected, true)) {
+                $selected[] = $candidateValue;
+            }
+        }
+
+        $exclusive = array_keys(array_filter($options, fn ($option) => (bool) ($option['exclusive'] ?? false)));
+        $selectedExclusive = array_values(array_intersect($selected, $exclusive));
+
+        if (!empty($selectedExclusive)) {
+            $selected = [$selectedExclusive[0]];
+        }
+
+        return [$selected, null];
+    }
+
+    protected function sanitizeText(array $item, mixed $value): array
+    {
+        if (!is_scalar($value)) {
+            return [null, 'Please provide a valid text response.'];
+        }
+
+        $text = (string) $value;
+        $response = $this->responseConfig($item);
+        $formatHint = $response['format_hint'] ?? null;
+
+        if ($formatHint === 'email') {
+            $text = trim($text);
+        }
+
+        $maxLength = $response['max_length'] ?? config('survey.validation.default_max_text_length');
+        if (is_numeric($maxLength) && $maxLength > 0 && mb_strlen($text) > (int) $maxLength) {
+            return [null, sprintf('Please limit your answer to %d characters.', (int) $maxLength)];
+        }
+
+        if ($formatHint === 'email' && !filter_var($text, FILTER_VALIDATE_EMAIL)) {
+            return [null, 'Please provide a valid email address.'];
+        }
+
+        return [$text, null];
+    }
+
+    protected function optionMap(array $item): array
+    {
+        $map = [];
+        foreach (($item['options'] ?? []) as $option) {
+            if (!array_key_exists('value', $option)) {
+                continue;
+            }
+
+            $value = (string) $option['value'];
+            $map[$value] = [
+                'exclusive' => (bool) ($option['exclusive'] ?? false),
+                'meta' => is_array($option['meta'] ?? null) ? $option['meta'] : [],
+            ];
+        }
+
+        return $map;
+    }
+
+    protected function responseConfig(array $item): array
+    {
+        $response = $item['response'] ?? [];
+        return is_array($response) ? $response : [];
     }
 }

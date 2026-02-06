@@ -128,6 +128,19 @@ return [
         ],
     ],
 
+    'validation' => [
+        'strict_server_validation' => env('SURVEY_STRICT_VALIDATION_ENABLED', false),
+        'default_required_types' => [
+            'slider',
+            'single_select',
+            'single_select_text',
+            'dropdown',
+            'multi_select',
+            'number_integer',
+        ],
+        'default_max_text_length' => 5000,
+    ],
+
     'automation' => [
         'cadence_windows' => [
             'weekly' => 60 * 24 * 7,

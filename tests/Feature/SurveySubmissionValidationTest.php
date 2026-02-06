@@ -21,13 +21,15 @@ class SurveySubmissionValidationTest extends TestCase
 
     public function test_submit_rejects_invalid_payload_and_unknown_questions(): void
     {
+        config()->set('survey.validation.strict_server_validation', true);
+
         $assignment = $this->seedSurveyAssignment();
 
         $payload = [
             'responses' => [
                 'Q_SLIDER' => 11,
                 'Q_SELECT' => 'Z',
-                'Q_MULTI' => ['X', 'NONE'],
+                'Q_MULTI' => ['X', 'INVALID'],
                 'Q_NUM' => -1,
                 'Q_EMAIL' => 'invalid-email',
                 'UNKNOWN_QID' => 'tampered',
@@ -57,6 +59,8 @@ class SurveySubmissionValidationTest extends TestCase
 
     public function test_submit_requires_visible_conditional_item_but_skips_it_when_hidden(): void
     {
+        config()->set('survey.validation.strict_server_validation', true);
+
         $assignment = $this->seedSurveyAssignment();
 
         $baseResponses = [
@@ -94,6 +98,8 @@ class SurveySubmissionValidationTest extends TestCase
 
     public function test_submit_ignores_hidden_answer_values_when_persisting(): void
     {
+        config()->set('survey.validation.strict_server_validation', true);
+
         $assignment = $this->seedSurveyAssignment();
 
         $response = $this->postJson(route('survey.submit', $assignment->token), [
@@ -101,7 +107,7 @@ class SurveySubmissionValidationTest extends TestCase
                 'Q_SLIDER' => 4,
                 'Q_SELECT' => 'A',
                 'Q_DEP' => 'DEP_1',
-                'Q_MULTI' => ['Y'],
+                'Q_MULTI' => ['Y', 'NONE'],
                 'Q_NUM' => 3,
                 'Q_EMAIL' => 'hidden@example.com',
             ],
@@ -125,6 +131,71 @@ class SurveySubmissionValidationTest extends TestCase
         $this->assertContains('Q_NUM', $persistedQids);
         $this->assertContains('Q_EMAIL', $persistedQids);
         $this->assertNotContains('Q_DEP', $persistedQids);
+
+        $multiAnswer = SurveyAnswer::query()
+            ->whereHas('response', fn ($query) => $query->where('assignment_id', $assignment->id))
+            ->where('question_key', 'Q_MULTI')
+            ->value('value');
+        $this->assertSame(['NONE'], json_decode((string) $multiAnswer, true, 512, JSON_THROW_ON_ERROR));
+    }
+
+    public function test_submit_in_strict_mode_trims_email_before_persisting(): void
+    {
+        config()->set('survey.validation.strict_server_validation', true);
+
+        $assignment = $this->seedSurveyAssignment();
+
+        $response = $this->postJson(route('survey.submit', $assignment->token), [
+            'responses' => [
+                'Q_SLIDER' => 4,
+                'Q_SELECT' => 'A',
+                'Q_MULTI' => ['Y'],
+                'Q_NUM' => 3,
+                'Q_EMAIL' => ' person@example.com ',
+            ],
+            'duration_ms' => 450,
+        ]);
+
+        $response->assertOk()->assertJson(['status' => 'ok']);
+
+        $emailAnswer = SurveyAnswer::query()
+            ->whereHas('response', fn ($query) => $query->where('assignment_id', $assignment->id))
+            ->where('question_key', 'Q_EMAIL')
+            ->value('value');
+
+        $this->assertSame('person@example.com', $emailAnswer);
+    }
+
+    public function test_submit_in_non_strict_mode_keeps_legacy_payload_behavior(): void
+    {
+        config()->set('survey.validation.strict_server_validation', false);
+
+        $assignment = $this->seedSurveyAssignment();
+
+        $response = $this->postJson(route('survey.submit', $assignment->token), [
+            'responses' => [
+                'Q_SLIDER' => 11,
+                'Q_SELECT' => 'A',
+                'Q_DEP' => 'DEP_1',
+                'Q_MULTI' => ['X', 'NONE'],
+                'Q_NUM' => -1,
+                'Q_EMAIL' => ' invalid-email ',
+                'UNKNOWN_QID' => 'tampered',
+            ],
+            'duration_ms' => 1234,
+        ]);
+
+        $response->assertOk()->assertJson(['status' => 'ok']);
+
+        $answersByQid = SurveyAnswer::query()
+            ->whereHas('response', fn ($query) => $query->where('assignment_id', $assignment->id))
+            ->pluck('value', 'question_key')
+            ->toArray();
+
+        $this->assertArrayHasKey('Q_DEP', $answersByQid);
+        $this->assertArrayNotHasKey('UNKNOWN_QID', $answersByQid);
+        $this->assertSame('11', $answersByQid['Q_SLIDER']);
+        $this->assertSame('invalid-email', $answersByQid['Q_EMAIL']);
     }
 
     protected function seedSurveyAssignment(): SurveyAssignment
