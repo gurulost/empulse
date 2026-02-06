@@ -36,7 +36,7 @@ externalPort = 80
 [deployment]
 deploymentTarget = "vm"
 healthCheckPath = "/up"
-run = ["bash", "-lc", "php artisan serve --host=0.0.0.0 --port=${PORT:-5000}"]
+run = ["sh", "-c", "sh -lc 'echo \"BOOT DB_HOST=$DB_HOST DB_CONNECTION=$DB_CONNECTION APP_DEBUG=$APP_DEBUG DATABASE_URL=${DATABASE_URL:+set}\"; php artisan optimize:clear; php artisan serve --host=0.0.0.0 --port=5000'"]
 build = ["bash", "-lc", "composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist && npm ci && npm run build"]
 
 [userenv]
