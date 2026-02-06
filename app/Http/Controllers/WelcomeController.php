@@ -6,8 +6,13 @@ use Illuminate\Http\Request;
 
 class WelcomeController extends Controller
 {
-    public function welcome() 
+    public function welcome(Request $request)
     {
+        $userAgent = strtolower((string) $request->userAgent());
+        if (str_contains($userAgent, 'go-http-client') || str_contains($userAgent, 'kube-probe')) {
+            return response('OK', 200);
+        }
+
         if (!auth()->check()) {
             return view('welcome');
         }
