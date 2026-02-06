@@ -5,17 +5,20 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 return new class extends Migration
+
 {
+    public $withinTransaction = false;
+
     public function up()
     {
-        if (DB::table('surveys')->where('is_default', true)->exists()) {
+        if (DB::table('surveys')->whereRaw('"is_default" = true')->exists()) {
             return;
         }
 
         $surveyId = DB::table('surveys')->insertGetId([
             'title' => 'Employee Pulse (Internal)',
             'description' => 'Placeholder assessment until the full survey is imported.',
-            'is_default' => true,
+            'is_default' => DB::raw('true'),
             'status' => 'published',
             'metadata' => json_encode([
                 'version' => 'placeholder',
@@ -86,7 +89,7 @@ return new class extends Migration
 
     public function down()
     {
-        $survey = DB::table('surveys')->where('is_default', true)->first();
+        $survey = DB::table('surveys')->whereRaw('"is_default" = true')->first();
 
         if ($survey) {
             DB::table('survey_questions')->where('survey_id', $survey->id)->delete();

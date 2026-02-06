@@ -5,7 +5,10 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
+
 {
+    public $withinTransaction = false;
+
     public function up(): void
     {
         if (!Schema::hasTable('survey_answers') || !Schema::hasColumn('survey_answers', 'question_id')) {

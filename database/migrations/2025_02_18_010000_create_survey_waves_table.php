@@ -5,7 +5,10 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
+
 {
+    public $withinTransaction = false;
+
     public function up()
     {
         Schema::create('survey_waves', function (Blueprint $table) {

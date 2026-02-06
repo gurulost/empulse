@@ -35,7 +35,7 @@ externalPort = 80
 
 [deployment]
 deploymentTarget = "vm"
-run = ["bash", "-c", "php artisan config:clear && php artisan migrate:fresh --force --seed && php artisan demo:seed --import-instrument --employees=120 --months=6 --force && php artisan queue:work --tries=1 --sleep=3 & php artisan schedule:work & php artisan serve --host=0.0.0.0 --port=${PORT:-5000}"]
+run = ["bash", "-c", "php artisan migrate --force && (php artisan queue:work --tries=1 --sleep=3 &) && (php artisan schedule:work &) && php artisan serve --host=0.0.0.0 --port=${PORT:-5000}"]
 build = ["bash", "-c", "composer install --no-dev --optimize-autoloader && npm install && npm run build"]
 
 [userenv]
