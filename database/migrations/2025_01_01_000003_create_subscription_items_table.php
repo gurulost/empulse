@@ -5,10 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
-
 {
-    public $withinTransaction = false;
-
     public function up(): void
     {
         if (!Schema::hasTable('subscription_items')) {
