@@ -89,9 +89,12 @@ class SurveyController extends Controller
             'duration_ms' => 'nullable|integer|min:0|max:86400000',
         ]);
 
-        $sanitizedResponses = $this->validationService->validateAndSanitize($assignment, $data['responses']);
+        $responses = $data['responses'];
+        if (config('survey.validation.strict_server_validation', false)) {
+            $responses = $this->validationService->validateAndSanitize($assignment, $responses);
+        }
 
-        $this->surveyService->recordResponse($assignment, $sanitizedResponses, [
+        $this->surveyService->recordResponse($assignment, $responses, [
             'duration_ms' => $data['duration_ms'] ?? null,
         ]);
 
