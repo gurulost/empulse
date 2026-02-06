@@ -221,3 +221,14 @@ Document any new mappings (QID → indicator/series_role/polarity) inside this f
 3. **Billing alignment** – drip cadences are locked to the Pulse plan (tariff `1`) via `config/survey.php`. Billing states read from the manager’s Cashier subscription; `past_due`/`canceled` waves pause automatically with descriptive logs and UI badges.
 4. **Docs/tests** – README and this file document the automation architecture, operational commands, and billing gates. Feature coverage includes wave creation guards, cadence enforcement, billing pauses, and the `/dashboard/analytics` filter endpoint (mocked service) so regressions are caught.
 5. **Operational reminders** – Always run `php artisan queue:work --tries=1` and schedule `php artisan survey:waves:schedule` via cron (`* * * * * php artisan schedule:run`). Without both, drip jobs will stall and the UI will show stale statuses.
+
+### Sub-update – Analytics EXPLAIN toolkit & query-shape tuning (2026-02-06)
+- Added production-focused index migrations for analytics-heavy paths:
+  - `2026_02_06_000000_add_analytics_indexes_to_survey_tables.php`
+  - `2026_02_06_010000_add_wave_query_indexes_to_survey_assignments_and_responses.php`
+  - New indexes cover latest-response scans, wave/version/label filters, answer fan-out, assignment wave stats, and response↔assignment joins.
+- Refactored `SurveyAnalyticsService::latestResponseIdsForCompany()` to use direct joins (`users` + optional `survey_assignments`) instead of nested `whereHas`/`EXISTS` wave subplans. Wave selectors still support `wave:*`, `version:*`, and `label:*` inputs.
+- Refactored `SurveyAnalyticsService::availableWavesForCompany()` legacy fallback queries to explicit company-scoped joins against `users`.
+- Added analytics answer prefiltering in `latestResponsesWithAnswers()` so dashboard analytics loads only relevant numeric question keys (WCA triplets + team culture + impact series), reducing unnecessary payload at scale.
+- Added command `php artisan analytics:explain {company_id} [--wave=...] [--no-analyze]` (`app/Console/Commands/ExplainAnalytics.php`) to run EXPLAIN plans for the core analytics queries directly in any environment.
+- Added runbook `docs/ANALYTICS_EXPLAIN_CHECKLIST.md` with preflight, budgets, red flags, and release gating so future passes can audit query plans consistently before production releases.

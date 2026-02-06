@@ -4,167 +4,14 @@ namespace App\Services;
 
 use App\Models\SurveyAnswer;
 use App\Models\SurveyResponse;
+use App\Models\SurveyVersion;
+use App\Models\SurveyWave;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class SurveyAnalyticsService
 {
-    protected array $metricKeys = [
-        'engagement' => 'engagement_score',
-        'enablement' => 'enablement_score',
-        'alignment' => 'alignment_score',
-        'culture' => 'culture_score',
-    ];
-
-    protected array $qidMetricMap = [
-        'QID1_1' => ['metric' => 'engagement', 'offset' => -0.5],
-        'QID1_2' => ['metric' => 'engagement', 'offset' => 0],
-        'QID1_3' => ['metric' => 'engagement', 'offset' => 0.5],
-        'QID2_1' => ['metric' => 'engagement', 'offset' => -0.25],
-        'QID2_2' => ['metric' => 'engagement', 'offset' => 0.25],
-        'QID2_3' => ['metric' => 'engagement', 'offset' => 0.75],
-        'QID2_4' => ['metric' => 'engagement', 'offset' => 0.1],
-        'QID3_1' => ['metric' => 'engagement', 'offset' => -0.1],
-        'QID3_2' => ['metric' => 'engagement', 'offset' => 0.15],
-        'QID3_3' => ['metric' => 'engagement', 'offset' => 0.4],
-        'QID3_4' => ['metric' => 'engagement', 'offset' => 0.6],
-        'QID4_1' => ['metric' => 'engagement', 'offset' => 0],
-        'QID7_1' => ['metric' => 'enablement', 'offset' => -0.3],
-        'QID7_2' => ['metric' => 'enablement', 'offset' => 0.2],
-        'QID7_3' => ['metric' => 'enablement', 'offset' => 0.6],
-        'QID7_6' => ['metric' => 'enablement', 'offset' => -0.1],
-        'QID8_1' => ['metric' => 'enablement', 'offset' => -0.4],
-        'QID8_2' => ['metric' => 'enablement', 'offset' => -0.1],
-        'QID8_3' => ['metric' => 'enablement', 'offset' => 0.2],
-        'QID8_6' => ['metric' => 'enablement', 'offset' => 0.4],
-        'QID8_7' => ['metric' => 'enablement', 'offset' => 0.5],
-        'QID8_8' => ['metric' => 'enablement', 'offset' => 0.6],
-        'QID8_9' => ['metric' => 'enablement', 'offset' => 0.8],
-        'QID9_1' => ['metric' => 'enablement', 'offset' => -0.25],
-        'QID9_2' => ['metric' => 'enablement', 'offset' => 0.25],
-        'QID9_3' => ['metric' => 'enablement', 'offset' => 0.75],
-        'QID9_6' => ['metric' => 'enablement', 'offset' => 0.4],
-        'QID10_1' => ['metric' => 'alignment', 'offset' => -0.3],
-        'QID10_2' => ['metric' => 'alignment', 'offset' => 0.2],
-        'QID10_3' => ['metric' => 'alignment', 'offset' => 0.6],
-        'QID11_1' => ['metric' => 'alignment', 'offset' => -0.4],
-        'QID11_2' => ['metric' => 'alignment', 'offset' => 0],
-        'QID11_3' => ['metric' => 'alignment', 'offset' => 0.5],
-        'QID12_1' => ['metric' => 'alignment', 'offset' => -0.1],
-        'QID14_1' => ['metric' => 'alignment', 'offset' => 0.2],
-        'QID15_1' => ['metric' => 'alignment', 'offset' => 0.35],
-        'QID18_1' => ['metric' => 'alignment', 'offset' => 0.45],
-        'QID21_1' => ['metric' => 'alignment', 'offset' => 0.55],
-        'QID24_1' => ['metric' => 'alignment', 'offset' => 0.65],
-        'QID27_1' => ['metric' => 'alignment', 'offset' => 0.75],
-        'QID30_1' => ['metric' => 'culture', 'offset' => -0.2],
-        'QID30_3' => ['metric' => 'culture', 'offset' => 0.5],
-        'QID31_1' => ['metric' => 'culture', 'offset' => -0.1],
-        'QID31_3' => ['metric' => 'culture', 'offset' => 0.4],
-        'QID32_1' => ['metric' => 'culture', 'offset' => 0.1],
-        'QID32_3' => ['metric' => 'culture', 'offset' => 0.7],
-        'QID35_1' => ['metric' => 'culture', 'offset' => -0.15],
-        'QID38_1' => ['metric' => 'culture', 'offset' => 0.05],
-        'QID41_1' => ['metric' => 'culture', 'offset' => 0.15],
-        'QID44_1' => ['metric' => 'culture', 'offset' => 0.25],
-        'QID49_1' => ['metric' => 'culture', 'offset' => 0.35],
-        'QID50_1' => ['metric' => 'culture', 'offset' => 0.45],
-        'QID52_1' => ['metric' => 'culture', 'offset' => 0.55],
-        'QID54_1' => ['metric' => 'culture', 'offset' => 0.65],
-        'QID55_1' => ['metric' => 'culture', 'offset' => 0.25],
-        'QID60_1' => ['metric' => 'culture', 'offset' => 0.35],
-    ];
-
-    public function datasetForCompany(?int $companyId = null): array
-    {
-        $query = SurveyResponse::with(['answers', 'user'])->orderByDesc('submitted_at');
-        if ($companyId) {
-            $query->whereHas('user', fn ($q) => $q->where('company_id', $companyId));
-        }
-
-        $responses = $query->get();
-        if ($responses->isEmpty()) {
-            return ['data' => [], 'time' => now()->valueOf()];
-        }
-
-        $userEmails = $responses->pluck('user.email')->filter()->unique()->all();
-        $workers = DB::table('company_worker')
-            ->whereIn('email', $userEmails)
-            ->get()
-            ->keyBy('email');
-
-        $payloads = $responses->map(function (SurveyResponse $response) use ($workers) {
-            $user = $response->user;
-            $worker = $user && $user->email ? $workers->get($user->email) : null;
-            $answers = $response->answers->pluck('value_numeric', 'question_key')->toArray();
-            foreach ($response->answers as $answer) {
-                if (!isset($answers[$answer->question_key])) {
-                    $answers[$answer->question_key] = is_numeric($answer->value) ? (float) $answer->value : $answer->value;
-                }
-            }
-
-            $values = $this->buildValues($answers, [
-                'company' => $user?->company_title ?? ($worker->company_title ?? 'Unknown Company'),
-                'department' => $worker->department ?? 'General',
-                'supervisor' => $worker->supervisor ?? '',
-                'email' => $user?->email ?? '',
-            ]);
-
-            return ['values' => $values];
-        });
-
-        return [
-            'data' => $payloads->map(fn ($payload) => json_encode($payload))->all(),
-            'time' => now()->valueOf(),
-        ];
-    }
-
-    protected function buildValues(array $answers, array $context): array
-    {
-        $metrics = $this->metricScores($answers);
-        $values = [];
-
-        foreach ($this->qidMetricMap as $qid => $definition) {
-            $metric = $definition['metric'];
-            $offset = $definition['offset'] ?? 0;
-            $values[$qid] = $this->scoreWithOffset($metrics[$metric], $offset);
-        }
-
-        $values['QID101_TEXT'] = $context['company'];
-        $values['QID63_TEXT'] = $context['department'];
-        $values['QID103_TEXT'] = $context['supervisor'];
-        $values['QID62_TEXT'] = $context['email'];
-
-        return $values;
-    }
-
-    protected function metricScores(array $answers): array
-    {
-        $scores = [];
-        foreach ($this->metricKeys as $metric => $key) {
-            $raw = $answers[$key] ?? 3;
-            $scores[$metric] = $this->normalizeScore($raw);
-        }
-
-        return $scores;
-    }
-
-    protected function normalizeScore($value): float
-    {
-        if (!is_numeric($value)) {
-            $value = 3;
-        }
-
-        $scaled = ((float) $value) * 2;
-        return max(1, min(10, $scaled));
-    }
-
-    protected function scoreWithOffset(float $base, float $offset): float
-    {
-        return round(max(1, min(10, $base + $offset)), 2);
-    }
-
     public function workContentAnalyticsForUser(User $user): array
     {
         if (!$user->company_id) {
@@ -190,7 +37,7 @@ class SurveyAnalyticsService
             return [];
         }
 
-        $responses = $this->latestResponsesWithAnswers($companyId);
+        $responses = $this->latestResponsesWithAnswers($companyId, $filters['wave'] ?? null);
         if ($responses->isEmpty()) {
             return [];
         }
@@ -203,13 +50,13 @@ class SurveyAnalyticsService
         $answers = $responses->flatMap(fn (SurveyResponse $response) => $response->answers);
         $attributes = $this->aggregateAttributes($answers);
         $indicators = $this->indicatorSatisfaction($attributes);
-        $temperature = $this->temperatureIndex($attributes);
         $teamCulture = $this->teamCultureAnalytics($answers);
+        $weightedIndicator = $this->weightedIndicatorScore($indicators);
+        $teamCultureEval = $this->teamCultureEvaluation($teamCulture);
+        $temperature = $this->temperatureIndex($weightedIndicator, $teamCultureEval);
         $impact = $this->impactAnalytics($answers);
         $gapChart = $this->gapChartDataset($attributes);
         $scatter = $this->teamScatterDataset($responses);
-        $weightedIndicator = $this->weightedIndicatorScore($indicators);
-        $teamCultureEval = $this->teamCultureEvaluation($teamCulture);
 
         return [
             'attributes' => $attributes->sortByDesc(fn ($row) => $row['gap'] ?? -INF)->values()->all(),
@@ -228,15 +75,13 @@ class SurveyAnalyticsService
     {
         $department = $filters['department'] ?? null;
         $team = $filters['team'] ?? null;
-        $wave = $filters['wave'] ?? null;
-
-        if (!$department && !$team && !$wave) {
+        if (!$department && !$team) {
             return $responses;
         }
 
         $workersByEmail = $this->companyWorkersByEmail($responses);
 
-        return $responses->filter(function (SurveyResponse $response) use ($department, $team, $wave, $workersByEmail) {
+        return $responses->filter(function (SurveyResponse $response) use ($department, $team, $workersByEmail) {
             $user = $response->user;
             $email = $user?->email;
             $worker = $email && isset($workersByEmail[$email]) ? $workersByEmail[$email] : null;
@@ -249,38 +94,157 @@ class SurveyAnalyticsService
                 return false;
             }
 
-            if ($wave) {
-                $versionId = (string) $response->survey_version_id;
-                $assignmentWave = (string) ($response->assignment?->wave_label ?? $response->assignment?->survey_version_id);
-                if ($versionId !== (string) $wave && $assignmentWave !== (string) $wave) {
-                    return false;
-                }
-            }
-
             return true;
         });
     }
 
-    protected function latestResponseIdsForCompany(int $companyId): Collection
+    protected function latestResponseIdsForCompany(int $companyId, ?string $wave = null): Collection
     {
-        return SurveyResponse::query()
-            ->select(DB::raw('MAX(id) as id'))
-            ->whereNotNull('submitted_at')
-            ->whereHas('user', fn ($q) => $q->where('company_id', $companyId))
-            ->groupBy('user_id')
-            ->pluck('id');
+        $query = SurveyResponse::query()
+            ->from('survey_responses as sr')
+            ->join('users as u', function ($join) use ($companyId) {
+                $join->on('u.id', '=', 'sr.user_id')
+                    ->where('u.company_id', '=', $companyId);
+            })
+            ->whereNotNull('sr.submitted_at')
+            ->selectRaw('MAX(sr.id) as id')
+            ->groupBy('sr.user_id');
+
+        if ($wave !== null && $wave !== '') {
+            $query->leftJoin('survey_assignments as sa', 'sa.id', '=', 'sr.assignment_id');
+            $this->applyWaveFilterToLatestResponsesQuery($query, (string) $wave);
+        }
+
+        return $query->pluck('id');
     }
 
-    protected function latestResponsesWithAnswers(int $companyId): Collection
+    protected function latestResponsesWithAnswers(int $companyId, ?string $wave = null): Collection
     {
-        $responseIds = $this->latestResponseIdsForCompany($companyId);
+        $responseIds = $this->latestResponseIdsForCompany($companyId, $wave);
         if ($responseIds->isEmpty()) {
             return collect();
         }
 
-        return SurveyResponse::with(['answers', 'user', 'assignment'])
+        $analyticsQuestionKeys = $this->analyticsQuestionKeys();
+
+        return SurveyResponse::with([
+                'answers' => function ($query) use ($analyticsQuestionKeys) {
+                    $query->select([
+                        'id',
+                        'response_id',
+                        'question_key',
+                        'value',
+                        'value_numeric',
+                        'metadata',
+                    ]);
+
+                    if (!empty($analyticsQuestionKeys)) {
+                        $query->whereIn('question_key', $analyticsQuestionKeys);
+                    }
+
+                    $query->whereNotNull('value_numeric');
+                },
+                'user:id,email,company_id,company_title',
+                'assignment:id,survey_wave_id,survey_version_id,wave_label',
+            ])
             ->whereIn('id', $responseIds)
+            ->select([
+                'id',
+                'survey_id',
+                'survey_version_id',
+                'survey_wave_id',
+                'assignment_id',
+                'user_id',
+                'wave_label',
+                'submitted_at',
+            ])
             ->get();
+    }
+
+    protected function applyWaveFilterToLatestResponsesQuery($query, string $wave): void
+    {
+        $selector = $this->parseWaveSelector($wave);
+        if (empty($selector['wave_ids']) && empty($selector['version_ids']) && empty($selector['labels'])) {
+            return;
+        }
+
+        $query->where(function ($waveQuery) use ($selector) {
+            $hasCondition = false;
+            $appendCondition = function (callable $callback) use (&$hasCondition, $waveQuery): void {
+                if ($hasCondition) {
+                    $waveQuery->orWhere($callback);
+                } else {
+                    $waveQuery->where($callback);
+                    $hasCondition = true;
+                }
+            };
+
+            if (!empty($selector['wave_ids'])) {
+                $appendCondition(function ($q) use ($selector) {
+                    $q->whereIn('sr.survey_wave_id', $selector['wave_ids'])
+                        ->orWhereIn('sa.survey_wave_id', $selector['wave_ids']);
+                });
+            }
+
+            if (!empty($selector['version_ids'])) {
+                $appendCondition(function ($q) use ($selector) {
+                    $q->whereIn('sr.survey_version_id', $selector['version_ids'])
+                        ->orWhereIn('sa.survey_version_id', $selector['version_ids']);
+                });
+            }
+
+            if (!empty($selector['labels'])) {
+                $appendCondition(function ($q) use ($selector) {
+                    $q->whereIn('sr.wave_label', $selector['labels'])
+                        ->orWhereIn('sa.wave_label', $selector['labels']);
+                });
+            }
+        });
+    }
+
+    protected function parseWaveSelector(string $wave): array
+    {
+        $raw = trim($wave);
+        if ($raw === '') {
+            return [
+                'wave_ids' => [],
+                'version_ids' => [],
+                'labels' => [],
+            ];
+        }
+
+        $waveIds = [];
+        $versionIds = [];
+        $labels = [];
+
+        if (str_contains($raw, ':')) {
+            [$prefix, $value] = explode(':', $raw, 2);
+            $value = trim($value);
+
+            if ($prefix === 'wave' && ctype_digit($value)) {
+                $waveIds[] = (int) $value;
+            } elseif ($prefix === 'version' && ctype_digit($value)) {
+                $versionIds[] = (int) $value;
+            } elseif ($prefix === 'label' && $value !== '') {
+                $labels[] = $value;
+            } elseif (ctype_digit($value)) {
+                $waveIds[] = (int) $value;
+                $versionIds[] = (int) $value;
+            } elseif ($value !== '') {
+                $labels[] = $value;
+            }
+        } elseif (ctype_digit($raw)) {
+            $waveIds[] = (int) $raw;
+            $versionIds[] = (int) $raw;
+        } else {
+            $labels[] = $raw;
+        }
+
+        return [
+            'wave_ids' => array_values(array_unique($waveIds)),
+            'version_ids' => array_values(array_unique($versionIds)),
+            'labels' => array_values(array_unique($labels)),
+        ];
     }
 
     protected function indicatorSatisfaction(Collection $attributes): array
@@ -296,14 +260,25 @@ class SurveyAnalyticsService
 
             $current = $this->average($rows->pluck('current')->filter());
             $ideal = $this->average($rows->pluck('ideal')->filter());
+            $desire = $this->average($rows->pluck('desire')->filter());
             $gap = ($current !== null && $ideal !== null) ? round($ideal - $current, 2) : null;
+            $satisfaction = null;
+            if ($current !== null) {
+                if ($ideal !== null && $ideal > 0) {
+                    $satisfaction = round(max(0, min(10, ($current / $ideal) * 10)), 2);
+                } else {
+                    $satisfaction = round(max(0, min(10, $current)), 2);
+                }
+            }
 
             $grouped[] = [
                 'key' => $key,
                 'label' => $config['label'] ?? $key,
                 'current' => $current,
                 'ideal' => $ideal,
+                'desire' => $desire,
                 'gap' => $gap,
+                'satisfaction' => $satisfaction,
             ];
         }
 
@@ -313,14 +288,52 @@ class SurveyAnalyticsService
             ->all();
     }
 
-    protected function temperatureIndex(Collection $attributes): ?float
+    protected function temperatureIndex(?float $weightedIndicator, ?float $teamCultureEval): ?float
     {
-        $currents = $attributes->pluck('current')->filter();
-        if ($currents->isEmpty()) {
+        if ($weightedIndicator === null && $teamCultureEval === null) {
             return null;
         }
 
-        return round($currents->avg(), 2);
+        if ($weightedIndicator === null) {
+            return $this->normalizeCultureToTen($teamCultureEval);
+        }
+
+        if ($teamCultureEval === null) {
+            return round($weightedIndicator, 2);
+        }
+
+        $weights = config('survey.temperature.weights', []);
+        $indicatorWeight = max(0, (float) ($weights['indicator'] ?? 0.65));
+        $cultureWeight = max(0, (float) ($weights['culture'] ?? 0.35));
+        $totalWeight = $indicatorWeight + $cultureWeight;
+
+        if ($totalWeight <= 0) {
+            return round($weightedIndicator, 2);
+        }
+
+        $cultureOnTen = $this->normalizeCultureToTen($teamCultureEval);
+
+        return round((($weightedIndicator * $indicatorWeight) + ($cultureOnTen * $cultureWeight)) / $totalWeight, 2);
+    }
+
+    protected function normalizeCultureToTen(?float $score): ?float
+    {
+        if ($score === null) {
+            return null;
+        }
+
+        $scale = config('survey.team_culture_evaluation.scale', []);
+        $min = (float) ($scale['min'] ?? 1);
+        $max = (float) ($scale['max'] ?? 9);
+
+        if ($max <= $min) {
+            return round($score, 2);
+        }
+
+        $clamped = max($min, min($max, $score));
+        $normalized = (($clamped - $min) / ($max - $min)) * 10;
+
+        return round($normalized, 2);
     }
 
     protected function weightedIndicatorScore(array $indicators): ?float
@@ -334,7 +347,7 @@ class SurveyAnalyticsService
         $weight = 0;
 
         foreach ($indicators as $indicator) {
-            $value = $indicator['current'] ?? null;
+            $value = $indicator['satisfaction'] ?? $indicator['current'] ?? null;
             if ($value === null) {
                 continue;
             }
@@ -358,25 +371,73 @@ class SurveyAnalyticsService
 
     public function availableWavesForCompany(int $companyId): array
     {
-        $responses = SurveyResponse::with('surveyWave')
-            ->select('survey_version_id', 'wave_label', 'survey_wave_id')
-            ->whereHas('user', fn ($q) => $q->where('company_id', $companyId))
-            ->whereNotNull('submitted_at')
-            ->orderByDesc('submitted_at')
-            ->limit(200)
+        $options = [];
+
+        $waves = SurveyWave::with('surveyVersion:id,version')
+            ->where('company_id', $companyId)
+            ->orderByRaw('COALESCE(due_at, opens_at, created_at) DESC')
+            ->orderByDesc('id')
             ->get();
 
-        $waves = $responses->map(function ($response) {
-            $wave = $response->surveyWave;
-            $label = $wave->label ?? $response->wave_label ?? "Version {$response->survey_version_id}";
-            $key = $wave?->id ?? $response->wave_label ?? (string) $response->survey_version_id;
-            return [
-                'key' => (string) $key,
-                'label' => $label,
-            ];
-        })->unique('key');
+        foreach ($waves as $wave) {
+            $key = "wave:{$wave->id}";
+            $label = $wave->label ?: "Wave {$wave->id}";
+            $versionSuffix = $wave->surveyVersion?->version ? " (v{$wave->surveyVersion->version})" : '';
+            $options[$key] = "{$label}{$versionSuffix}";
+        }
 
-        return $waves->pluck('label', 'key')->toArray();
+        // Support historical rows created before wave records existed.
+        $legacyLabels = SurveyResponse::query()
+            ->from('survey_responses as sr')
+            ->join('users as u', function ($join) use ($companyId) {
+                $join->on('u.id', '=', 'sr.user_id')
+                    ->where('u.company_id', '=', $companyId);
+            })
+            ->whereNotNull('sr.submitted_at')
+            ->whereNull('sr.survey_wave_id')
+            ->whereNotNull('sr.wave_label')
+            ->where('sr.wave_label', '!=', '')
+            ->select('sr.wave_label')
+            ->distinct()
+            ->orderByDesc('sr.wave_label')
+            ->pluck('sr.wave_label');
+
+        foreach ($legacyLabels as $label) {
+            $key = 'label:' . $label;
+            if (!array_key_exists($key, $options)) {
+                $options[$key] = $label;
+            }
+        }
+
+        $legacyVersionIds = SurveyResponse::query()
+            ->from('survey_responses as sr')
+            ->join('users as u', function ($join) use ($companyId) {
+                $join->on('u.id', '=', 'sr.user_id')
+                    ->where('u.company_id', '=', $companyId);
+            })
+            ->whereNotNull('sr.submitted_at')
+            ->whereNull('sr.survey_wave_id')
+            ->whereNull('sr.wave_label')
+            ->whereNotNull('sr.survey_version_id')
+            ->select('sr.survey_version_id')
+            ->distinct()
+            ->pluck('sr.survey_version_id')
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->values();
+
+        if ($legacyVersionIds->isNotEmpty()) {
+            $versionsById = SurveyVersion::whereIn('id', $legacyVersionIds)->pluck('version', 'id');
+            foreach ($legacyVersionIds as $versionId) {
+                $key = "version:{$versionId}";
+                if (!array_key_exists($key, $options)) {
+                    $versionLabel = $versionsById[$versionId] ?? (string) $versionId;
+                    $options[$key] = "Version {$versionLabel}";
+                }
+            }
+        }
+
+        return $options;
     }
 
     protected function average(Collection $values): ?float
@@ -391,18 +452,20 @@ class SurveyAnalyticsService
     protected function teamCultureAnalytics(Collection $answers): array
     {
         $config = config('survey.team_culture', []);
-        if (empty($config)) {
-            return [];
-        }
-
         $positiveKeys = $config['positive'] ?? [];
         $negativeKeys = $config['negative'] ?? [];
         if (empty($positiveKeys) && empty($negativeKeys)) {
             return [];
         }
 
+        $negativeLookup = array_fill_keys($negativeKeys, true);
+        $scale = config('survey.team_culture_evaluation.scale', []);
+        $scaleMin = (float) ($scale['min'] ?? 1);
+        $scaleMax = (float) ($scale['max'] ?? 9);
+
         $positiveValues = collect();
         $negativeValues = collect();
+        $normalizedValuesByQid = [];
         $items = [];
 
         foreach ($answers as $answer) {
@@ -418,7 +481,14 @@ class SurveyAnalyticsService
             } elseif (in_array($key, $negativeKeys, true)) {
                 $negativeValues->push($value);
                 $items[] = ['qid' => $key, 'value' => $value, 'polarity' => 'negative'];
+            } else {
+                continue;
             }
+
+            $normalized = isset($negativeLookup[$key])
+                ? $this->reverseScore($value, $scaleMin, $scaleMax)
+                : $value;
+            $normalizedValuesByQid[$key][] = $normalized;
         }
 
         if ($positiveValues->isEmpty() && $negativeValues->isEmpty()) {
@@ -432,17 +502,75 @@ class SurveyAnalyticsService
             $score = round($positiveAvg - $negativeAvg, 2);
         }
 
+        $dimensionConfig = config('survey.team_culture_evaluation.dimensions', []);
+        $dimensionScores = [];
+        $weightedSum = 0.0;
+        $weightedTotal = 0.0;
+
+        foreach ($dimensionConfig as $dimensionKey => $dimension) {
+            $questionIds = $dimension['questions'] ?? [];
+            $weight = max(0, (float) ($dimension['weight'] ?? 1));
+            if (empty($questionIds)) {
+                continue;
+            }
+
+            $values = collect($questionIds)
+                ->flatMap(fn ($qid) => $normalizedValuesByQid[$qid] ?? [])
+                ->filter(fn ($value) => is_numeric($value))
+                ->map(fn ($value) => (float) $value)
+                ->values();
+
+            if ($values->isEmpty()) {
+                continue;
+            }
+
+            $avg = $this->average($values);
+            $dimensionScores[$dimensionKey] = [
+                'label' => $dimension['label'] ?? $dimensionKey,
+                'weight' => $weight,
+                'average' => $avg,
+                'count' => $values->count(),
+            ];
+
+            if ($avg !== null && $weight > 0) {
+                $weightedSum += $avg * $weight;
+                $weightedTotal += $weight;
+            }
+        }
+
+        if ($weightedTotal > 0) {
+            $evaluation = round($weightedSum / $weightedTotal, 2);
+        } else {
+            $allNormalized = collect($normalizedValuesByQid)->flatten();
+            $evaluation = $this->average($allNormalized);
+        }
+
         return [
             'score' => $score,
             'positive' => $positiveAvg,
             'negative' => $negativeAvg,
             'items' => $items,
+            'dimensions' => $dimensionScores,
+            'evaluation' => $evaluation,
         ];
     }
 
     protected function teamCultureEvaluation(array $teamCulture): ?float
     {
-        return $teamCulture['score'] ?? null;
+        if (array_key_exists('evaluation', $teamCulture) && $teamCulture['evaluation'] !== null) {
+            return (float) $teamCulture['evaluation'];
+        }
+
+        return isset($teamCulture['score']) ? (float) $teamCulture['score'] : null;
+    }
+
+    protected function reverseScore(float $value, float $min, float $max): float
+    {
+        if ($max <= $min) {
+            return $value;
+        }
+
+        return round(($min + $max) - $value, 2);
     }
 
     protected function impactAnalytics(Collection $answers): array
@@ -555,13 +683,13 @@ class SurveyAnalyticsService
             }
 
             $attributes = $this->aggregateAttributes($answers);
-            $currentValues = $attributes->pluck('current')->filter();
-            if ($currentValues->isEmpty()) {
+            if ($attributes->isEmpty()) {
                 continue;
             }
 
-            $indicatorScore = $this->average($currentValues);
-            $cultureScore = $this->teamCultureAnalytics($answers)['score'] ?? null;
+            $indicators = $this->indicatorSatisfaction($attributes);
+            $indicatorScore = $this->weightedIndicatorScore($indicators);
+            $cultureScore = $this->teamCultureEvaluation($this->teamCultureAnalytics($answers));
             if ($indicatorScore === null || $cultureScore === null) {
                 continue;
             }
@@ -654,14 +782,62 @@ class SurveyAnalyticsService
         return null;
     }
 
+    protected function analyticsQuestionKeys(): array
+    {
+        static $keys = null;
+        if ($keys !== null) {
+            return $keys;
+        }
+
+        $wcaKeys = [];
+        foreach (array_keys(config('survey.work_content_attributes', [])) as $attributeKey) {
+            $wcaKeys[] = "{$attributeKey}_A";
+            $wcaKeys[] = "{$attributeKey}_B";
+            $wcaKeys[] = "{$attributeKey}_C";
+        }
+
+        $teamCultureKeys = array_merge(
+            config('survey.team_culture.positive', []),
+            config('survey.team_culture.negative', [])
+        );
+
+        $impactKeys = collect(config('survey.impact_series', []))->flatten(1)->all();
+
+        $keys = array_values(array_unique(array_filter(
+            array_merge($wcaKeys, $teamCultureKeys, $impactKeys),
+            fn ($value) => is_string($value) && $value !== ''
+        )));
+
+        return $keys;
+    }
+
     public function getTrendData(int $companyId, string $metric = 'engagement'): array
     {
-        // Get all waves for the company
-        $waves = \App\Models\SurveyWave::where('company_id', $companyId)
+        // Prefer scheduled/completed waves with due dates.
+        $waves = SurveyWave::where('company_id', $companyId)
             ->whereNotNull('due_at')
             ->where('due_at', '<=', now())
             ->orderBy('due_at')
             ->get();
+
+        // Fallback for legacy/manual waves that never had due_at but already have submissions.
+        if ($waves->isEmpty()) {
+            $waveIds = SurveyResponse::query()
+                ->whereNotNull('submitted_at')
+                ->whereNotNull('survey_wave_id')
+                ->whereHas('user', fn ($query) => $query->where('company_id', $companyId))
+                ->orderBy('submitted_at')
+                ->pluck('survey_wave_id')
+                ->unique()
+                ->values();
+
+            if ($waveIds->isNotEmpty()) {
+                $waves = SurveyWave::whereIn('id', $waveIds)
+                    ->orderByRaw('COALESCE(due_at, opens_at) asc')
+                    ->orderBy('id')
+                    ->get();
+            }
+        }
 
         $labels = [];
         $data = [];
@@ -687,11 +863,14 @@ class SurveyAnalyticsService
                 $score = $this->weightedIndicatorScore($indicators);
             } elseif ($metric === 'culture') {
                 $culture = $this->teamCultureAnalytics($answers);
-                $score = $culture['score'] ?? null;
+                $score = $this->teamCultureEvaluation($culture);
             }
 
             if ($score !== null) {
-                $labels[] = $wave->label ?? $wave->due_at->format('M Y');
+                $labels[] = $wave->label
+                    ?? optional($wave->due_at)->format('M Y')
+                    ?? optional($wave->opens_at)->format('M Y')
+                    ?? "Wave {$wave->id}";
                 $data[] = $score;
             }
         }
@@ -715,10 +894,11 @@ class SurveyAnalyticsService
         $responses = SurveyResponse::with(['answers', 'user'])
             ->where('survey_wave_id', $waveId)
             ->whereNotNull('submitted_at')
+            ->whereHas('user', fn ($query) => $query->where('company_id', $companyId))
             ->get();
 
         if ($responses->isEmpty()) {
-            return [];
+            return $this->emptyComparisonDataset();
         }
 
         $workers = $this->companyWorkersByEmail($responses);
@@ -756,7 +936,7 @@ class SurveyAnalyticsService
 
             // Culture
             $culture = $this->teamCultureAnalytics($answers);
-            $cultScore = $culture['score'] ?? 0;
+            $cultScore = $this->teamCultureEvaluation($culture) ?? 0;
 
             if ($engScore !== null) {
                 $labels[] = $key;
@@ -779,6 +959,25 @@ class SurveyAnalyticsService
                     'backgroundColor' => '#10b981',
                 ]
             ]
+        ];
+    }
+
+    protected function emptyComparisonDataset(): array
+    {
+        return [
+            'labels' => [],
+            'datasets' => [
+                [
+                    'label' => 'Engagement',
+                    'data' => [],
+                    'backgroundColor' => '#4f46e5',
+                ],
+                [
+                    'label' => 'Culture',
+                    'data' => [],
+                    'backgroundColor' => '#10b981',
+                ],
+            ],
         ];
     }
 }
