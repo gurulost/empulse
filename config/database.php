@@ -85,12 +85,16 @@
 
           'pgsql' => [
               'driver' => 'pgsql',
-              'url' => env('REPLIT_DEPLOYMENT') ? env('DATABASE_URL') : null,
-              'host' => env('REPLIT_DEPLOYMENT') ? null : env('DB_HOST', '127.0.0.1'),
-              'port' => env('REPLIT_DEPLOYMENT') ? null : env('DB_PORT', '5432'),
-              'database' => env('REPLIT_DEPLOYMENT') ? null : env('DB_DATABASE', 'forge'),
-              'username' => env('REPLIT_DEPLOYMENT') ? null : env('DB_USERNAME', 'forge'),
-              'password' => env('REPLIT_DEPLOYMENT') ? null : env('DB_PASSWORD', ''),
+              // Prefer explicit DB_* variables; only fall back to DATABASE_URL
+              // when individual connection values are not provided.
+              'url' => (env('DB_HOST') || env('DB_DATABASE') || env('DB_USERNAME') || env('DB_PASSWORD'))
+                  ? null
+                  : env('DATABASE_URL'),
+              'host' => env('DB_HOST', '127.0.0.1'),
+              'port' => env('DB_PORT', '5432'),
+              'database' => env('DB_DATABASE', 'forge'),
+              'username' => env('DB_USERNAME', 'forge'),
+              'password' => env('DB_PASSWORD', ''),
               'charset' => 'utf8',
               'prefix' => '',
               'prefix_indexes' => true,
