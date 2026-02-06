@@ -105,6 +105,26 @@ php artisan survey:waves:schedule
 - Frontend assets load without 404/mismatch errors.
 - Survey submission and wave automation execute without runtime errors.
 
+## Release Step & Demo Seeding
+
+### How release works
+The `Procfile` `release` step runs **before** the web process starts:
+1. `php artisan migrate --force` — applies any pending migrations. Fast no-op if already up to date.
+2. Demo seeding is **gated** by the `SEED_DEMO_ON_RELEASE` environment variable (default: `false`).
+
+### Environment knobs
+| Variable | Default | Purpose |
+|---|---|---|
+| `SEED_DEMO_ON_RELEASE` | `false` | Set to `true` to enable demo seeding on release |
+| `DEMO_SEED_EMPLOYEES` | `120` | Number of demo employees to create |
+| `DEMO_SEED_MONTHS` | `6` | Months of historical survey data to generate |
+
+### The `--if-empty` flag
+When `--if-empty` is passed, the demo seeder checks `Schema::hasTable('users')` and `users` row count. If any users already exist, it prints a skip message and exits successfully. This prevents reseeding on every deploy while still allowing first-time population.
+
+### To trigger a one-time demo refresh
+Set `SEED_DEMO_ON_RELEASE=true` in deployment secrets, deploy, then remove/set it back to `false` afterward.
+
 ## Deployment Recovery Checklist (2026-02-06 Follow-up)
 Use this when deployment starts crash-looping or health checks fail.
 
