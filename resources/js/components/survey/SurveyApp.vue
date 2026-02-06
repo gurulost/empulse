@@ -259,7 +259,7 @@ const shouldDisplay = (item) => {
         return true;
     }
 
-    return conditions.every((condition) => {
+    const evaluator = (condition) => {
         const currentValue = responses[condition.qid];
         if (currentValue === undefined || currentValue === null || currentValue === '') {
             return false;
@@ -279,10 +279,19 @@ const shouldDisplay = (item) => {
         }
 
         return equalsAny.includes(currentValue);
-    });
+    };
+
+    const operator = String(logic?.operator ?? logic?.combinator ?? 'and').toLowerCase();
+    if (operator === 'or' || operator === 'any') {
+        return conditions.some(evaluator);
+    }
+
+    return conditions.every(evaluator);
 };
 
-const isRequired = (item) => ['slider', 'single_select', 'single_select_text', 'dropdown', 'multi_select', 'number_integer'].includes(item.type);
+const isRequired = (item) =>
+    item?.response?.required !== false &&
+    ['slider', 'single_select', 'single_select_text', 'dropdown', 'multi_select', 'number_integer', 'text_short', 'text', 'text_long'].includes(item.type);
 
 const isEmpty = (value) => {
     if (value === null || value === undefined || value === '') {
@@ -301,6 +310,35 @@ const isEmpty = (value) => {
     return false;
 };
 
+const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value).trim());
+
+const numberMin = (item) => {
+    const min = item?.response?.min;
+    return Number.isFinite(Number(min)) ? Number(min) : null;
+};
+
+const collectVisibleQids = () => {
+    const qids = [];
+
+    (pages.value || []).forEach((page) => {
+        visibleItems(page.items || []).forEach((item) => qids.push(item.qid));
+        (page.sections || []).forEach((section) => {
+            visibleItems(section.items || []).forEach((item) => qids.push(item.qid));
+        });
+    });
+
+    return new Set(qids);
+};
+
+const submissionResponses = () => {
+    const payload = cloneResponses();
+    const visibleQids = collectVisibleQids();
+
+    return Object.fromEntries(
+        Object.entries(payload).filter(([qid]) => visibleQids.has(qid))
+    );
+};
+
 const validatePage = () => {
     const page = currentPage.value;
     if (!page) {
@@ -312,12 +350,43 @@ const validatePage = () => {
     const toCheck = [...visibleItems(page.items || []), ...sectionItems];
 
     toCheck.forEach((item) => {
-        if (isRequired(item) && isEmpty(responses[item.qid])) {
+        const value = responses[item.qid];
+
+        if (isRequired(item) && isEmpty(value)) {
             errors[item.qid] = 'Please provide an answer.';
             valid = false;
-        } else {
-            errors[item.qid] = null;
+            return;
         }
+
+        if (item.type === 'single_select_text' && value && typeof value === 'object' && value.selected && (!value.text || String(value.text).trim() === '')) {
+            errors[item.qid] = 'Please provide the additional text.';
+            valid = false;
+            return;
+        }
+
+        if ((item.type === 'text_short' || item.type === 'text' || item.type === 'text_long') && item?.response?.format_hint === 'email' && !isEmpty(value) && !isValidEmail(value)) {
+            errors[item.qid] = 'Please enter a valid email address.';
+            valid = false;
+            return;
+        }
+
+        if (item.type === 'number_integer' && !isEmpty(value)) {
+            const numeric = Number(value);
+            if (!Number.isInteger(numeric)) {
+                errors[item.qid] = 'Please enter a whole number.';
+                valid = false;
+                return;
+            }
+
+            const min = numberMin(item);
+            if (min !== null && numeric < min) {
+                errors[item.qid] = `Value must be at least ${min}.`;
+                valid = false;
+                return;
+            }
+        }
+
+        errors[item.qid] = null;
     });
 
     return valid;
@@ -349,7 +418,7 @@ const submitSurvey = async () => {
     clearTimeout(autosaveTimer.value);
     try {
         await axios.post(props.submitUrl, {
-            responses: cloneResponses(),
+            responses: submissionResponses(),
             duration_ms: Date.now() - startTime,
         });
         completed.value = true;
@@ -357,6 +426,33 @@ const submitSurvey = async () => {
         if (err.response && err.response.status === 409) {
             completed.value = true;
             alreadyCompleted.value = true;
+        } else if (err.response && err.response.status === 422) {
+            const fieldErrors = err.response?.data?.errors || {};
+            Object.keys(errors).forEach((qid) => {
+                errors[qid] = null;
+            });
+            Object.entries(fieldErrors).forEach(([qid, messages]) => {
+                const firstMessage = Array.isArray(messages) ? messages[0] : messages;
+                errors[qid] = firstMessage || 'Invalid answer.';
+            });
+
+            const firstInvalidQid = Object.keys(fieldErrors)[0];
+            if (firstInvalidQid) {
+                const pageIndex = pages.value.findIndex((page) => {
+                    const pageItemQids = visibleItems(page.items || []).map((item) => item.qid);
+                    const sectionItemQids = (page.sections || [])
+                        .flatMap((section) => visibleItems(section.items || []))
+                        .map((item) => item.qid);
+
+                    return [...pageItemQids, ...sectionItemQids].includes(firstInvalidQid);
+                });
+
+                if (pageIndex >= 0) {
+                    currentPageIndex.value = pageIndex;
+                }
+            }
+
+            error.value = 'Please correct the highlighted responses and submit again.';
         } else {
             console.error(err);
             error.value = 'Something went wrong while submitting your responses. Please try again.';

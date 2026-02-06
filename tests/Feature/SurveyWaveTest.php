@@ -180,4 +180,70 @@ class SurveyWaveTest extends TestCase
         $this->assertSame('paused', SurveyWaveLog::latest()->first()->status);
         Queue::assertNothingPushed();
     }
+
+    public function test_process_wave_creates_distinct_assignment_per_wave(): void
+    {
+        [$company, $survey, $version] = $this->createSurveyArtifacts();
+
+        User::factory()->create([
+            'role' => 1,
+            'company' => 1,
+            'company_id' => $company->id,
+            'tariff' => 1,
+        ]);
+
+        $employee = User::factory()->create([
+            'role' => 4,
+            'company_id' => $company->id,
+            'tariff' => 1,
+        ]);
+
+        $waveOne = SurveyWave::create([
+            'company_id' => $company->id,
+            'survey_id' => $survey->id,
+            'survey_version_id' => $version->id,
+            'kind' => 'full',
+            'label' => 'Wave One',
+            'status' => 'scheduled',
+            'cadence' => 'manual',
+        ]);
+
+        $waveTwo = SurveyWave::create([
+            'company_id' => $company->id,
+            'survey_id' => $survey->id,
+            'survey_version_id' => $version->id,
+            'kind' => 'full',
+            'label' => 'Wave Two',
+            'status' => 'scheduled',
+            'cadence' => 'manual',
+        ]);
+
+        (new ProcessSurveyWave($waveOne->id))->handle(app(SurveyService::class));
+
+        $assignmentOne = SurveyAssignment::where('user_id', $employee->id)
+            ->where('survey_wave_id', $waveOne->id)
+            ->first();
+
+        $this->assertNotNull($assignmentOne);
+
+        $assignmentOne->update([
+            'status' => 'completed',
+            'completed_at' => now(),
+        ]);
+
+        (new ProcessSurveyWave($waveTwo->id))->handle(app(SurveyService::class));
+
+        $assignmentTwo = SurveyAssignment::where('user_id', $employee->id)
+            ->where('survey_wave_id', $waveTwo->id)
+            ->first();
+
+        $this->assertNotNull($assignmentTwo);
+        $this->assertNotEquals($assignmentOne->id, $assignmentTwo->id);
+        $this->assertEquals(
+            2,
+            SurveyAssignment::where('user_id', $employee->id)
+                ->whereIn('survey_wave_id', [$waveOne->id, $waveTwo->id])
+                ->count()
+        );
+    }
 }

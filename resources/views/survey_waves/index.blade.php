@@ -60,9 +60,8 @@
                         <div class="col-md-2">
                             <label class="form-label">Status</label>
                             <select name="status" class="form-select" required>
-                                @foreach($statusOptions as $value => $label)
-                                    <option value="{{ $value }}">{{ $label }}</option>
-                                @endforeach
+                                <option value="scheduled">Scheduled</option>
+                                <option value="paused">Paused</option>
                             </select>
                         </div>
                         <div class="col-md-2">

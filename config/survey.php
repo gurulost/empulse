@@ -20,30 +20,37 @@ return [
         'relationships' => [
             'label' => 'Relationships & Team',
             'attributes' => ['WCA_REL', 'WCA_TEAM'],
+            'weight' => 1.0,
         ],
         'growth' => [
             'label' => 'Learning & Growth',
             'attributes' => ['WCA_TRAIN', 'WCA_LEARN'],
+            'weight' => 1.0,
         ],
         'purpose' => [
             'label' => 'Purpose & Meaning',
             'attributes' => ['WCA_BETTER', 'WCA_TASKS', 'WCA_PROJECTS'],
+            'weight' => 1.0,
         ],
         'rewards' => [
             'label' => 'Rewards',
             'attributes' => ['WCA_PAY'],
+            'weight' => 1.0,
         ],
         'flexibility' => [
             'label' => 'Flexibility',
             'attributes' => ['WCA_SCHED'],
+            'weight' => 1.0,
         ],
         'progression' => [
             'label' => 'Progression',
             'attributes' => ['WCA_DREAM'],
+            'weight' => 1.0,
         ],
         'impact' => [
             'label' => 'Impact',
             'attributes' => ['WCA_CLIENTS', 'WCA_PROGRESS'],
+            'weight' => 1.0,
         ],
     ],
 
@@ -71,6 +78,38 @@ return [
             'TC_ADD_13',
             'TC_ADD_14',
             'WEL_TCE_06',
+        ],
+    ],
+
+    'team_culture_evaluation' => [
+        'scale' => [
+            'min' => 1,
+            'max' => 9,
+        ],
+        // Mirrors the product formula grouping for Team Culture section clusters.
+        'dimensions' => [
+            'team_core' => [
+                'label' => 'Team Culture Core',
+                'weight' => 0.34,
+                'questions' => ['TC_01', 'TC_02', 'TC_03', 'TC_04'],
+            ],
+            'psychological_safety' => [
+                'label' => 'Psychological Safety',
+                'weight' => 0.33,
+                'questions' => ['TC_PS_05', 'TC_PS_06', 'TC_PS_07', 'TC_PS_08', 'TC_PS_09', 'TC_PS_10', 'TC_PS_11', 'TC_ADD_12', 'TC_ADD_13', 'TC_ADD_14'],
+            ],
+            'ethics_leadership' => [
+                'label' => 'Ethics & Leadership',
+                'weight' => 0.33,
+                'questions' => ['WEL_01', 'WEL_02', 'WEL_03', 'WEL_TCE_04', 'WEL_TCE_05', 'WEL_TCE_06'],
+            ],
+        ],
+    ],
+
+    'temperature' => [
+        'weights' => [
+            'indicator' => 0.65,
+            'culture' => 0.35,
         ],
     ],
 

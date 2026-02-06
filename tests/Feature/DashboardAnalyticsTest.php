@@ -43,6 +43,10 @@ class DashboardAnalyticsTest extends TestCase
                 'wave' => 'wave-1',
             ])
             ->andReturn(['metrics' => []]);
+        $mock->shouldReceive('availableWavesForCompany')
+            ->once()
+            ->with($company->id)
+            ->andReturn([]);
 
         $this->app->instance(SurveyAnalyticsService::class, $mock);
 

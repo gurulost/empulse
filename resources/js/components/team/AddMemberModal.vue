@@ -45,6 +45,14 @@
                                     <input class="form-check-input" type="radio" v-model="form.role" :value="2" id="roleChief">
                                     <label class="form-check-label" for="roleChief">Chief</label>
                                 </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" v-model="form.role" :value="3" id="roleTeamleadManager">
+                                    <label class="form-check-label" for="roleTeamleadManager">Teamlead</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" v-model="form.role" :value="4" id="roleEmployeeManager">
+                                    <label class="form-check-label" for="roleEmployeeManager">Employee</label>
+                                </div>
                             </div>
 
                             <!-- Role Selection for Chief -->
@@ -106,7 +114,7 @@ const isEditing = computed(() => !!props.member);
 const form = ref({
     name: props.member?.name || '',
     email: props.member?.email || '',
-    role: props.member?.role || (props.userRole === 1 ? 1 : 4),
+    role: props.member?.role || 4,
     department: props.member?.department || ''
 });
 
@@ -114,7 +122,7 @@ const errors = ref({});
 const saving = ref(false);
 
 const showDepartmentField = computed(() => {
-    return props.userRole === 1 || (props.userRole === 2 && form.value.role);
+    return props.userRole === 1 || props.userRole === 2;
 });
 
 const isValid = computed(() => {

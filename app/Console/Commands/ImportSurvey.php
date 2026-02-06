@@ -47,7 +47,9 @@ class ImportSurvey extends Command
             $this->storePages($version, Arr::get($payload, 'pages', []));
 
             if ($this->option('activate')) {
-                SurveyVersion::where('id', '!=', $version->id)->update(['is_active' => false]);
+                SurveyVersion::where('instrument_id', $version->instrument_id)
+                    ->where('id', '!=', $version->id)
+                    ->update(['is_active' => false]);
                 $version->update(['is_active' => true]);
             }
 

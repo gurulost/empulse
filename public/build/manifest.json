@@ -1,18 +1,197 @@
 {
+  "_SkeletonLoader-!~{00i}~.js": {
+    "file": "assets/SkeletonLoader-C3QQ2tIr.css",
+    "src": "_SkeletonLoader-!~{00i}~.js"
+  },
+  "_SkeletonLoader-CW1uc0DJ.js": {
+    "file": "assets/SkeletonLoader-CW1uc0DJ.js",
+    "name": "SkeletonLoader",
+    "imports": [
+      "__plugin-vue_export-helper-DlAUqK2U.js",
+      "_vendor-vue-B_7dnjM8.js"
+    ],
+    "css": [
+      "assets/SkeletonLoader-C3QQ2tIr.css"
+    ]
+  },
+  "__plugin-vue_export-helper-DlAUqK2U.js": {
+    "file": "assets/_plugin-vue_export-helper-DlAUqK2U.js",
+    "name": "_plugin-vue_export-helper"
+  },
+  "_useToast-BhPLCSCb.js": {
+    "file": "assets/useToast-BhPLCSCb.js",
+    "name": "useToast",
+    "imports": [
+      "_vendor-vue-B_7dnjM8.js"
+    ]
+  },
+  "_vendor-axios-B9ygI19o.js": {
+    "file": "assets/vendor-axios-B9ygI19o.js",
+    "name": "vendor-axios"
+  },
+  "_vendor-bootstrap-di-GGlkx.js": {
+    "file": "assets/vendor-bootstrap-di-GGlkx.js",
+    "name": "vendor-bootstrap"
+  },
+  "_vendor-charts-D4532vWU.js": {
+    "file": "assets/vendor-charts-D4532vWU.js",
+    "name": "vendor-charts",
+    "imports": [
+      "_vendor-vue-B_7dnjM8.js"
+    ]
+  },
+  "_vendor-lodash-CfaW9ZgC.js": {
+    "file": "assets/vendor-lodash-CfaW9ZgC.js",
+    "name": "vendor-lodash"
+  },
+  "_vendor-vue-B_7dnjM8.js": {
+    "file": "assets/vendor-vue-B_7dnjM8.js",
+    "name": "vendor-vue"
+  },
   "resources/images/empulse-logo.png": {
     "file": "assets/empulse-logo-CZ9eJs8T.png",
     "src": "resources/images/empulse-logo.png"
   },
   "resources/js/app.js": {
-    "file": "assets/app-x-gsWVJB.js",
+    "file": "assets/app-Bnm_wZH-.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
+    "imports": [
+      "_vendor-lodash-CfaW9ZgC.js",
+      "_vendor-bootstrap-di-GGlkx.js",
+      "_vendor-axios-B9ygI19o.js",
+      "_vendor-vue-B_7dnjM8.js"
+    ],
+    "dynamicImports": [
+      "resources/js/components/layout/AppSidebar.vue",
+      "resources/js/components/common/ToastContainer.vue",
+      "resources/js/components/analytics/AnalyticsDashboard.vue",
+      "resources/js/components/admin/AdminDashboard.vue",
+      "resources/js/components/builder/SurveyBuilder.vue",
+      "resources/js/components/survey/SurveyApp.vue",
+      "resources/js/components/reports/ReportsDashboard.vue",
+      "resources/js/components/team/TeamManagementDashboard.vue"
+    ]
+  },
+  "resources/js/components/admin/AdminDashboard.vue": {
+    "file": "assets/AdminDashboard-CfYON1cb.js",
+    "name": "AdminDashboard",
+    "src": "resources/js/components/admin/AdminDashboard.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-vue-B_7dnjM8.js",
+      "_vendor-axios-B9ygI19o.js",
+      "__plugin-vue_export-helper-DlAUqK2U.js"
+    ],
     "css": [
-      "assets/app-H8J6jL36.css"
+      "assets/AdminDashboard-Be2V6QOh.css"
+    ]
+  },
+  "resources/js/components/analytics/AnalyticsDashboard.vue": {
+    "file": "assets/AnalyticsDashboard-BdvquXAb.js",
+    "name": "AnalyticsDashboard",
+    "src": "resources/js/components/analytics/AnalyticsDashboard.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-vue-B_7dnjM8.js",
+      "_vendor-lodash-CfaW9ZgC.js",
+      "_vendor-axios-B9ygI19o.js",
+      "__plugin-vue_export-helper-DlAUqK2U.js"
+    ],
+    "css": [
+      "assets/AnalyticsDashboard-PKNsooQm.css"
+    ]
+  },
+  "resources/js/components/builder/SurveyBuilder.vue": {
+    "file": "assets/SurveyBuilder-B7bMPjNj.js",
+    "name": "SurveyBuilder",
+    "src": "resources/js/components/builder/SurveyBuilder.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-vue-B_7dnjM8.js",
+      "_vendor-axios-B9ygI19o.js",
+      "__plugin-vue_export-helper-DlAUqK2U.js"
+    ],
+    "css": [
+      "assets/SurveyBuilder-D2w9EzDn.css"
+    ]
+  },
+  "resources/js/components/common/ToastContainer.vue": {
+    "file": "assets/ToastContainer-DL6MCVO_.js",
+    "name": "ToastContainer",
+    "src": "resources/js/components/common/ToastContainer.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-vue-B_7dnjM8.js",
+      "_useToast-BhPLCSCb.js",
+      "__plugin-vue_export-helper-DlAUqK2U.js"
+    ],
+    "css": [
+      "assets/ToastContainer-DEMzwyVC.css"
+    ]
+  },
+  "resources/js/components/layout/AppSidebar.vue": {
+    "file": "assets/AppSidebar-56Y66j1F.js",
+    "name": "AppSidebar",
+    "src": "resources/js/components/layout/AppSidebar.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-vue-B_7dnjM8.js",
+      "__plugin-vue_export-helper-DlAUqK2U.js"
+    ],
+    "css": [
+      "assets/AppSidebar-CBkmbXPl.css"
     ],
     "assets": [
       "assets/empulse-logo-CZ9eJs8T.png"
+    ]
+  },
+  "resources/js/components/reports/ReportsDashboard.vue": {
+    "file": "assets/ReportsDashboard-BJuV6ze7.js",
+    "name": "ReportsDashboard",
+    "src": "resources/js/components/reports/ReportsDashboard.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-vue-B_7dnjM8.js",
+      "_vendor-axios-B9ygI19o.js",
+      "_vendor-charts-D4532vWU.js",
+      "__plugin-vue_export-helper-DlAUqK2U.js"
+    ],
+    "css": [
+      "assets/ReportsDashboard-CNssimh1.css"
+    ]
+  },
+  "resources/js/components/survey/SurveyApp.vue": {
+    "file": "assets/SurveyApp-B259-oam.js",
+    "name": "SurveyApp",
+    "src": "resources/js/components/survey/SurveyApp.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-vue-B_7dnjM8.js",
+      "_vendor-axios-B9ygI19o.js",
+      "__plugin-vue_export-helper-DlAUqK2U.js",
+      "_SkeletonLoader-CW1uc0DJ.js",
+      "_useToast-BhPLCSCb.js"
+    ],
+    "css": [
+      "assets/SurveyApp-Di0dP1YX.css"
+    ]
+  },
+  "resources/js/components/team/TeamManagementDashboard.vue": {
+    "file": "assets/TeamManagementDashboard-DItq-siz.js",
+    "name": "TeamManagementDashboard",
+    "src": "resources/js/components/team/TeamManagementDashboard.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-vue-B_7dnjM8.js",
+      "_vendor-axios-B9ygI19o.js",
+      "_useToast-BhPLCSCb.js",
+      "_SkeletonLoader-CW1uc0DJ.js",
+      "__plugin-vue_export-helper-DlAUqK2U.js"
+    ],
+    "css": [
+      "assets/TeamManagementDashboard-Gbd81wUb.css"
     ]
   },
   "resources/sass/app.scss": {

@@ -29,7 +29,7 @@
         </template>
 
         <template v-else-if="item.type === 'text_short' || item.type === 'text'">
-            <input type="text" class="form-control form-control-lg shadow-sm" :value="textValue" :disabled="disabled" @input="updateText($event.target.value)" placeholder="Type your answer here..." />
+            <input :type="textInputType" class="form-control form-control-lg shadow-sm" :value="textValue" :disabled="disabled" @input="updateText($event.target.value)" placeholder="Type your answer here..." />
         </template>
 
         <template v-else-if="item.type === 'text_long'">
@@ -37,7 +37,7 @@
         </template>
 
         <template v-else-if="item.type === 'number_integer'">
-            <input type="number" class="form-control form-control-lg shadow-sm" :value="numberValue" :disabled="disabled" @input="updateNumber($event.target.value)" placeholder="0" />
+            <input type="number" class="form-control form-control-lg shadow-sm" :value="numberValue" :disabled="disabled" :min="numberMin" step="1" @input="updateNumber($event.target.value)" placeholder="0" />
         </template>
 
         <template v-else-if="item.type === 'dropdown' || item.type === 'single_select' || item.type === 'single_select_text'">
@@ -138,6 +138,11 @@ function getInitialSliderValue() {
 
 const textValue = computed(() => props.modelValue ?? '');
 const numberValue = computed(() => (props.modelValue ?? ''));
+const textInputType = computed(() => (props.item.response?.format_hint === 'email' ? 'email' : 'text'));
+const numberMin = computed(() => {
+    const min = props.item.response?.min;
+    return Number.isFinite(Number(min)) ? Number(min) : undefined;
+});
 const selectValue = computed(() => {
     if (props.item.type === 'single_select_text') {
         if (props.modelValue && typeof props.modelValue === 'object') {
@@ -152,13 +157,22 @@ const freeText = computed(() => {
     }
     return '';
 });
+
+const hasFreeTextOption = (option) =>
+    Object.prototype.hasOwnProperty.call(option?.meta ?? {}, 'freetext_placeholder');
+
 const freeTextPlaceholder = computed(() => {
     const option = options.value.find((opt) => opt.value === selectValue.value);
-    return option?.meta?.freetext_placeholder ?? 'Please specify';
+    if (!hasFreeTextOption(option)) {
+        return 'Please specify';
+    }
+
+    const placeholder = option.meta?.freetext_placeholder;
+    return placeholder === '' ? 'Please specify' : (placeholder ?? 'Please specify');
 });
 const showFreeText = computed(() => {
     const option = options.value.find((opt) => opt.value === selectValue.value);
-    return props.item.type === 'single_select_text' && option?.meta?.freetext_placeholder;
+    return props.item.type === 'single_select_text' && hasFreeTextOption(option);
 });
 
 const multiSelectValues = computed(() => {
@@ -178,7 +192,7 @@ const updateNumber = (value) => {
 const onSelectChange = (value) => {
     if (props.item.type === 'single_select_text') {
         const option = options.value.find((opt) => opt.value === value);
-        if (option?.meta?.freetext_placeholder) {
+        if (hasFreeTextOption(option)) {
             emit('update:modelValue', { selected: value, text: props.modelValue?.text ?? '' });
         } else {
             emit('update:modelValue', value);

@@ -131,6 +131,12 @@ class AnalyticsApiTest extends TestCase
                 'wave' => null,
             ])
             ->andReturn(['metrics' => [10, 20]]);
+        $mock->shouldReceive('availableWavesForCompany')
+            ->once()
+            ->with($company->id)
+            ->andReturn([
+                'wave:' . $wave->id => 'Wave Alpha',
+            ]);
 
         $this->app->instance(SurveyAnalyticsService::class, $mock);
 
@@ -138,9 +144,46 @@ class AnalyticsApiTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('data.metrics', [10, 20])
-            ->assertJsonPath("filters.waves.{$wave->id}", 'Wave Alpha')
+            ->assertJsonPath("filters.waves.wave:{$wave->id}", 'Wave Alpha')
             ->assertJsonStructure([
                 'filters' => ['departments', 'teamleads', 'waves', 'exist_departments'],
             ]);
+    }
+
+    public function test_workfit_admin_without_company_can_fetch_selected_company_filters(): void
+    {
+        $company = Companies::create([
+            'title' => 'Delta Co',
+            'manager' => 'Dana',
+            'manager_email' => 'dana@example.com',
+        ]);
+
+        $admin = User::factory()->create([
+            'role' => 1,
+            'is_admin' => 1,
+            'company_id' => null,
+        ]);
+
+        $mock = Mockery::mock(SurveyAnalyticsService::class);
+        $mock->shouldReceive('companyDashboardAnalytics')
+            ->once()
+            ->with([
+                'company_id' => $company->id,
+                'department' => null,
+                'team' => null,
+                'wave' => null,
+            ])
+            ->andReturn(['metrics' => [5, 6]]);
+        $mock->shouldReceive('availableWavesForCompany')
+            ->once()
+            ->with($company->id)
+            ->andReturn([]);
+
+        $this->app->instance(SurveyAnalyticsService::class, $mock);
+
+        $response = $this->actingAs($admin)->getJson("/analytics/api/dashboard?company_id={$company->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('data.metrics', [5, 6]);
     }
 }

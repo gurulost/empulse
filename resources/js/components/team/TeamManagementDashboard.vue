@@ -8,7 +8,7 @@
                     <i class="bi bi-people me-2"></i>Team Members
                 </a>
             </li>
-            <li class="nav-item">
+            <li class="nav-item" v-if="canManageDepartments">
                 <a class="nav-link" :class="{ active: activeTab === 'departments' }" href="#" @click.prevent="activeTab = 'departments'">
                     <i class="bi bi-building me-2"></i>Departments
                 </a>
@@ -21,10 +21,11 @@
                 key="members"
                 :user-role="userRole"
                 :departments="departments"
+                :can-manage-departments="canManageDepartments"
                 @refresh-departments="loadDepartments"
             />
             <DepartmentManager
-                v-else
+                v-else-if="canManageDepartments"
                 key="departments"
                 :departments="departments"
                 @refresh="loadDepartments"
@@ -34,7 +35,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useTeamApi } from '../../composables/useTeamApi';
 import TeamMemberTable from './TeamMemberTable.vue';
 import DepartmentManager from './DepartmentManager.vue';
@@ -46,8 +47,14 @@ const props = defineProps({
 const activeTab = ref('members');
 const departments = ref([]);
 const api = useTeamApi();
+const canManageDepartments = computed(() => [1, 2].includes(props.userRole));
 
 const loadDepartments = async () => {
+    if (!canManageDepartments.value) {
+        departments.value = [];
+        return;
+    }
+
     try {
         const response = await api.getDepartments();
         const list = response.data || response;
@@ -57,6 +64,12 @@ const loadDepartments = async () => {
         departments.value = [];
     }
 };
+
+watch(canManageDepartments, (allowed) => {
+    if (!allowed && activeTab.value === 'departments') {
+        activeTab.value = 'members';
+    }
+});
 
 onMounted(() => {
     loadDepartments();

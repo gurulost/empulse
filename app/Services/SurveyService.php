@@ -15,36 +15,77 @@ use Illuminate\Support\Str;
 
 class SurveyService
 {
-    public function getOrCreateAssignment(User $user): ?SurveyAssignment
+    public function getOrCreateAssignment(User $user, ?SurveyWave $wave = null): ?SurveyAssignment
     {
-        $survey = $this->defaultSurvey();
-        $version = SurveyVersion::where('is_active', true)->orderByDesc('id')->first();
+        if ($wave) {
+            $wave->loadMissing('survey', 'surveyVersion');
+        }
+
+        $survey = $wave?->survey
+            ?: ($wave?->survey_id ? Survey::find($wave->survey_id) : null)
+            ?: $this->defaultSurvey();
+
+        $version = $wave?->surveyVersion
+            ?: ($wave?->survey_version_id ? SurveyVersion::find($wave->survey_version_id) : null)
+            ?: SurveyVersion::where('is_active', true)->orderByDesc('id')->first();
+
         if (!$survey || !$version) {
             return null;
         }
 
-        $wave = $this->resolveCurrentWave($survey, $version, $user);
+        $wave = $wave ?: $this->resolveCurrentWave($survey, $version, $user);
 
-        $assignment = SurveyAssignment::firstOrCreate(
-            [
-                'survey_id' => $survey->id,
-                'user_id' => $user->id,
-            ],
-            [
-                'token' => (string) Str::uuid(),
-                'status' => 'pending',
-                'survey_version_id' => $version->id,
-                'survey_wave_id' => $wave?->id,
-                'wave_label' => $wave->label ?? $this->currentWaveLabel($version),
-            ]
-        );
+        if ($wave) {
+            $assignment = SurveyAssignment::firstOrCreate(
+                [
+                    'survey_id' => $survey->id,
+                    'user_id' => $user->id,
+                    'survey_wave_id' => $wave->id,
+                ],
+                [
+                    'token' => (string) Str::uuid(),
+                    'status' => 'pending',
+                    'survey_version_id' => $version->id,
+                    'wave_label' => $wave->label ?? $this->currentWaveLabel($version),
+                    'due_at' => $wave->due_at,
+                ]
+            );
+        } else {
+            $assignment = SurveyAssignment::query()
+                ->where('survey_id', $survey->id)
+                ->where('user_id', $user->id)
+                ->orderByRaw("CASE WHEN status = 'completed' THEN 1 ELSE 0 END")
+                ->orderByDesc('id')
+                ->first();
 
-        if (!$assignment->survey_version_id || !$assignment->wave_label || !$assignment->survey_wave_id) {
-            $assignment->update([
-                'survey_version_id' => $assignment->survey_version_id ?: $version->id,
-                'survey_wave_id' => $assignment->survey_wave_id ?: $wave?->id,
-                'wave_label' => $assignment->wave_label ?: ($wave->label ?? $this->currentWaveLabel($version)),
-            ]);
+            if (!$assignment) {
+                $assignment = SurveyAssignment::create([
+                    'survey_id' => $survey->id,
+                    'user_id' => $user->id,
+                    'token' => (string) Str::uuid(),
+                    'status' => 'pending',
+                    'survey_version_id' => $version->id,
+                    'wave_label' => $this->currentWaveLabel($version),
+                ]);
+            }
+        }
+
+        $updates = [];
+        if (!$assignment->survey_version_id) {
+            $updates['survey_version_id'] = $version->id;
+        }
+        if (!$assignment->wave_label) {
+            $updates['wave_label'] = $wave?->label ?? $this->currentWaveLabel($version);
+        }
+        if ($wave && (int) ($assignment->survey_wave_id ?? 0) !== (int) $wave->id) {
+            $updates['survey_wave_id'] = $wave->id;
+        }
+        if ($wave && !$assignment->due_at && $wave->due_at) {
+            $updates['due_at'] = $wave->due_at;
+        }
+
+        if (!empty($updates)) {
+            $assignment->update($updates);
         }
 
         return $assignment->fresh();
@@ -134,7 +175,7 @@ class SurveyService
         return route('survey.take', ['token' => $assignment->token]);
     }
 
-    protected function defaultSurvey(): ?Survey
+    public function defaultSurvey(): ?Survey
     {
         return Survey::with('questions')->where('is_default', true)->first();
     }

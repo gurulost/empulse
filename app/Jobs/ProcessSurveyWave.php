@@ -40,7 +40,7 @@ class ProcessSurveyWave implements ShouldQueue
 
         foreach ($companyUsers as $user) {
             try {
-                $assignment = $surveyService->getOrCreateAssignment($user);
+                $assignment = $surveyService->getOrCreateAssignment($user, $wave);
                 if (!$assignment) {
                     $stats['skipped']++;
                     $this->logEvent($wave, $user, 'skipped', 'No assignment available.');

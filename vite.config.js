@@ -31,7 +31,31 @@ export default defineConfig(({ mode }) => ({
         outDir: 'public/build',
         rollupOptions: {
             output: {
-                manualChunks: undefined,
+                manualChunks(id) {
+                    if (!id.includes('node_modules')) {
+                        return;
+                    }
+
+                    if (id.includes('chart.js') || id.includes('vue-chartjs')) {
+                        return 'vendor-charts';
+                    }
+
+                    if (id.includes('/vue/')) {
+                        return 'vendor-vue';
+                    }
+
+                    if (id.includes('/bootstrap/')) {
+                        return 'vendor-bootstrap';
+                    }
+
+                    if (id.includes('/axios/')) {
+                        return 'vendor-axios';
+                    }
+
+                    if (id.includes('/lodash/')) {
+                        return 'vendor-lodash';
+                    }
+                },
             },
         },
     },

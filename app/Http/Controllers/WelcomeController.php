@@ -8,9 +8,14 @@ class WelcomeController extends Controller
 {
     public function welcome() 
     {
-        if (auth()->user() == null){
+        if (!auth()->check()) {
             return view('welcome');
         }
-        return redirect('/home');
+
+        if ((int) auth()->user()->role === 4) {
+            return redirect()->route('employee.dashboard');
+        }
+
+        return redirect()->route('home');
     }
 }

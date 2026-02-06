@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Companies;
 use App\Models\User;
 use App\Services\SurveyAnalyticsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -56,5 +57,48 @@ class ReportsApiTest extends TestCase
         $response = $this->actingAs($user)->getJson('/reports/comparison?wave_id=1&dimension=department');
 
         $response->assertOk();
+    }
+
+    public function test_workfit_admin_can_request_trends_for_selected_company()
+    {
+        $company = Companies::create([
+            'title' => 'Acme Co',
+            'manager' => 'Manager',
+            'manager_email' => 'manager@example.com',
+        ]);
+
+        $admin = User::factory()->create([
+            'role' => 0,
+            'is_admin' => 1,
+            'company_id' => null,
+        ]);
+
+        $mock = Mockery::mock(SurveyAnalyticsService::class);
+        $mock->shouldReceive('getTrendData')
+            ->once()
+            ->with($company->id, 'culture')
+            ->andReturn(['labels' => [], 'datasets' => []]);
+
+        $this->app->instance(SurveyAnalyticsService::class, $mock);
+
+        $response = $this->actingAs($admin)->getJson("/reports/trends?metric=culture&company_id={$company->id}");
+
+        $response->assertOk();
+        $response->assertJsonStructure(['labels', 'datasets']);
+    }
+
+    public function test_workfit_admin_without_company_requires_company_selection_for_reports(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 1,
+            'is_admin' => 1,
+            'company_id' => null,
+        ]);
+
+        $response = $this->actingAs($admin)->getJson('/reports/trends?metric=engagement');
+
+        $response->assertStatus(422)->assertJson([
+            'message' => 'Company is required.',
+        ]);
     }
 }

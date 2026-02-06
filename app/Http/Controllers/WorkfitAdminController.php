@@ -83,8 +83,12 @@ class WorkfitAdminController extends Controller
         // Guard against impersonating other super admins if needed, but usually allowed.
         
         auth()->loginUsingId($user->id);
-        
-        return response()->json(['redirect' => route('home')]);
+
+        $redirect = ((int) $user->role === 4)
+            ? route('employee.dashboard')
+            : route('home');
+
+        return response()->json(['redirect' => $redirect]);
     }
 
     public function getSubscriptionList()

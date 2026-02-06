@@ -6,6 +6,10 @@
 @section('content')
     <div class="container py-4">
         <h3 class="mb-3">Account & Billing</h3>
+        @php
+            $stripeKey = config('services.stripe.key');
+            $canUpdateCard = !empty($stripeKey) && $intent;
+        @endphp
 
         @if(session('status'))
             <div class="alert alert-success">{{ session('status') }}</div>
@@ -70,53 +74,60 @@
                             @endif
                         </p>
 
-                        <form id="payment-method-form" action="{{ route('billing.payment_method') }}" method="POST">
-                            @csrf
-                            <div class="mb-2">
-                                <label class="form-label">Update Card</label>
-                                <div id="card-element"></div>
+                        @if($canUpdateCard)
+                            <form id="payment-method-form" action="{{ route('billing.payment_method') }}" method="POST">
+                                @csrf
+                                <div class="mb-2">
+                                    <label class="form-label">Update Card</label>
+                                    <div id="card-element"></div>
+                                </div>
+                                <button id="card-button" class="btn btn-primary btn-sm" type="submit" data-secret="{{ $intent->client_secret }}">
+                                    Save Payment Method
+                                </button>
+                            </form>
+                        @else
+                            <div class="alert alert-warning mb-0">
+                                Card updates are unavailable until Stripe is configured for this environment.
                             </div>
-                            <button id="card-button" class="btn btn-primary btn-sm" type="submit" data-secret="{{ $intent->client_secret }}">
-                                Save Payment Method
-                            </button>
-                        </form>
+                        @endif
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="https://js.stripe.com/v3/"></script>
-    <script>
-        const stripe = Stripe('{{ config('services.stripe.key') }}')
-        const elements = stripe.elements()
-        const cardElement = elements.create('card')
-        cardElement.mount('#card-element')
+    @if($canUpdateCard)
+        <script src="https://js.stripe.com/v3/"></script>
+        <script>
+            const stripe = Stripe('{{ $stripeKey }}')
+            const elements = stripe.elements()
+            const cardElement = elements.create('card')
+            cardElement.mount('#card-element')
 
-        const form = document.getElementById('payment-method-form')
-        const cardBtn = document.getElementById('card-button')
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault()
-            cardBtn.disabled = true
-            const { setupIntent, error } = await stripe.confirmCardSetup (
-                cardBtn.dataset.secret, {
-                    payment_method: {
-                        card: cardElement,
+            const form = document.getElementById('payment-method-form')
+            const cardBtn = document.getElementById('card-button')
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault()
+                cardBtn.disabled = true
+                const { setupIntent, error } = await stripe.confirmCardSetup (
+                    cardBtn.dataset.secret, {
+                        payment_method: {
+                            card: cardElement,
+                        }
                     }
+                )
+                if (error) {
+                    alert(error.message)
+                    cardBtn.disabled = false
+                    return
                 }
-            )
-            if (error) {
-                alert(error.message)
-                cardBtn.disabled = false
-                return
-            }
-            let token = document.createElement('input')
-            token.setAttribute('type', 'hidden')
-            token.setAttribute('name', 'token')
-            token.setAttribute('value', setupIntent.payment_method)
-            form.appendChild(token)
-            form.submit()
-        })
-    </script>
+                let token = document.createElement('input')
+                token.setAttribute('type', 'hidden')
+                token.setAttribute('name', 'token')
+                token.setAttribute('value', setupIntent.payment_method)
+                form.appendChild(token)
+                form.submit()
+            })
+        </script>
+    @endif
 @endsection
-

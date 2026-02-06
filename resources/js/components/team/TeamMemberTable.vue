@@ -173,7 +173,8 @@ import AddMemberModal from './AddMemberModal.vue';
 
 const props = defineProps({
     userRole: { type: Number, required: true },
-    departments: { type: Array, default: () => [] }
+    departments: { type: Array, default: () => [] },
+    canManageDepartments: { type: Boolean, default: false }
 });
 
 const emit = defineEmits(['refresh-departments']);
@@ -200,7 +201,9 @@ const availableRoles = computed(() => {
     if (props.userRole === 1) {
         return [
             { value: 1, label: 'Manager' },
-            { value: 2, label: 'Chief' }
+            { value: 2, label: 'Chief' },
+            { value: 3, label: 'Teamlead' },
+            { value: 4, label: 'Employee' },
         ];
     } else if (props.userRole === 2) {
         return [

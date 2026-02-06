@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(\App\Http\Middleware\RewriteAssetUrls::class);
         
         $middleware->alias([
+            'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
             'manager' => \App\Http\Middleware\Manager::class,
             'teamlead' => \App\Http\Middleware\Teamlead::class,
             'chief' => \App\Http\Middleware\Chief::class,

@@ -37,6 +37,11 @@ class ScheduleSurveyWaves extends Command
                     continue;
                 }
 
+                if ($wave->status === 'processing') {
+                    $this->logWaveEvent($wave, 'skipped', 'Already processing.');
+                    continue;
+                }
+
                 if ($wave->due_at && $wave->due_at->isPast()) {
                     $wave->update(['status' => 'completed']);
                     $this->logWaveEvent($wave, 'completed', 'Wave past due date.');
