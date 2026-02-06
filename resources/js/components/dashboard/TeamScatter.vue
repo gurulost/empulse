@@ -76,10 +76,15 @@ export default {
             const plotHeight = height - padding * 2;
 
             // Axis ranges
-            const minX = 1;
+            const minX = 0;
             const maxX = 10;
-            const minY = -9;
-            const maxY = 9;
+            const yValues = this.points
+                .map((point) => Number(point.culture))
+                .filter((value) => Number.isFinite(value));
+            const minY = yValues.length ? Math.floor(Math.min(...yValues)) : 0;
+            const maxY = yValues.length ? Math.ceil(Math.max(...yValues)) : 10;
+            const yRangeMin = minY === maxY ? minY - 1 : minY;
+            const yRangeMax = minY === maxY ? maxY + 1 : maxY;
 
             // Draw axes
             ctx.strokeStyle = '#d1d5db';
@@ -98,10 +103,10 @@ export default {
 
             this.points.forEach((point) => {
                 const xValue = Number(point.indicator ?? minX);
-                const yValue = Number(point.culture ?? minY);
+                const yValue = Number(point.culture ?? yRangeMin);
 
                 const xPct = (xValue - minX) / (maxX - minX);
-                const yPct = (yValue - minY) / (maxY - minY);
+                const yPct = (yValue - yRangeMin) / (yRangeMax - yRangeMin);
 
                 const x = padding + xPct * plotWidth;
                 const y = height - padding - yPct * plotHeight;

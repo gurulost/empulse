@@ -77,8 +77,8 @@
                     <h5 class="mb-0">Snapshot</h5>
                 </div>
                 <div class="card-body">
-                    @if($analytics && count($analytics['data']) > 0)
-                        <p class="text-muted">{{ count($analytics['data']) }} recent submissions processed.</p>
+                    @if($analytics && !empty($analytics))
+                        <p class="text-muted">{{ $completedResponsesCount }} submissions processed.</p>
                         <p class="small text-muted">The dashboard now reads from the internal survey store.</p>
                     @else
                         <p class="text-muted">Responses will appear here once teammates start submitting the new survey.</p>

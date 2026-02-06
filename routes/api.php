@@ -2,7 +2,6 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\ApiController;
 
 /*
 |--------------------------------------------------------------------------
@@ -19,8 +18,4 @@ Route::get('/healthz', fn() => response('OK', 200));
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
-});
-
-Route::group(['prefix' => 'qualtrics', 'middleware' => 'auth'], function() {
-    Route::get('/', [ApiController::class, 'qualtrics'])->name('api.qualtrics');
 });

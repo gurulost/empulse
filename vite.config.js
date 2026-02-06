@@ -4,6 +4,15 @@ import laravel from 'laravel-vite-plugin';
 import path from 'path';
 
 export default defineConfig(({ mode }) => ({
+    css: {
+        preprocessorOptions: {
+            scss: {
+                // Bootstrap 5.x still emits Sass deprecation noise from dependencies.
+                quietDeps: true,
+                silenceDeprecations: ['legacy-js-api'],
+            },
+        },
+    },
     resolve: {
         alias: {
             '@assets': path.resolve(__dirname, 'resources/images'),

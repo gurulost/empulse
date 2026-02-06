@@ -9,7 +9,6 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Laravel\Cashier\Billable;
 use App\Models\Companies;
-use App\Services\SurveyAnalyticsService;
 use App\Services\SurveyService;
 use DB;
 use Hash;
@@ -223,50 +222,6 @@ class User extends Authenticatable
         }
 
         return false;
-    }
-
-    public function qualtricsFunc($userName, $userEmail, $userRole, $userPassword, $companyTitle, ?array $dataset = null) {
-        $qualtrics = new \stdClass();
-        $qualtrics->data = [];
-        $qualtrics->time = null;
-
-        if ($dataset === null) {
-            $analyticsService = app(SurveyAnalyticsService::class);
-            $dataset = $analyticsService->datasetForCompany($this->company_id);
-        }
-
-        $qualtrics->time = $dataset['time'] ?? now()->valueOf();
-        $entries = $dataset['data'] ?? [];
-        $allUsers = \DB::table('company_worker')->pluck('email')->toArray();
-        $userDepartment = \DB::table('company_worker')->where('email', $userEmail)->value('department');
-
-        foreach ($entries as $payload) {
-            $decoded = is_array($payload) ? $payload : json_decode($payload, true);
-            if (!$decoded || !isset($decoded['values'])) {
-                continue;
-            }
-
-            $values = $decoded['values'];
-            $companyMatches = isset($values['QID101_TEXT']) && $values['QID101_TEXT'] === $companyTitle;
-            $emailAllowed = isset($values['QID62_TEXT']) && in_array($values['QID62_TEXT'], $allUsers);
-            if (!$companyMatches || !$emailAllowed) {
-                continue;
-            }
-
-            if ($userRole == 1) {
-                $qualtrics->data[] = json_encode($decoded);
-            } elseif ($userRole == 2) {
-                if (isset($values['QID63_TEXT']) && $values['QID63_TEXT'] === $userDepartment) {
-                    $qualtrics->data[] = json_encode($decoded);
-                }
-            } elseif ($userRole == 3) {
-                if (isset($values['QID103_TEXT']) && $values['QID103_TEXT'] === $userName) {
-                    $qualtrics->data[] = json_encode($decoded);
-                }
-            }
-        }
-
-        return $qualtrics;
     }
 
     public function deleteAvatarFunc($id) {

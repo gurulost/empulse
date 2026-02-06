@@ -1,19 +1,5 @@
-/**
- * First we will load all of this project's JavaScript dependencies which
- * includes Vue and other libraries. It is a great starting point when
- * building robust, powerful web applications using Vue and Laravel.
- */
-
 import './bootstrap';
 import { createApp } from 'vue';
-import SurveyApp from './components/survey/SurveyApp.vue';
-import AdminDashboard from './components/admin/AdminDashboard.vue';
-import SurveyBuilder from './components/builder/SurveyBuilder.vue';
-import ReportsDashboard from './components/reports/ReportsDashboard.vue';
-import AppSidebar from './components/layout/AppSidebar.vue';
-import ToastContainer from './components/common/ToastContainer.vue';
-import TeamManagementDashboard from './components/team/TeamManagementDashboard.vue';
-import AnalyticsDashboard from './components/analytics/AnalyticsDashboard.vue';
 
 const parseProp = (raw) => {
     if (raw === null || raw === undefined) return undefined;
@@ -42,86 +28,106 @@ const getPropsFromAttributes = (element, mapping) => {
     return props;
 };
 
-const mountByTagName = (tagName, Component, propsFromElement = () => ({})) => {
-    document.querySelectorAll(tagName).forEach((element) => {
+const mountByTagName = async (tagName, loader, propsFromElement = () => ({})) => {
+    const elements = [...document.querySelectorAll(tagName)];
+    if (!elements.length) {
+        return;
+    }
+
+    const { default: Component } = await loader();
+
+    elements.forEach((element) => {
         const props = propsFromElement(element);
         if (props === null) return;
         createApp(Component, props).mount(element);
     });
 };
 
-const mountById = (id, Component, propsFromElement = () => ({})) => {
+const mountById = async (id, loader, propsFromElement = () => ({})) => {
     const element = document.getElementById(id);
-    if (!element) return;
+    if (!element) {
+        return;
+    }
 
+    const { default: Component } = await loader();
     const props = propsFromElement(element);
     if (props === null) return;
+
     createApp(Component, props).mount(element);
 };
 
-// Layout (authenticated pages)
-mountByTagName('app-sidebar', AppSidebar, (element) =>
-    getPropsFromAttributes(element, {
-        user: ':user',
-        currentRoute: 'current-route',
-    }),
-);
+const boot = async () => {
+    const tasks = [
+        () => mountByTagName('app-sidebar', () => import('./components/layout/AppSidebar.vue'), (element) =>
+            getPropsFromAttributes(element, {
+                user: ':user',
+                currentRoute: 'current-route',
+            }),
+        ),
+        () => mountByTagName('toast-container', () => import('./components/common/ToastContainer.vue')),
+        () => mountByTagName('analytics-dashboard', () => import('./components/analytics/AnalyticsDashboard.vue'), (element) =>
+            getPropsFromAttributes(element, {
+                user: ':user',
+                initialCompanyId: ':initial-company-id',
+                companies: ':companies',
+            }),
+        ),
+        () => mountByTagName('admin-dashboard', () => import('./components/admin/AdminDashboard.vue'), (element) =>
+            getPropsFromAttributes(element, {
+                user: ':user',
+            }),
+        ),
+        () => mountById('survey-builder-root', () => import('./components/builder/SurveyBuilder.vue'), (element) => {
+            const initialVersionId = parseInt(element.dataset.initialVersionId ?? '', 10);
+            const surveyId = parseInt(element.dataset.surveyId ?? '', 10);
 
-mountByTagName('toast-container', ToastContainer);
+            if (!Number.isFinite(initialVersionId) || !Number.isFinite(surveyId)) {
+                return null;
+            }
 
-// Analytics dashboard
-mountByTagName('analytics-dashboard', AnalyticsDashboard, (element) =>
-    getPropsFromAttributes(element, {
-        user: ':user',
-        initialCompanyId: ':initial-company-id',
-    }),
-);
+            return { initialVersionId, surveyId };
+        }),
+        () => mountById('survey-app', () => import('./components/survey/SurveyApp.vue'), (element) => {
+            const definitionUrl = element.dataset.definitionUrl;
+            const submitUrl = element.dataset.submitUrl;
+            const autosaveUrl = element.dataset.autosaveUrl;
 
-// Workfit admin dashboard (modern layout)
-mountByTagName('admin-dashboard', AdminDashboard, (element) =>
-    getPropsFromAttributes(element, {
-        user: ':user',
-    }),
-);
+            if (!definitionUrl || !submitUrl) {
+                return null;
+            }
 
-// Survey builder
-mountById('survey-builder-root', SurveyBuilder, (element) => {
-    const initialVersionId = parseInt(element.dataset.initialVersionId ?? '', 10);
-    const surveyId = parseInt(element.dataset.surveyId ?? '', 10);
+            return {
+                definitionUrl,
+                submitUrl,
+                autosaveUrl,
+            };
+        }),
+        () => mountById('reports-dashboard-root', () => import('./components/reports/ReportsDashboard.vue'), (element) =>
+            getPropsFromAttributes(element, {
+                user: 'data-user',
+                initialCompanyId: 'data-initial-company-id',
+                companies: 'data-companies',
+            }),
+        ),
+        () => mountById('team-management-app', () => import('./components/team/TeamManagementDashboard.vue'), (element) => {
+            const userRole = parseInt(element.dataset.userRole ?? '', 10);
+            if (!Number.isFinite(userRole)) {
+                return null;
+            }
 
-    if (!Number.isFinite(initialVersionId) || !Number.isFinite(surveyId)) {
-        return null;
+            return { userRole };
+        }),
+    ];
+
+    for (const task of tasks) {
+        try {
+            await task();
+        } catch (error) {
+            console.error('Component mount failed:', error);
+        }
     }
+};
 
-    return { initialVersionId, surveyId };
-});
-
-// Survey taking flow
-mountById('survey-app', SurveyApp, (element) => {
-    const definitionUrl = element.dataset.definitionUrl;
-    const submitUrl = element.dataset.submitUrl;
-    const autosaveUrl = element.dataset.autosaveUrl;
-
-    if (!definitionUrl || !submitUrl) {
-        return null;
-    }
-
-    return {
-        definitionUrl,
-        submitUrl,
-        autosaveUrl,
-    };
-});
-
-// Reports
-mountById('reports-dashboard-root', ReportsDashboard);
-
-// Team management dashboard
-mountById('team-management-app', TeamManagementDashboard, (element) => {
-    const userRole = parseInt(element.dataset.userRole ?? '', 10);
-    if (!Number.isFinite(userRole)) {
-        return null;
-    }
-
-    return { userRole };
+boot().catch((error) => {
+    console.error('App bootstrap failed:', error);
 });

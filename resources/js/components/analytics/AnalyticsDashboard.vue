@@ -1,39 +1,74 @@
 <template>
     <div class="analytics-dashboard">
         <!-- Header & Filters -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
             <h1 class="h3 mb-0 text-gray-800">Dashboard Analytics</h1>
-            
-            <div class="d-flex gap-2">
-                <select v-model="filters.department" class="form-select form-select-sm" style="width: 200px;">
+
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <select
+                    v-if="isWorkfitAdmin"
+                    v-model="selectedCompanyIdRaw"
+                    class="form-select form-select-sm"
+                    style="width: 240px;"
+                >
+                    <option value="">Select Company</option>
+                    <option v-for="company in companies" :key="company.id" :value="String(company.id)">
+                        {{ company.title }}
+                    </option>
+                </select>
+
+                <select
+                    v-model="filters.department"
+                    class="form-select form-select-sm"
+                    style="width: 200px;"
+                    :disabled="!hasCompanyContext"
+                >
                     <option value="">All Departments</option>
                     <option v-for="dept in options.departments" :key="dept.department" :value="dept.department">
                         {{ dept.department }}
                     </option>
                 </select>
 
-                <select v-model="filters.team" class="form-select form-select-sm" style="width: 200px;">
+                <select
+                    v-model="filters.team"
+                    class="form-select form-select-sm"
+                    style="width: 200px;"
+                    :disabled="!hasCompanyContext"
+                >
                     <option value="">All Teams</option>
                     <option v-for="lead in options.teamleads" :key="lead.name" :value="lead.name">
                         {{ lead.name }}
                     </option>
                 </select>
 
-                <select v-model="filters.wave" class="form-select form-select-sm" style="width: 200px;">
+                <select
+                    v-model="filters.wave"
+                    class="form-select form-select-sm"
+                    style="width: 200px;"
+                    :disabled="!hasCompanyContext"
+                >
                     <option value="">Latest Wave</option>
                     <option v-for="(label, key) in options.waves" :key="key" :value="key">
                         {{ label }}
                     </option>
                 </select>
-                
-                <button class="btn btn-sm btn-outline-secondary" @click="resetFilters" :disabled="isLoading">
+
+                <button class="btn btn-sm btn-outline-secondary" @click="resetFilters" :disabled="isLoading || !hasCompanyContext">
                     Reset
                 </button>
             </div>
         </div>
 
+        <div v-if="requiresCompanySelection" class="alert alert-info">
+            Select a company to load analytics.
+        </div>
+
+        <div v-else-if="showNoCompanyContext" class="alert alert-warning">
+            No company context found for your account. Contact an administrator to assign a company.
+        </div>
+
         <!-- Loading State -->
-        <div v-if="isLoading" class="text-center py-5">
+        <div v-else-if="isLoading" class="text-center py-5">
             <div class="spinner-border text-primary" role="status">
                 <span class="visually-hidden">Loading...</span>
             </div>
@@ -90,7 +125,7 @@
                             <h6 class="m-0 font-weight-bold text-primary">Team Culture Pulse</h6>
                         </div>
                         <div class="card-body">
-                            <team-culture-pulse 
+                            <team-culture-pulse
                                 v-if="data.team_culture"
                                 :score="data.team_culture.score"
                                 :positive="data.team_culture.positive"
@@ -124,7 +159,7 @@
                             <h6 class="m-0 font-weight-bold text-primary">Impact Snapshot</h6>
                         </div>
                         <div class="card-body">
-                            <impact-snapshot 
+                            <impact-snapshot
                                 v-if="data.impact"
                                 :positive="data.impact.positive"
                                 :importance="data.impact.importance"
@@ -141,10 +176,10 @@
     </div>
 </template>
 
-<script>
-import { ref, reactive, onMounted, watch } from 'vue';
-import { useAnalyticsApi } from '../../composables/useAnalyticsApi';
+<script setup>
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { debounce } from 'lodash';
+import { useAnalyticsApi } from '../../composables/useAnalyticsApi';
 import GapChart from '../dashboard/GapChart.vue';
 import ImpactSnapshot from '../dashboard/ImpactSnapshot.vue';
 import IndicatorList from '../dashboard/IndicatorList.vue';
@@ -152,114 +187,155 @@ import TeamCulturePulse from '../dashboard/TeamCulturePulse.vue';
 import TeamScatter from '../dashboard/TeamScatter.vue';
 import TemperatureGauge from '../dashboard/TemperatureGauge.vue';
 
-export default {
-    name: 'AnalyticsDashboard',
-    components: {
-        GapChart,
-        ImpactSnapshot,
-        IndicatorList,
-        TeamCulturePulse,
-        TeamScatter,
-        TemperatureGauge,
+const props = defineProps({
+    user: {
+        type: Object,
+        required: true,
     },
-    props: {
-        user: {
-            type: Object,
-            required: true
-        },
-        initialCompanyId: {
-            type: Number,
-            required: true
-        }
+    initialCompanyId: {
+        type: [Number, String],
+        default: null,
     },
-    setup(props) {
-        const { getDashboardData } = useAnalyticsApi();
-        const isLoading = ref(true);
-        const error = ref(null);
-        const data = ref({});
-        const options = reactive({
-            departments: [],
-            teamleads: [],
-            waves: [],
-            exist_departments: []
-        });
+    companies: {
+        type: Array,
+        default: () => [],
+    },
+});
 
-        const filters = reactive({
-            department: '',
-            team: '',
-            wave: ''
-        });
+const { getDashboardData } = useAnalyticsApi();
 
-        const fetchData = async () => {
-            isLoading.value = true;
-            error.value = null;
-            try {
-                const response = await getDashboardData({
-                    company_id: props.initialCompanyId,
-                    department: filters.department,
-                    team: filters.team,
-                    wave: filters.wave
-                });
+const normalizeCompanyId = (value) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+};
 
-                data.value = response.data;
-                
-                // Update options only if they are empty (initial load)
-                if (options.departments.length === 0) {
-                    options.departments = response.filters.departments;
-                    options.teamleads = response.filters.teamleads;
-                    options.waves = response.filters.waves;
-                    options.exist_departments = response.filters.exist_departments;
-                }
-            } catch (err) {
-                console.error('Error fetching analytics:', err);
-                error.value = 'Failed to load dashboard data. Please try again.';
-            } finally {
-                isLoading.value = false;
-            }
-        };
+const inferredCompanyId = computed(() => normalizeCompanyId(props.initialCompanyId) ?? normalizeCompanyId(props.user?.company_id));
+const selectedCompanyIdRaw = ref(inferredCompanyId.value ? String(inferredCompanyId.value) : '');
 
-        const debouncedFetch = debounce(fetchData, 500);
+const isWorkfitAdmin = computed(() => Number(props.user?.is_admin ?? 0) === 1 || Number(props.user?.role ?? 0) === 0);
+const selectedCompanyId = computed(() => normalizeCompanyId(selectedCompanyIdRaw.value));
+const hasCompanyContext = computed(() => selectedCompanyId.value !== null);
+const requiresCompanySelection = computed(() => isWorkfitAdmin.value && !hasCompanyContext.value);
+const showNoCompanyContext = computed(() => !isWorkfitAdmin.value && !hasCompanyContext.value);
 
-        const resetFilters = () => {
-            filters.department = '';
-            filters.team = '';
-            filters.wave = '';
-            // debouncedFetch will be triggered by the watcher
-        };
+const isLoading = ref(false);
+const error = ref(null);
+const data = ref({});
 
-        // Helper functions for TeamCulturePulse
-        const getPositiveItems = (items) => {
-            if (!items) return [];
-            return items.filter(i => i.polarity === 'positive').slice(0, 3);
-        };
+const options = reactive({
+    departments: [],
+    teamleads: [],
+    waves: [],
+    exist_departments: [],
+});
 
-        const getNegativeItems = (items) => {
-            if (!items) return [];
-            return items.filter(i => i.polarity === 'negative').slice(0, 3);
-        };
+const filters = reactive({
+    department: '',
+    team: '',
+    wave: '',
+});
 
-        // Watch for filter changes to re-fetch data
-        watch(filters, () => {
-            debouncedFetch();
-        }, { deep: true });
+const clearFilterOptions = () => {
+    options.departments = [];
+    options.teamleads = [];
+    options.waves = [];
+    options.exist_departments = [];
+};
 
-        onMounted(() => {
-            fetchData();
-        });
+let requestCounter = 0;
 
-        return {
-            isLoading,
-            error,
-            data,
-            filters,
-            options,
-            resetFilters,
-            fetchData,
-            getPositiveItems,
-            getNegativeItems
-        };
+const resetFilters = () => {
+    filters.department = '';
+    filters.team = '';
+    filters.wave = '';
+};
+
+const fetchData = async () => {
+    if (!hasCompanyContext.value) {
+        isLoading.value = false;
+        error.value = null;
+        data.value = {};
+        clearFilterOptions();
+        return;
     }
-}
+
+    isLoading.value = true;
+    error.value = null;
+    const requestId = ++requestCounter;
+
+    try {
+        const response = await getDashboardData({
+            company_id: selectedCompanyId.value,
+            department: filters.department,
+            team: filters.team,
+            wave: filters.wave,
+        });
+
+        if (requestId !== requestCounter) {
+            return;
+        }
+
+        data.value = response.data || {};
+        options.departments = response.filters?.departments || [];
+        options.teamleads = response.filters?.teamleads || [];
+        options.waves = response.filters?.waves || [];
+        options.exist_departments = response.filters?.exist_departments || [];
+    } catch (err) {
+        if (requestId !== requestCounter) {
+            return;
+        }
+
+        console.error('Error fetching analytics:', err);
+        error.value = err?.response?.data?.message || 'Failed to load dashboard data. Please try again.';
+    } finally {
+        if (requestId !== requestCounter) {
+            return;
+        }
+
+        isLoading.value = false;
+    }
+};
+
+const debouncedFetch = debounce(fetchData, 400);
+
+const getPositiveItems = (items) => {
+    if (!items) return [];
+    return items.filter((item) => item.polarity === 'positive').slice(0, 3);
+};
+
+const getNegativeItems = (items) => {
+    if (!items) return [];
+    return items.filter((item) => item.polarity === 'negative').slice(0, 3);
+};
+
+watch(filters, () => {
+    if (!hasCompanyContext.value) {
+        return;
+    }
+
+    debouncedFetch();
+}, { deep: true });
+
+watch(selectedCompanyIdRaw, () => {
+    requestCounter += 1;
+    debouncedFetch.cancel();
+    resetFilters();
+    data.value = {};
+    clearFilterOptions();
+
+    if (hasCompanyContext.value) {
+        fetchData();
+    } else {
+        isLoading.value = false;
+        error.value = null;
+    }
+});
+
+onMounted(() => {
+    if (hasCompanyContext.value) {
+        fetchData();
+    }
+});
 </script>
 
 <style scoped>

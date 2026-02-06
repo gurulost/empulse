@@ -27,33 +27,51 @@
             <!-- Navigation -->
             <ul class="nav nav-pills flex-column mb-auto gap-2">
                 <li class="nav-item">
-                    <a :href="dashboardHref" class="nav-link" :class="{ active: isEmployee ? currentRoute.startsWith('employee') : currentRoute === 'home' }">
+                    <a :href="dashboardHref" class="nav-link" :class="{ active: dashboardActive }">
                         <i class="bi bi-speedometer2 me-3"></i>
                         Dashboard
                     </a>
                 </li>
-                <li v-if="!isEmployee">
-                    <a href="/reports" class="nav-link" :class="{ active: currentRoute.startsWith('reports') }">
+                <li v-if="canAccessCompanyReports">
+                    <a href="/reports" class="nav-link" :class="{ active: routeStartsWith('reports') }">
                         <i class="bi bi-graph-up me-3"></i>
                         Analytics & Reports
                     </a>
                 </li>
+                <li v-if="canManageSurveys">
+                    <a href="/surveys/manage" class="nav-link" :class="{ active: currentRouteName === 'surveys.manage' }">
+                        <i class="bi bi-ui-checks-grid me-3"></i>
+                        Survey Management
+                    </a>
+                </li>
+                <li v-if="canManageWaves">
+                    <a href="/survey-waves" class="nav-link" :class="{ active: routeStartsWith('survey-waves.') }">
+                        <i class="bi bi-calendar2-week me-3"></i>
+                        Survey Waves
+                    </a>
+                </li>
+                <li v-if="canManageTeam">
+                    <a href="/team/manage" class="nav-link" :class="{ active: routeStartsWith('team.') }">
+                        <i class="bi bi-people me-3"></i>
+                        Team
+                    </a>
+                </li>
+                <li v-if="canAccessBilling">
+                    <a href="/account/billing" class="nav-link" :class="{ active: routeStartsWith('billing.') || routeStartsWith('plans.') }">
+                        <i class="bi bi-credit-card me-3"></i>
+                        Billing
+                    </a>
+                </li>
                 <li v-if="isWorkfitAdmin">
-                    <a href="/admin" class="nav-link" :class="{ active: currentRoute.startsWith('admin') }">
+                    <a href="/admin" class="nav-link" :class="{ active: routeStartsWith('admin') }">
                         <i class="bi bi-shield-lock me-3"></i>
                         Admin Panel
                     </a>
                 </li>
                 <li v-if="isWorkfitAdmin">
-                    <a href="/admin/builder" class="nav-link" :class="{ active: currentRoute.startsWith('admin.builder') }">
+                    <a href="/admin/builder" class="nav-link" :class="{ active: routeStartsWith('admin.builder') }">
                         <i class="bi bi-ui-checks me-3"></i>
                         Survey Builder
-                    </a>
-                </li>
-                <li v-if="!isEmployee">
-                    <a href="/team/manage" class="nav-link" :class="{ active: currentRoute.startsWith('team.') }">
-                        <i class="bi bi-people me-3"></i>
-                        Team
                     </a>
                 </li>
             </ul>
@@ -89,12 +107,29 @@ const props = defineProps({
 });
 
 const role = computed(() => Number(props.user?.role ?? 0));
-const isWorkfitAdmin = computed(() => Number(props.user?.is_admin ?? 0) === 1);
+const currentRouteName = computed(() => String(props.currentRoute ?? ''));
+const isWorkfitAdmin = computed(() => Number(props.user?.is_admin ?? 0) === 1 || Number(props.user?.role ?? 0) === 0);
 const userName = computed(() => props.user?.name ?? '');
 const userAvatar = computed(() => (props.user?.image ? `/upload/${props.user.image}` : '/upload/no_image.jpg'));
 const isEmployee = computed(() => role.value === 4);
+const isManager = computed(() => role.value === 1);
+const hasCompanyContext = computed(() => Number(props.user?.company_id ?? 0) > 0);
+const canAccessCompanyReports = computed(() => !isEmployee.value && hasCompanyContext.value);
+const canManageTeam = computed(() => !isEmployee.value && hasCompanyContext.value);
+const canManageSurveys = computed(() => isManager.value);
+const canManageWaves = computed(() => isManager.value);
+const canAccessBilling = computed(() => isManager.value);
 const dashboardHref = computed(() => (isEmployee.value ? '/employee' : '/home'));
+const dashboardActive = computed(() => {
+    if (isEmployee.value) {
+        return routeStartsWith('employee');
+    }
+
+    return currentRouteName.value === 'home' || currentRouteName.value === 'dashboard.analytics';
+});
 const isOpen = ref(false);
+
+const routeStartsWith = (prefix) => currentRouteName.value.startsWith(prefix);
 
 const toggleSidebar = () => {
     isOpen.value = !isOpen.value;

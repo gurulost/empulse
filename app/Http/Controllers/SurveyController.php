@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\SurveyAssignment;
 use App\Services\SurveyDefinitionService;
+use App\Services\SurveyResponseValidationService;
 use App\Services\SurveyService;
 use Illuminate\Http\Request;
 
@@ -11,11 +12,17 @@ class SurveyController extends Controller
 {
     protected SurveyService $surveyService;
     protected SurveyDefinitionService $definitionService;
+    protected SurveyResponseValidationService $validationService;
 
-    public function __construct(SurveyService $surveyService, SurveyDefinitionService $definitionService)
+    public function __construct(
+        SurveyService $surveyService,
+        SurveyDefinitionService $definitionService,
+        SurveyResponseValidationService $validationService
+    )
     {
         $this->surveyService = $surveyService;
         $this->definitionService = $definitionService;
+        $this->validationService = $validationService;
     }
 
     public function show(string $token)
@@ -53,7 +60,7 @@ class SurveyController extends Controller
         }
 
         $data = $request->validate([
-            'responses' => 'nullable|array',
+            'responses' => 'nullable|array|max:500',
         ]);
 
         $assignment->update([
@@ -78,11 +85,13 @@ class SurveyController extends Controller
         }
 
         $data = $request->validate([
-            'responses' => 'required|array',
-            'duration_ms' => 'nullable|integer|min:0',
+            'responses' => 'required|array|max:500',
+            'duration_ms' => 'nullable|integer|min:0|max:86400000',
         ]);
 
-        $this->surveyService->recordResponse($assignment, $data['responses'], [
+        $sanitizedResponses = $this->validationService->validateAndSanitize($assignment, $data['responses']);
+
+        $this->surveyService->recordResponse($assignment, $sanitizedResponses, [
             'duration_ms' => $data['duration_ms'] ?? null,
         ]);
 

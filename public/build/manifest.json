@@ -1,22 +1,164 @@
 {
+  "_SkeletonLoader-!~{00d}~.js": {
+    "file": "assets/SkeletonLoader-C3QQ2tIr.css",
+    "src": "_SkeletonLoader-!~{00d}~.js"
+  },
+  "_SkeletonLoader-DsZlrgnT.js": {
+    "file": "assets/SkeletonLoader-DsZlrgnT.js",
+    "name": "SkeletonLoader",
+    "imports": [
+      "__plugin-vue_export-helper-DlAUqK2U.js",
+      "resources/js/app.js"
+    ],
+    "css": [
+      "assets/SkeletonLoader-C3QQ2tIr.css"
+    ]
+  },
+  "__plugin-vue_export-helper-DlAUqK2U.js": {
+    "file": "assets/_plugin-vue_export-helper-DlAUqK2U.js",
+    "name": "_plugin-vue_export-helper"
+  },
+  "_useToast-3pCS-Upl.js": {
+    "file": "assets/useToast-3pCS-Upl.js",
+    "name": "useToast",
+    "imports": [
+      "resources/js/app.js"
+    ]
+  },
   "resources/images/empulse-logo.png": {
     "file": "assets/empulse-logo-CZ9eJs8T.png",
     "src": "resources/images/empulse-logo.png"
   },
   "resources/js/app.js": {
-    "file": "assets/app-x-gsWVJB.js",
+    "file": "assets/app-BeGgamdR.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
+    "dynamicImports": [
+      "resources/js/components/layout/AppSidebar.vue",
+      "resources/js/components/common/ToastContainer.vue",
+      "resources/js/components/analytics/AnalyticsDashboard.vue",
+      "resources/js/components/admin/AdminDashboard.vue",
+      "resources/js/components/builder/SurveyBuilder.vue",
+      "resources/js/components/survey/SurveyApp.vue",
+      "resources/js/components/reports/ReportsDashboard.vue",
+      "resources/js/components/team/TeamManagementDashboard.vue"
+    ]
+  },
+  "resources/js/components/admin/AdminDashboard.vue": {
+    "file": "assets/AdminDashboard-BHvwyl69.js",
+    "name": "AdminDashboard",
+    "src": "resources/js/components/admin/AdminDashboard.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.js",
+      "__plugin-vue_export-helper-DlAUqK2U.js"
+    ],
     "css": [
-      "assets/app-H8J6jL36.css"
+      "assets/AdminDashboard-Be2V6QOh.css"
+    ]
+  },
+  "resources/js/components/analytics/AnalyticsDashboard.vue": {
+    "file": "assets/AnalyticsDashboard-DuCQ7-4R.js",
+    "name": "AnalyticsDashboard",
+    "src": "resources/js/components/analytics/AnalyticsDashboard.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.js",
+      "__plugin-vue_export-helper-DlAUqK2U.js"
+    ],
+    "css": [
+      "assets/AnalyticsDashboard-PKNsooQm.css"
+    ]
+  },
+  "resources/js/components/builder/SurveyBuilder.vue": {
+    "file": "assets/SurveyBuilder-C9XtrOWj.js",
+    "name": "SurveyBuilder",
+    "src": "resources/js/components/builder/SurveyBuilder.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.js",
+      "__plugin-vue_export-helper-DlAUqK2U.js"
+    ],
+    "css": [
+      "assets/SurveyBuilder-D2w9EzDn.css"
+    ]
+  },
+  "resources/js/components/common/ToastContainer.vue": {
+    "file": "assets/ToastContainer-C7D0iMMi.js",
+    "name": "ToastContainer",
+    "src": "resources/js/components/common/ToastContainer.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.js",
+      "_useToast-3pCS-Upl.js",
+      "__plugin-vue_export-helper-DlAUqK2U.js"
+    ],
+    "css": [
+      "assets/ToastContainer-DEMzwyVC.css"
+    ]
+  },
+  "resources/js/components/layout/AppSidebar.vue": {
+    "file": "assets/AppSidebar-Dskkaz63.js",
+    "name": "AppSidebar",
+    "src": "resources/js/components/layout/AppSidebar.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.js",
+      "__plugin-vue_export-helper-DlAUqK2U.js"
+    ],
+    "css": [
+      "assets/AppSidebar-CBkmbXPl.css"
     ],
     "assets": [
       "assets/empulse-logo-CZ9eJs8T.png"
     ]
   },
+  "resources/js/components/reports/ReportsDashboard.vue": {
+    "file": "assets/ReportsDashboard-B1YBHcui.js",
+    "name": "ReportsDashboard",
+    "src": "resources/js/components/reports/ReportsDashboard.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.js",
+      "__plugin-vue_export-helper-DlAUqK2U.js"
+    ],
+    "css": [
+      "assets/ReportsDashboard-CNssimh1.css"
+    ]
+  },
+  "resources/js/components/survey/SurveyApp.vue": {
+    "file": "assets/SurveyApp-qrnIR858.js",
+    "name": "SurveyApp",
+    "src": "resources/js/components/survey/SurveyApp.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.js",
+      "__plugin-vue_export-helper-DlAUqK2U.js",
+      "_SkeletonLoader-DsZlrgnT.js",
+      "_useToast-3pCS-Upl.js"
+    ],
+    "css": [
+      "assets/SurveyApp-C9q2qIEF.css"
+    ]
+  },
+  "resources/js/components/team/TeamManagementDashboard.vue": {
+    "file": "assets/TeamManagementDashboard-DXhXnhrE.js",
+    "name": "TeamManagementDashboard",
+    "src": "resources/js/components/team/TeamManagementDashboard.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.js",
+      "_useToast-3pCS-Upl.js",
+      "_SkeletonLoader-DsZlrgnT.js",
+      "__plugin-vue_export-helper-DlAUqK2U.js"
+    ],
+    "css": [
+      "assets/TeamManagementDashboard-Gbd81wUb.css"
+    ]
+  },
   "resources/sass/app.scss": {
-    "file": "assets/app-BMQ9SfyK.css",
+    "file": "assets/app-NPQ17TNQ.css",
     "src": "resources/sass/app.scss",
     "isEntry": true
   }

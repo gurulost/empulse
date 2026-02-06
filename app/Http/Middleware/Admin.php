@@ -20,11 +20,11 @@ class Admin
     {
         try {
             if (Auth::check()) {
-                if (Auth::user()->role !== 4) {
+                if ((int) Auth::user()->role !== 4) {
                     return $next($request);
-                } else {
-                    Auth::logout();
                 }
+
+                return redirect()->route('employee.dashboard');
             }
 
             return redirect()->route('login');

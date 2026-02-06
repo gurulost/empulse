@@ -23,9 +23,15 @@ class RedirectIfAuthenticated
 
         foreach ($guards as $guard) {
             $user = Auth::guard($guard)->user();
-            if ($user && $user->role !== 4) {
-                return redirect(RouteServiceProvider::HOME);
-            } 
+            if (!$user) {
+                continue;
+            }
+
+            if ((int) $user->role === 4) {
+                return redirect()->route('employee.dashboard');
+            }
+
+            return redirect(RouteServiceProvider::HOME);
         }
 
         return $next($request);

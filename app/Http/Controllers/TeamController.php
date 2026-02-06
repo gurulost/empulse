@@ -30,9 +30,13 @@ class TeamController extends Controller
         $this->departmentService = $departmentService;
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        return view('team.manage');
+        $hasCompanyContext = (bool) ($request->user()?->company_id);
+
+        return view('team.manage', [
+            'hasCompanyContext' => $hasCompanyContext,
+        ]);
     }
 
     // --- Members API ---
