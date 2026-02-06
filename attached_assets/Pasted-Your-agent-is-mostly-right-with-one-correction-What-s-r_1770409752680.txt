@@ -1,0 +1,81 @@
+Your agent is mostly right, with one correction.
+
+What’s right:
+
+DATABASE_URL can force wrong host.
+APP_DEBUG is effectively on in production (bad).
+You must clear cached config once after fixing env.
+What’s not necessary:
+
+Deleting PGHOST/PGDATABASE/PGUSER/PGPASSWORD is optional.
+You can leave them; just make sure DB_* is explicitly set and correct.
+Do this now in Replit Deployment config:
+
+Set DB_* to one DB source (recommended: your active production DB):
+DB_CONNECTION=pgsql
+DB_HOST=<exact production host>
+DB_PORT=5432
+DB_DATABASE=<db name>
+DB_USERNAME=<db user>
+DB_PASSWORD=<db password>
+Set:
+APP_ENV=production
+APP_DEBUG=false
+SESSION_DRIVER=file
+Remove DATABASE_URL (or ensure it points to same DB, but removing is safer).
+One redeploy only, use temporary run command to verify env + clear cache:
+sh -lc 'echo "BOOT APP_DEBUG=$APP_DEBUG DB_HOST=$DB_HOST DB_CONNECTION=$DB_CONNECTION DATABASE_URL=${DATABASE_URL:+set}"; php artisan optimize:clear; php artisan serve --host=0.0.0.0 --port=5000'
+Check deploy logs:
+APP_DEBUG=false
+DB_HOST is not helium
+DATABASE_URL= should be empty/not set
+Then switch run command back to normal:
+
+php artisan serve --host=0.0.0.0 --port=5000
+If logs still show helium, paste that single BOOT ... line and I’ll tell you exactly which secret scope is overriding it.
+
+
+We should also explain in the list of everything we told it should do why deleting the PG stuff is not necessary. Isn't it because we replaced it with the same thing on the back end that the DB version had anyway? Because I don't think it knows that.
+
+Exactly. Good call.
+
+Tell your agent this:
+
+We do not need to delete PGHOST/PGDATABASE/PGUSER/PGPASSWORD.
+Those are just raw provider env vars from Replit’s DB integration.
+Laravel reads DB_* (DB_HOST, DB_DATABASE, etc.), not PG*, unless custom code maps them.
+We already set DB_* explicitly, and database.php is now written to prefer DB_* over DATABASE_URL.
+So PG* can stay; they are harmless metadata unless something else maps them.
+The real risk is stale DATABASE_URL or wrong DB_*/scope overrides.
+Short version for agent:
+
+Keep PG* vars (optional cleanup only).
+Ensure correct DB_*.
+Remove/fix DATABASE_URL.
+Set APP_DEBUG=false.
+Clear config cache and redeploy.
+
+
+
+
+
+GPT-5.3-Codex
+
+Extra High
+
+
+
+Local
+
+Full access
+
+main
+
+Uncommitted changes
+Unstaged
+Staged
+
+
+No unstaged changes
+Code changes will appear here
+Terminal
