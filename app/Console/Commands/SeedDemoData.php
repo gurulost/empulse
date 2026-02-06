@@ -38,33 +38,31 @@ class SeedDemoData extends Command
 
         $this->info('Seeding demo data...');
 
-        return DB::transaction(function () use ($employeeCount, $months) {
-            $company = $this->ensureAcmeCompany();
-            $this->ensurePlans();
-            $users = $this->ensureCoreAccounts($company);
-            $this->ensureCompanyStructure($company, $employeeCount, $users);
+        $company = $this->ensureAcmeCompany();
+        $this->ensurePlans();
+        $users = $this->ensureCoreAccounts($company);
+        $this->ensureCompanyStructure($company, $employeeCount, $users);
 
-            [$survey, $version] = $this->ensureSurveyArtifacts((bool) $this->option('import-instrument'));
+        [$survey, $version] = $this->ensureSurveyArtifacts((bool) $this->option('import-instrument'));
 
-            $this->seedSurveyWavesAndResponses(
-                $company->id,
-                $survey->id,
-                $version->id,
-                $months
-            );
+        $this->seedSurveyWavesAndResponses(
+            $company->id,
+            $survey->id,
+            $version->id,
+            $months
+        );
 
-            $this->info('Demo data seeded successfully.');
-            $this->line('Logins (password: password):');
-            $this->line('- admin@workfit.com (Super Admin)');
-            $this->line('- manager@acme.com (Manager)');
-            $this->line('- chief@acme.com (Chief)');
-            $this->line('- lead@acme.com (Team Lead)');
-            $this->line('- employee1@acme.com (Employee)');
-            $this->line('- employee2@acme.com (Employee)');
-            $this->line('- employee3@acme.com (Employee)');
+        $this->info('Demo data seeded successfully.');
+        $this->line('Logins (password: password):');
+        $this->line('- admin@workfit.com (Super Admin)');
+        $this->line('- manager@acme.com (Manager)');
+        $this->line('- chief@acme.com (Chief)');
+        $this->line('- lead@acme.com (Team Lead)');
+        $this->line('- employee1@acme.com (Employee)');
+        $this->line('- employee2@acme.com (Employee)');
+        $this->line('- employee3@acme.com (Employee)');
 
-            return self::SUCCESS;
-        });
+        return self::SUCCESS;
     }
 
     protected function ensureAcmeCompany(): Companies
