@@ -431,12 +431,20 @@ const submitSurvey = async () => {
             Object.keys(errors).forEach((qid) => {
                 errors[qid] = null;
             });
-            Object.entries(fieldErrors).forEach(([qid, messages]) => {
+            Object.entries(fieldErrors).forEach(([field, messages]) => {
+                const qid = field.startsWith('responses.')
+                    ? field.slice('responses.'.length)
+                    : field;
                 const firstMessage = Array.isArray(messages) ? messages[0] : messages;
                 errors[qid] = firstMessage || 'Invalid answer.';
             });
 
-            const firstInvalidQid = Object.keys(fieldErrors)[0];
+            const firstInvalidField = Object.keys(fieldErrors)[0];
+            const firstInvalidQid = firstInvalidField
+                ? (firstInvalidField.startsWith('responses.')
+                    ? firstInvalidField.slice('responses.'.length)
+                    : firstInvalidField)
+                : null;
             if (firstInvalidQid) {
                 const pageIndex = pages.value.findIndex((page) => {
                     const pageItemQids = visibleItems(page.items || []).map((item) => item.qid);

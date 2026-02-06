@@ -134,6 +134,7 @@ return [
             'monthly' => 60 * 24 * 30,
             'quarterly' => 60 * 24 * 90,
         ],
+        'processing_timeout_minutes' => env('SURVEY_WAVE_PROCESSING_TIMEOUT_MINUTES', 30),
         'manual_one_shot' => true,
         'drip_tariffs' => [1],
         'tariff_labels' => [

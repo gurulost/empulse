@@ -68,8 +68,9 @@ class AnalyticsApiController extends Controller
             
         $teamleads = \DB::table('company_worker')
             ->where('company_id', $companyId)
-            ->where('role', 3)
-            ->select('name')
+            ->whereNotNull('supervisor')
+            ->where('supervisor', '!=', '')
+            ->select('supervisor as name')
             ->distinct()
             ->get();
 

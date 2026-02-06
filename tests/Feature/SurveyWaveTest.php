@@ -246,4 +246,192 @@ class SurveyWaveTest extends TestCase
                 ->count()
         );
     }
+
+    public function test_scheduler_creates_new_assignment_after_completed_drip_cycle(): void
+    {
+        [$company, $survey, $version] = $this->createSurveyArtifacts();
+
+        User::factory()->create([
+            'role' => 1,
+            'company' => 1,
+            'company_id' => $company->id,
+            'tariff' => 1,
+        ]);
+
+        $employee = User::factory()->create([
+            'role' => 4,
+            'company_id' => $company->id,
+            'tariff' => 1,
+        ]);
+
+        $wave = SurveyWave::create([
+            'company_id' => $company->id,
+            'survey_id' => $survey->id,
+            'survey_version_id' => $version->id,
+            'kind' => 'drip',
+            'label' => 'Pulse Week 1',
+            'status' => 'scheduled',
+            'cadence' => 'weekly',
+        ]);
+
+        (new ProcessSurveyWave($wave->id))->handle(app(SurveyService::class));
+
+        $firstAssignment = SurveyAssignment::where('survey_wave_id', $wave->id)
+            ->where('user_id', $employee->id)
+            ->firstOrFail();
+
+        $firstAssignment->update([
+            'status' => 'completed',
+            'completed_at' => now()->subDays(1),
+            'last_dispatched_at' => now()->subDays(8),
+        ]);
+
+        Artisan::call('survey:waves:schedule');
+
+        $assignments = SurveyAssignment::where('survey_wave_id', $wave->id)
+            ->where('user_id', $employee->id)
+            ->orderBy('id')
+            ->get();
+
+        $this->assertCount(2, $assignments);
+        $this->assertSame('completed', $assignments->first()->status);
+        $this->assertSame('pending', $assignments->last()->status);
+        $this->assertNotSame($assignments->first()->id, $assignments->last()->id);
+    }
+
+    public function test_assignment_link_prefers_latest_pending_assignment(): void
+    {
+        [$company, $survey, $version] = $this->createSurveyArtifacts();
+
+        $employee = User::factory()->create([
+            'role' => 4,
+            'company_id' => $company->id,
+            'tariff' => 1,
+        ]);
+
+        $first = SurveyAssignment::create([
+            'survey_id' => $survey->id,
+            'survey_version_id' => $version->id,
+            'user_id' => $employee->id,
+            'token' => 'first-token',
+            'status' => 'pending',
+        ]);
+
+        $latest = SurveyAssignment::create([
+            'survey_id' => $survey->id,
+            'survey_version_id' => $version->id,
+            'user_id' => $employee->id,
+            'token' => 'latest-token',
+            'status' => 'pending',
+        ]);
+
+        $link = app(SurveyService::class)->assignmentLink($employee);
+
+        $this->assertNotNull($link);
+        $this->assertStringEndsWith($latest->token, $link);
+        $this->assertNotSame($first->token, $latest->token);
+    }
+
+    public function test_scheduler_recovers_stale_processing_wave_and_requeues_it(): void
+    {
+        [$company, $survey, $version] = $this->createSurveyArtifacts();
+
+        User::factory()->create([
+            'role' => 1,
+            'company' => 1,
+            'company_id' => $company->id,
+            'tariff' => 1,
+        ]);
+
+        $wave = SurveyWave::create([
+            'company_id' => $company->id,
+            'survey_id' => $survey->id,
+            'survey_version_id' => $version->id,
+            'kind' => 'full',
+            'label' => 'Annual Recovery',
+            'status' => 'processing',
+            'cadence' => 'manual',
+        ]);
+
+        DB::table('survey_waves')
+            ->where('id', $wave->id)
+            ->update([
+                'updated_at' => now()->subMinutes(config('survey.automation.processing_timeout_minutes', 30) + 5),
+            ]);
+
+        Queue::fake();
+
+        Artisan::call('survey:waves:schedule');
+
+        Queue::assertPushed(ProcessSurveyWave::class, 1);
+        $recoveryLog = SurveyWaveLog::where('survey_wave_id', $wave->id)
+            ->where('status', 'scheduled')
+            ->latest()
+            ->first();
+
+        $this->assertNotNull($recoveryLog);
+        $this->assertStringContainsString('Recovered stale processing wave', $recoveryLog->message);
+    }
+
+    public function test_scheduler_does_not_requeue_recent_processing_wave(): void
+    {
+        [$company, $survey, $version] = $this->createSurveyArtifacts();
+
+        User::factory()->create([
+            'role' => 1,
+            'company' => 1,
+            'company_id' => $company->id,
+            'tariff' => 1,
+        ]);
+
+        $wave = SurveyWave::create([
+            'company_id' => $company->id,
+            'survey_id' => $survey->id,
+            'survey_version_id' => $version->id,
+            'kind' => 'full',
+            'label' => 'Annual In Flight',
+            'status' => 'processing',
+            'cadence' => 'manual',
+        ]);
+
+        Queue::fake();
+
+        Artisan::call('survey:waves:schedule');
+
+        $wave->refresh();
+        $this->assertSame('processing', $wave->status);
+        Queue::assertNothingPushed();
+
+        $recoveryLog = SurveyWaveLog::where('survey_wave_id', $wave->id)
+            ->where('message', 'like', 'Recovered stale processing wave%')
+            ->first();
+        $this->assertNull($recoveryLog);
+    }
+
+    public function test_failed_wave_job_resets_processing_status_for_recovery(): void
+    {
+        [$company, $survey, $version] = $this->createSurveyArtifacts();
+
+        $wave = SurveyWave::create([
+            'company_id' => $company->id,
+            'survey_id' => $survey->id,
+            'survey_version_id' => $version->id,
+            'kind' => 'full',
+            'label' => 'Annual Failure',
+            'status' => 'processing',
+            'cadence' => 'manual',
+        ]);
+
+        $job = new ProcessSurveyWave($wave->id);
+        $job->failed(new \RuntimeException('Simulated queue failure'));
+
+        $wave->refresh();
+        $this->assertSame('scheduled', $wave->status);
+
+        $errorLog = SurveyWaveLog::where('survey_wave_id', $wave->id)->latest()->first();
+        $this->assertNotNull($errorLog);
+        $this->assertSame('error', $errorLog->status);
+        $this->assertStringContainsString('Queue job failed', $errorLog->message);
+        $this->assertStringContainsString('Wave reset to scheduled', $errorLog->message);
+    }
 }

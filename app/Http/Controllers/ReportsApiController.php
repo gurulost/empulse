@@ -38,8 +38,18 @@ class ReportsApiController extends Controller
             return $errorResponse;
         }
 
-        $waveId = $request->input('wave_id');
-        if (!$waveId) {
+        $requestedWaveId = $request->input('wave_id');
+        $waveId = null;
+
+        if ($requestedWaveId) {
+            $waveId = SurveyWave::where('company_id', $companyId)
+                ->whereKey($requestedWaveId)
+                ->value('id');
+
+            if (!$waveId) {
+                return response()->json(['message' => 'Wave not found'], 404);
+            }
+        } else {
             // Default to most recent wave, falling back to the latest response wave when due dates are not set.
             $latestWave = SurveyWave::where('company_id', $companyId)
                 ->orderByDesc('due_at')
@@ -63,6 +73,10 @@ class ReportsApiController extends Controller
         }
 
         $dimension = $request->input('dimension', 'department');
+        if (!in_array($dimension, ['department', 'team'], true)) {
+            $dimension = 'department';
+        }
+
         $data = $this->analytics->getComparisonData($companyId, $waveId, $dimension);
 
         return response()->json($data);

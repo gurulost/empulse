@@ -3,7 +3,8 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
-        "build": "vite build"
+        "build": "vite build",
+        "sass:check-imports": "if rg -n \"@import\\\\s+['\\\"]\" resources/sass --glob '*.scss'; then echo 'Sass @import is deprecated. Use @use/@forward.' && exit 1; else echo 'No Sass @import found in resources/sass.'; fi"
     },
     "devDependencies": {
         "@vitejs/plugin-vue": "^5.0.0",

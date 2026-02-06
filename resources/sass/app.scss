@@ -1,11 +1,41 @@
-// Fonts
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-// Variables
-@import 'variables';
-
-// Bootstrap
-@import 'bootstrap/scss/bootstrap';
+@use 'variables' as theme;
+@use 'bootstrap/scss/bootstrap' with (
+    $font-family-sans-serif: theme.$font-family-sans-serif,
+    $font-size-base: theme.$font-size-base,
+    $line-height-base: theme.$line-height-base,
+    $headings-font-weight: theme.$headings-font-weight,
+    $headings-color: theme.$headings-color,
+    $primary: theme.$primary,
+    $secondary: theme.$secondary,
+    $success: theme.$success,
+    $info: theme.$info,
+    $warning: theme.$warning,
+    $danger: theme.$danger,
+    $light: theme.$light,
+    $dark: theme.$dark,
+    $body-bg: theme.$body-bg,
+    $body-color: theme.$body-color,
+    $border-radius: theme.$border-radius,
+    $border-radius-lg: theme.$border-radius-lg,
+    $border-radius-sm: theme.$border-radius-sm,
+    $border-radius-pill: theme.$border-radius-pill,
+    $box-shadow: theme.$box-shadow,
+    $box-shadow-sm: theme.$box-shadow-sm,
+    $box-shadow-lg: theme.$box-shadow-lg,
+    $card-border-width: theme.$card-border-width,
+    $card-border-radius: theme.$card-border-radius,
+    $card-box-shadow: theme.$card-box-shadow,
+    $card-cap-bg: theme.$card-cap-bg,
+    $card-spacer-y: theme.$card-spacer-y,
+    $card-spacer-x: theme.$card-spacer-x,
+    $input-btn-padding-y: theme.$input-btn-padding-y,
+    $input-btn-padding-x: theme.$input-btn-padding-x,
+    $btn-font-weight: theme.$btn-font-weight,
+    $nav-link-font-size: theme.$nav-link-font-size,
+    $nav-link-font-weight: theme.$nav-link-font-weight,
+    $nav-link-color: theme.$nav-link-color,
+    $nav-link-hover-color: theme.$nav-link-hover-color
+);
 
 // Global Overrides
 body {
@@ -52,7 +82,7 @@ h6 {
 
     &:hover {
         transform: translateY(-2px);
-        box-shadow: $box-shadow-lg;
+        box-shadow: theme.$box-shadow-lg;
     }
 }
 

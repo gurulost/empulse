@@ -47,6 +47,16 @@ class SurveyWaveAutomation
         return (bool) config('survey.automation.manual_one_shot', true);
     }
 
+    public static function processingTimeoutMinutes(): int
+    {
+        return max(1, (int) config('survey.automation.processing_timeout_minutes', 30));
+    }
+
+    public static function processingStaleThreshold(): CarbonInterface
+    {
+        return now()->subMinutes(self::processingTimeoutMinutes());
+    }
+
     public static function planLabel(?int $tariff): string
     {
         $labels = config('survey.automation.tariff_labels', []);

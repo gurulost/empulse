@@ -4,6 +4,15 @@ import laravel from 'laravel-vite-plugin';
 import path from 'path';
 
 export default defineConfig(({ mode }) => ({
+    css: {
+        preprocessorOptions: {
+            scss: {
+                // Bootstrap 5.x still emits Sass deprecation noise from dependencies.
+                quietDeps: true,
+                silenceDeprecations: ['legacy-js-api'],
+            },
+        },
+    },
     resolve: {
         alias: {
             '@assets': path.resolve(__dirname, 'resources/images'),
@@ -31,31 +40,7 @@ export default defineConfig(({ mode }) => ({
         outDir: 'public/build',
         rollupOptions: {
             output: {
-                manualChunks(id) {
-                    if (!id.includes('node_modules')) {
-                        return;
-                    }
-
-                    if (id.includes('chart.js') || id.includes('vue-chartjs')) {
-                        return 'vendor-charts';
-                    }
-
-                    if (id.includes('/vue/')) {
-                        return 'vendor-vue';
-                    }
-
-                    if (id.includes('/bootstrap/')) {
-                        return 'vendor-bootstrap';
-                    }
-
-                    if (id.includes('/axios/')) {
-                        return 'vendor-axios';
-                    }
-
-                    if (id.includes('/lodash/')) {
-                        return 'vendor-lodash';
-                    }
-                },
+                manualChunks: undefined,
             },
         },
     },

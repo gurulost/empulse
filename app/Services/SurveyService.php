@@ -91,6 +91,57 @@ class SurveyService
         return $assignment->fresh();
     }
 
+    public function getOrCreateAssignmentForWave(User $user, SurveyWave $wave): ?SurveyAssignment
+    {
+        $wave->loadMissing('survey', 'surveyVersion');
+
+        $survey = $wave->survey
+            ?: ($wave->survey_id ? Survey::find($wave->survey_id) : null)
+            ?: $this->defaultSurvey();
+
+        $version = $wave->surveyVersion
+            ?: ($wave->survey_version_id ? SurveyVersion::find($wave->survey_version_id) : null)
+            ?: SurveyVersion::where('is_active', true)->orderByDesc('id')->first();
+
+        if (!$survey || !$version) {
+            return null;
+        }
+
+        $assignment = SurveyAssignment::query()
+            ->where('survey_id', $survey->id)
+            ->where('user_id', $user->id)
+            ->where('survey_wave_id', $wave->id)
+            ->where('status', '!=', 'completed')
+            ->orderByDesc('id')
+            ->first();
+
+        if (!$assignment) {
+            $assignment = SurveyAssignment::create([
+                'survey_id' => $survey->id,
+                'survey_version_id' => $version->id,
+                'survey_wave_id' => $wave->id,
+                'user_id' => $user->id,
+                'token' => (string) Str::uuid(),
+                'status' => 'pending',
+                'wave_label' => $wave->label ?: $this->currentWaveLabel($version),
+                'due_at' => $wave->due_at,
+            ]);
+        } else {
+            $assignment->fill([
+                'survey_version_id' => $assignment->survey_version_id ?: $version->id,
+                'survey_wave_id' => $assignment->survey_wave_id ?: $wave->id,
+                'wave_label' => $assignment->wave_label ?: ($wave->label ?: $this->currentWaveLabel($version)),
+                'due_at' => $assignment->due_at ?: $wave->due_at,
+            ]);
+
+            if ($assignment->isDirty()) {
+                $assignment->save();
+            }
+        }
+
+        return $assignment->fresh();
+    }
+
     public function markPendingAssignmentsForCompany(int $companyId): void
     {
         $survey = $this->defaultSurvey();
@@ -167,7 +218,16 @@ class SurveyService
 
     public function assignmentLink(User $user): ?string
     {
-        $assignment = $this->getOrCreateAssignment($user);
+        $assignment = SurveyAssignment::query()
+            ->where('user_id', $user->id)
+            ->where('status', 'pending')
+            ->orderByDesc('id')
+            ->first();
+
+        if (!$assignment) {
+            $assignment = $this->getOrCreateAssignment($user);
+        }
+
         if (!$assignment) {
             return null;
         }

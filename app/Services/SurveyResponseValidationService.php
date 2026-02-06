@@ -29,9 +29,21 @@ class SurveyResponseValidationService
     {
         $definition = $this->definitionService->definitionForAssignment($assignment);
         $items = $this->flattenItems($definition['pages'] ?? []);
+        $validQids = collect($items)
+            ->pluck('qid')
+            ->filter(fn ($qid) => is_string($qid) && $qid !== '')
+            ->values()
+            ->all();
 
         $errors = [];
         $sanitized = [];
+
+        foreach (array_keys($responses) as $qid) {
+            $qid = (string) $qid;
+            if (!in_array($qid, $validQids, true)) {
+                $errors["responses.{$qid}"][] = 'Unknown question key.';
+            }
+        }
 
         foreach ($items as $item) {
             $qid = $item['qid'] ?? null;
@@ -47,7 +59,7 @@ class SurveyResponseValidationService
             [$value, $error] = $this->validateItemValue($item, $rawValue);
 
             if ($error) {
-                $errors[$qid] = $error;
+                $errors["responses.{$qid}"][] = $error;
                 continue;
             }
 
@@ -377,4 +389,3 @@ class SurveyResponseValidationService
         return false;
     }
 }
-

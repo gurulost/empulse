@@ -10,18 +10,28 @@ use App\Services\SurveyService;
 use App\Support\SurveyWaveAutomation;
 use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
-class ProcessSurveyWave implements ShouldQueue
+class ProcessSurveyWave implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, Batchable;
 
+    public int $uniqueFor;
+
     public function __construct(protected int $waveId)
     {
+        $this->uniqueFor = max(60, SurveyWaveAutomation::processingTimeoutMinutes() * 60);
+    }
+
+    public function uniqueId(): string
+    {
+        return "survey-wave:{$this->waveId}";
     }
 
     public function handle(SurveyService $surveyService): void
@@ -40,7 +50,7 @@ class ProcessSurveyWave implements ShouldQueue
 
         foreach ($companyUsers as $user) {
             try {
-                $assignment = $surveyService->getOrCreateAssignment($user, $wave);
+                $assignment = $surveyService->getOrCreateAssignmentForWave($user, $wave);
                 if (!$assignment) {
                     $stats['skipped']++;
                     $this->logEvent($wave, $user, 'skipped', 'No assignment available.');
@@ -74,6 +84,37 @@ class ProcessSurveyWave implements ShouldQueue
         }
 
         $this->finalizeWave($wave, $stats);
+    }
+
+    public function failed(Throwable $exception): void
+    {
+        $wave = SurveyWave::find($this->waveId);
+        if (!$wave) {
+            return;
+        }
+
+        $recoveredStatus = null;
+        if ($wave->status === 'processing') {
+            $recoveredStatus = ($wave->due_at && $wave->due_at->isPast()) ? 'completed' : 'scheduled';
+            $wave->update(['status' => $recoveredStatus]);
+        }
+
+        $message = 'Queue job failed: ' . $exception->getMessage();
+        if ($recoveredStatus) {
+            $message .= " Wave reset to {$recoveredStatus}.";
+        }
+
+        SurveyWaveLog::create([
+            'survey_wave_id' => $wave->id,
+            'status' => 'error',
+            'message' => $message,
+        ]);
+
+        Log::error('Wave processing job failed', [
+            'wave' => $wave->id,
+            'error' => $exception->getMessage(),
+            'recovered_status' => $recoveredStatus,
+        ]);
     }
 
     protected function shouldSkipAssignment(SurveyWave $wave, SurveyAssignment $assignment): ?string
