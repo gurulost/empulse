@@ -104,3 +104,21 @@ php artisan survey:waves:schedule
 - Scheduler and queue worker are continuously running.
 - Frontend assets load without 404/mismatch errors.
 - Survey submission and wave automation execute without runtime errors.
+
+## Deployment Recovery Checklist (2026-02-06 Follow-up)
+Use this when deployment starts crash-looping or health checks fail.
+
+1. Keep build phase stateless:
+   - Build should only install dependencies and compile assets.
+   - Do not run `php artisan migrate`, `migrate:fresh`, or `demo:seed` in build.
+2. Keep runtime startup fast:
+   - Run only the web process in startup for health checks.
+   - Move queue worker and scheduler to managed background processes.
+3. Database secret precedence:
+   - Use explicit `DB_*` secrets in deployment.
+   - Keep `DATABASE_URL` only as fallback; do not rely on Replit dev DB host (`helium`) in production.
+4. Health checks:
+   - Target `/up` (or `/api/healthz`) instead of `/` if available in deployment settings.
+5. One-time post-deploy ops:
+   - Run `php artisan migrate --force` once from deployment shell/release step.
+   - Run `php artisan demo:seed --import-instrument --employees=120 --months=6 --force` only when demo data refresh is intended.
