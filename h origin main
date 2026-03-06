@@ -1,0 +1,163 @@
+[33mf0832ad[m[33m ([m[1;32mreplit-agent[m[33m)[m Resolve login controller conflicts with correct formatting
+[33m463a792[m Resolve conflicts in login controller and update documentation
+[33me234474[m Published your App
+[33m516bd56[m Improve login functionality and application environment handling
+[33m9c7068a[m Published your App
+[33m543e908[m Add error capture for login failures to aid debugging
+[33m430e9b8[m Published your App
+[33m638825d[m Improve login security by handling cache failures gracefully
+[33m3d6fb44[m Saved progress at the end of the loop
+[33m129275a[m Saved progress at the end of the loop
+[33med36720[m Published your App
+[33m7ae4953[m Published your App
+[33madd342e[m Published your App
+[33m705b705[m Published your App
+[33m60ef967[m Published your App
+[33md213f38[m Saved progress at the end of the loop
+[33m7f17e21[m Update Brevo email configuration to use the correct API key
+[33mf0fa76b[m Saved progress at the end of the loop
+[33mb662044[m Update server process and add deployment notes
+[33m5a7c86c[m Published your App
+[33mb464e12[m Published your App
+[33m3a855ce[m Published your App
+[33mb0c6a0e[m Saved progress at the end of the loop
+[33m7d25b20[m Ensure application storage directories are writable for production
+[33m47c7175[m Published your App
+[33m0097320[m Transitioned from Plan to Build mode
+[33m6bdfd1e[m Saved progress at the end of the loop
+[33m94fc954[m Add safe database migrations and optional demo data seeding to deployments
+[33me54e650[m Published your App
+[33m46b8026[m Remove app initialization from release step and start web server
+[33m29188de[m Saved progress at the end of the loop
+[33m4971b21[m Saved progress at the end of the loop
+[33m02843e8[m Saved progress at the end of the loop
+[33m581cb7c[m Transitioned from Plan to Build mode
+[33m131e3fc[m Transitioned from Plan to Build mode
+[33m3307101[m Saved progress at the end of the loop
+[33mfdf9459[m[33m ([m[1;31mgitsafe-backup/main[m[33m)[m Saved progress at the end of the loop
+[33m13dc527[m Fix database transaction errors and improve deployment stability
+[33mb24a04b[m Fix database transaction errors and improve deployment stability
+[33mefb81be[m Saved progress at the end of the loop
+[33m716ff7e[m Saved progress at the end of the loop
+[33m3997e5b[m Saved progress at the end of the loop
+[33m44b2422[m Saved progress at the end of the loop
+[33m10329d2[m Saved progress at the end of the loop
+[33m92564e8[m Saved progress at the end of the loop
+[33m1b6b2e5[m Saved progress at the end of the loop
+[33maf8cbfb[m Saved progress at the end of the loop
+[33m1f64c45[m Saved progress at the end of the loop
+[33m8832f11[m Add a table to store background processing jobs
+[33m9b400dd[m Transitioned from Plan to Build mode
+[33m11e51a0[m Published your App
+[33m9dc97c4[m Saved progress at the end of the loop
+[33mc400eab[m Saved progress at the end of the loop
+[33m0b7ddcd[m Published your App
+[33mcb59692[m Remove unused health check route from web routes file
+[33m5373a2b[m Add a fast health check route bypassing session middleware
+[33mb8c101d[m Saved progress at the end of the loop
+[33m441c367[m Saved progress at the end of the loop
+[33m92c40e3[m Saved progress at the end of the loop
+[33m55ece84[m Transitioned from Plan to Build mode
+[33ma47367d[m Saved progress at the end of the loop
+[33m1131007[m Add a dedicated health check route to improve application monitoring
+[33m43951df[m Transitioned from Plan to Build mode
+[33mccc04fd[m Add a dedicated health check route to the application
+[33m3f4c9fd[m Saved progress at the end of the loop
+[33m50629b7[m Saved progress at the end of the loop
+[33m17a3ddf[m Update database configuration for deployment environments
+[33m65b69be[m Resolve merge conflict by accepting current version
+[33mf8e03bb[m Configure database connection to use local or remote based on deployment status
+[33m8fd1cc8[m Saved progress at the end of the loop
+[33m8deacad[m Update deployment instructions to use external database credentials
+[33me77736c[m Add screenshot of development database credentials to aid debugging
+[33m129cb48[m Update database configuration to use production credentials
+[33mf820e35[m Update database configuration to use production secrets
+[33md583316[m Update database configuration to use production credentials automatically
+[33m10047ae[m Saved progress at the end of the loop
+[33m489a925[m Saved progress at the end of the loop
+[33mebbbb5a[m Add missing application key to production environment secrets
+[33m986dd51[m Saved progress at the end of the loop
+[33me6c8961[m Saved progress at the end of the loop
+[33mea4ba09[m Saved progress at the end of the loop
+[33m0032106[m Saved progress at the end of the loop
+[33m5662d17[m Saved progress at the end of the loop
+[33m14092a7[m Saved progress at the end of the loop
+[33m13c9b09[m Saved progress at the end of the loop
+[33m06bb1f2[m Add demo data seeding to the deployment process
+[33m0dfaf4c[m Published your App
+[33m9fef1ef[m Saved progress at the end of the loop
+[33mbe87e56[m Saved progress at the end of the loop
+[33md651be7[m Saved progress at the end of the loop
+[33me0e440b[m Saved progress at the end of the loop
+[33mf7e0256[m Update database configuration to properly use environment variables
+[33mcd18a06[m Saved progress at the end of the loop
+[33mdd79f87[m Saved progress at the end of the loop
+[33ma877701[m Update database configuration to use production environment variables
+[33md486ffa[m Update database configuration to use production environment variables
+[33m4dd5ed5[m Add company logo to guest navigation and improve text readability
+[33m6c73041[m Add company logo to guest navigation and improve text readability
+[33mfb655ba[m Improve readability of landing page text by adding white color
+[33m60f3568[m Improve readability of landing page text by adding white color
+[33m4705612[m Style the guest navigation bar with a dark gradient and clean links
+[33m558d577[m Style the guest navigation bar with a dark gradient and clean links
+[33maf1df3f[m Saved progress at the end of the loop
+[33m4a0efc5[m Update logo image path for proper display in the sidebar
+[33mb03a825[m Update logo and branding to use the Empulse logo consistently
+[33m1117433[m Restored to 6dbd53b560c13d6791cb54ebe3d38d3148ca4f3d
+[33md257562[m Restored to '6dbd53b560c13d6791cb54ebe3d38d3148ca4f3d'
+[33mf52b7ee[m Update how Vue components are mounted and update vendor JS files
+[33m31153c7[m Update how Vue components are mounted and update vendor JS files
+[33m58ba334[m Update Vue mounting to preserve existing HTML content
+[33m6dbd53b[m Update Vue mounting to preserve existing HTML content
+[33md20cd2b[m Published your App
+[33mfb61c23[m Adjust session settings to work within the Replit iframe environment
+[33mdc07786[m Enable database sessions and create the necessary table
+[33m8375e92[m Update session settings to improve site compatibility
+[33mf73206d[m Saved progress at the end of the loop
+[33m7dd3b99[m Published your App
+[33m9eeeb2f[m Saved progress at the end of the loop
+[33m5959612[m Published your App
+[33mdeac68c[m Saved progress at the end of the loop
+[33mc6002b5[m Rename CSS file and remove unused backup file
+[33m2c95981[m Fix issues with authentication, role handling, and legacy code
+[33m78711ae[m Update authentication and role checks across the application
+[33m1d74319[m Saved progress at the end of the loop
+[33mead7614[m Refactor code to improve maintainability and fix typos
+[33m7787447[m Restore legacy features and fix application errors
+[33m5e4be80[m Improve user management and billing setup functionalities
+[33mde63cdd[m Saved progress at the end of the loop
+[33mb02f24f[m Enhance social login, payment processing, and admin functionalities
+[33m8a6d7f5[m Saved progress at the end of the loop
+[33m27fd0c2[m Improve website functionality and user experience across multiple features
+[33m9182f62[m Saved progress at the end of the loop
+[33m5a5f482[m Update project overview and audit findings documentation
+[33ma53ad28[m Update application settings and user authentication logic
+[33mcab9994[m Saved progress at the end of the loop
+[33m3f555a0[m Saved progress at the end of the loop
+[33me12adf9[m Improve code quality by using configuration settings instead of environment variables
+[33m5a4d7d8[m Saved progress at the end of the loop
+[33mc7478eb[m Fix broken database queries and improve asset URL handling
+[33m382b3a1[m Published your App
+[33mf3f1a95[m Securely handle API keys and improve UI consistency
+[33m1b5d107[m Ensure all pages render correctly with consistent UI styling
+[33mb775aae[m Improve UI rendering by updating pagination and Vite configuration
+[33m5282969[m Set Bootstrap 5 as the default pagination view for the application
+[33mebe0f82[m Published your App
+[33mf7a12a8[m Update project documentation with recent security fixes and remaining issues
+[33mfdda2de[m Improve user role management and system security
+[33m3195ec8[m Published your App
+[33m6bdbe2d[m Saved progress at the end of the loop
+[33m07f4de0[m Update application to match database schema and clarify configuration
+[33m5ad4b9a[m Update project assets and dependencies for improved functionality
+[33m87f78bd[m Complete various system updates and refactors across modules
+[33m1e8e186[m Saved progress at the end of the loop
+[33m88a5882[m Saved progress at the end of the loop
+[33mc7f2d38[m Update documentation to reflect recent authentication system redesign
+[33m21c99c2[m Update website authentication pages with modern styling and improved user experience
+[33m1ae7c0b[m Prevent Vue from clearing the landing page content
+[33m5a10f78[m Update application setup to ensure assets load correctly on Replit
+[33m064a692[m Fix application styling by making asset URLs relative
+[33me15f93c[m Ensure website assets load correctly by dynamically setting the app URL
+[33ma9b0e47[m Saved progress at the end of the loop
+[33m084c6d5[m Update application to correctly handle asset URLs across different environments
+[33m0242bcf[m Configure Vite server for improved development environment accessibility
