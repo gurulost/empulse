@@ -34,84 +34,163 @@
     $nav-link-font-size: theme.$nav-link-font-size,
     $nav-link-font-weight: theme.$nav-link-font-weight,
     $nav-link-color: theme.$nav-link-color,
-    $nav-link-hover-color: theme.$nav-link-hover-color
+    $nav-link-hover-color: theme.$nav-link-hover-color,
+    $input-border-color: theme.$input-border-color,
+    $input-focus-border-color: theme.$input-focus-border-color,
+    $input-focus-box-shadow: theme.$input-focus-box-shadow
 );
 
+// ─────────────────────────────────────────────
 // Global Overrides
+// ─────────────────────────────────────────────
+
 body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    letter-spacing: -0.011em;
+}
+
+h1, h2, h3, h4, h5, h6,
+.display-1, .display-2, .display-3, .display-4, .display-5, .display-6 {
+    font-family: theme.$font-family-display;
+    letter-spacing: -0.025em;
+}
+
+// ─────────────────────────────────────────────
+// Buttons — refined with better transitions
+// ─────────────────────────────────────────────
+
+.btn {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     letter-spacing: -0.01em;
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-    letter-spacing: -0.02em;
-}
-
-// Buttons
-.btn {
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-
-    &:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    }
-
-    &:active {
-        transform: translateY(0);
-    }
-}
-
 .btn-primary {
-    box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2), 0 2px 4px -1px rgba(79, 70, 229, 0.1);
+    box-shadow: 0 1px 2px rgba(79, 70, 229, 0.12), 0 4px 8px rgba(79, 70, 229, 0.12);
 
     &:hover {
-        box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3), 0 4px 6px -2px rgba(79, 70, 229, 0.15);
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25), 0 8px 24px rgba(79, 70, 229, 0.15);
     }
 }
 
-// Cards
+.btn-outline-secondary {
+    border-color: #e2e8f0;
+    color: theme.$body-color;
+
+    &:hover {
+        background-color: #f8fafc;
+        border-color: #cbd5e1;
+        color: theme.$headings-color;
+    }
+}
+
+// ─────────────────────────────────────────────
+// Cards — subtle, premium feel
+// ─────────────────────────────────────────────
+
 .card {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(226, 232, 240, 0.6);
+    transition: box-shadow 0.2s ease;
+}
 
-    &:hover {
-        transform: translateY(-2px);
-        box-shadow: theme.$box-shadow-lg;
+.card-header {
+    font-family: theme.$font-family-display;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+// ─────────────────────────────────────────────
+// Form Controls — refined borders and focus states
+// ─────────────────────────────────────────────
+
+.form-control,
+.form-select {
+    border-color: #e2e8f0;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+    &:focus {
+        border-color: theme.$primary;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
     }
 }
 
+.form-label {
+    font-weight: 500;
+    font-size: 0.875rem;
+    color: #475569;
+    letter-spacing: -0.01em;
+}
+
+// ─────────────────────────────────────────────
+// Tables — cleaner
+// ─────────────────────────────────────────────
+
+.table {
+    th {
+        font-family: theme.$font-family-display;
+        font-weight: 600;
+        font-size: 0.8125rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #64748b;
+        border-bottom-width: 1px;
+    }
+
+    td {
+        vertical-align: middle;
+        font-size: 0.9375rem;
+    }
+}
+
+// ─────────────────────────────────────────────
+// Badges — slightly more refined
+// ─────────────────────────────────────────────
+
+.badge {
+    font-family: theme.$font-family-display;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+// ─────────────────────────────────────────────
 // Glassmorphism Utilities
+// ─────────────────────────────────────────────
+
 .glass {
-    background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.04);
 }
 
 .glass-dark {
-    background: rgba(15, 23, 42, 0.85);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(12, 18, 34, 0.88);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-right: 1px solid rgba(255, 255, 255, 0.04);
 }
 
+// ─────────────────────────────────────────────
 // Gradients
+// ─────────────────────────────────────────────
+
 .bg-gradient-primary {
     background: linear-gradient(135deg, #4f46e5 0%, #818cf8 100%);
 }
 
 .bg-gradient-dark {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    background: linear-gradient(145deg, #0c1222 0%, #1e293b 100%);
 }
 
+.bg-gradient-auth {
+    background: linear-gradient(145deg, #0c1222 0%, #1a1f3a 50%, #1e293b 100%);
+}
+
+// ─────────────────────────────────────────────
 // Custom Scrollbar
+// ─────────────────────────────────────────────
+
 ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -130,24 +209,118 @@ h6 {
     }
 }
 
+// ─────────────────────────────────────────────
 // Utilities
-.text-balance {
-    text-wrap: balance;
+// ─────────────────────────────────────────────
+
+.text-balance { text-wrap: balance; }
+.cursor-pointer { cursor: pointer; }
+.tracking-tight { letter-spacing: -0.025em; }
+.tracking-wide { letter-spacing: 0.05em; }
+.min-vh-75 { min-height: 75vh; }
+
+// Button variants
+.btn-white {
+    background: #fff;
+    color: theme.$headings-color;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+
+    &:hover {
+        background: #f8fafc;
+        color: theme.$headings-color;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
 }
 
-.cursor-pointer {
-    cursor: pointer;
+// ─────────────────────────────────────────────
+// Animations
+// ─────────────────────────────────────────────
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.animate-fade-in-up {
+    animation: fadeInUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.4s ease both;
+}
+
+.animate-scale-in {
+    animation: scaleIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+// Staggered delays for child elements
+@for $i from 1 through 12 {
+    .delay-#{$i} {
+        animation-delay: #{$i * 0.06}s;
+    }
+}
+
+// ─────────────────────────────────────────────
+// Hover Utilities
+// ─────────────────────────────────────────────
+
+.hover-lift {
+    transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease;
+    &:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12) !important;
+    }
+}
+
+.hover-glow {
+    transition: box-shadow 0.3s ease;
+    &:hover {
+        box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1), 0 8px 24px rgba(79, 70, 229, 0.15);
+    }
+}
+
+// ─────────────────────────────────────────────
 // Guest Navigation Bar
+// ─────────────────────────────────────────────
+
 .container-nav {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-    padding: 0.5rem 1rem;
+    background: linear-gradient(145deg, #0c1222 0%, #1e293b 100%);
+    padding: 0.75rem 1.5rem;
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     z-index: 1000;
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .navbar-main {
@@ -166,17 +339,356 @@ h6 {
 
 .navbar-content {
     display: flex;
-    gap: 1.5rem;
+    gap: 2rem;
 }
 
 .navbar-link {
     color: #94a3b8;
     text-decoration: none;
+    font-family: theme.$font-family-display;
     font-size: 0.875rem;
     font-weight: 500;
     transition: color 0.2s ease;
-    
+
     &:hover {
         color: #fff;
+    }
+}
+
+// ─────────────────────────────────────────────
+// Auth Pages — consistent deep navy theme
+// ─────────────────────────────────────────────
+
+.auth-page {
+    position: relative;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background:
+            radial-gradient(ellipse 60% 50% at 20% 80%, rgba(79, 70, 229, 0.12), transparent),
+            radial-gradient(ellipse 50% 40% at 80% 20%, rgba(99, 102, 241, 0.08), transparent);
+        pointer-events: none;
+    }
+}
+
+.shadow-2xl {
+    box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.3);
+}
+
+.hover-opacity-100:hover {
+    opacity: 1 !important;
+}
+
+// Auth shared components (used across login, register, password reset, verify)
+.auth-brand-panel {
+    background: linear-gradient(180deg, #4f46e5 0%, #3730a3 100%);
+    position: relative;
+
+    &::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 30% 80%, rgba(255, 255, 255, 0.08), transparent 50%);
+    }
+}
+
+.auth-brand-icon {
+    font-size: 3.5rem;
+    opacity: 0.9;
+}
+
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 1.25rem 0;
+    color: #94a3b8;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+
+    &::before, &::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: #e2e8f0;
+    }
+}
+
+.auth-icon-circle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(79, 70, 229, 0.08), rgba(99, 102, 241, 0.04));
+    color: theme.$primary;
+    font-size: 1.75rem;
+}
+
+// ─────────────────────────────────────────────
+// Page Header component
+// ─────────────────────────────────────────────
+
+.page-header {
+    margin-bottom: 2rem;
+
+    .page-title {
+        font-family: theme.$font-family-display;
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: theme.$headings-color;
+        letter-spacing: -0.025em;
+        margin-bottom: 0.25rem;
+    }
+
+    .page-subtitle {
+        color: #64748b;
+        font-size: 0.9375rem;
+        margin-bottom: 0;
+    }
+}
+
+// ─────────────────────────────────────────────
+// Stat Cards
+// ─────────────────────────────────────────────
+
+.stat-card {
+    background: #fff;
+    border: 1px solid rgba(226, 232, 240, 0.6);
+    border-radius: theme.$border-radius-lg;
+    padding: 1.25rem 1.5rem;
+    transition: all 0.2s ease;
+
+    .stat-label {
+        font-family: theme.$font-family-display;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #64748b;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+        font-family: theme.$font-family-display;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: theme.$headings-color;
+        letter-spacing: -0.02em;
+    }
+
+    .stat-detail {
+        font-size: 0.8125rem;
+        color: #94a3b8;
+        margin-top: 0.25rem;
+    }
+
+    &:hover {
+        border-color: rgba(79, 70, 229, 0.2);
+        box-shadow: 0 4px 16px rgba(79, 70, 229, 0.06);
+    }
+}
+
+// ─────────────────────────────────────────────
+// Empty State
+// ─────────────────────────────────────────────
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 2rem;
+
+    .empty-state-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, rgba(79, 70, 229, 0.08), rgba(99, 102, 241, 0.04));
+        color: theme.$primary;
+        font-size: 1.5rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .empty-state-title {
+        font-family: theme.$font-family-display;
+        font-weight: 600;
+        font-size: 1.125rem;
+        color: theme.$headings-color;
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-state-text {
+        color: #64748b;
+        font-size: 0.9375rem;
+        max-width: 400px;
+        margin: 0 auto;
+    }
+}
+
+// ─────────────────────────────────────────────
+// Profile Page
+// ─────────────────────────────────────────────
+
+.profile-main {
+    padding: 2rem 0;
+}
+
+.profile-content {
+    max-width: 900px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 2rem;
+    align-items: start;
+
+    @media (max-width: 768px) {
+        grid-template-columns: 1fr;
+    }
+}
+
+.profile-card {
+    background: #fff;
+    border-radius: theme.$border-radius-lg;
+    border: 1px solid rgba(226, 232, 240, 0.6);
+    box-shadow: theme.$box-shadow;
+    padding: 2rem;
+    text-align: center;
+
+    .profile-card-img {
+        margin-bottom: 1.5rem;
+
+        img {
+            width: 120px;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 3px solid #e2e8f0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+    }
+
+    .profile-card-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+}
+
+.prof-btn-add,
+.prof-btn-delete {
+    display: inline-block;
+    width: 100%;
+    padding: 0.625rem 1.25rem;
+    border-radius: theme.$border-radius;
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-align: center;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    border: none;
+}
+
+.prof-btn-add {
+    background: theme.$primary;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.2);
+
+    &:hover {
+        background: theme.$primary-dark;
+        color: #fff;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+    }
+}
+
+.prof-btn-delete {
+    background: #fff;
+    color: theme.$danger;
+    border: 1px solid #fecaca;
+
+    &:hover {
+        background: #fef2f2;
+        color: theme.$danger;
+        border-color: theme.$danger;
+        transform: translateY(-1px);
+    }
+}
+
+.profile-change-password-card {
+    background: #fff;
+    border-radius: theme.$border-radius-lg;
+    border: 1px solid rgba(226, 232, 240, 0.6);
+    box-shadow: theme.$box-shadow;
+    padding: 2rem;
+}
+
+.formEditPasswordBlock {
+    .form-password-title {
+        font-family: theme.$font-family-display;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: theme.$headings-color;
+        letter-spacing: -0.02em;
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label-group {
+        margin-bottom: 1.25rem;
+
+        label {
+            display: block;
+            font-weight: 500;
+            font-size: 0.875rem;
+            color: #475569;
+            margin-bottom: 0.375rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.625rem 0.875rem;
+            border: 1px solid #e2e8f0;
+            border-radius: theme.$border-radius;
+            font-size: 0.9375rem;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+            &:focus {
+                border-color: theme.$primary;
+                box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+                outline: none;
+            }
+        }
+    }
+
+    .form-confirm-pass-btn {
+        display: inline-block;
+        width: 100%;
+        padding: 0.75rem 1.5rem;
+        background: theme.$primary;
+        color: #fff;
+        border: none;
+        border-radius: theme.$border-radius-pill;
+        font-family: theme.$font-family-display;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 8px rgba(79, 70, 229, 0.2);
+        margin-top: 0.5rem;
+
+        &:hover {
+            background: theme.$primary-dark;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(79, 70, 229, 0.3);
+        }
     }
 }

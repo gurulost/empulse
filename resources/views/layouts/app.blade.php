@@ -8,7 +8,9 @@
     <title>@yield('title')</title>
 
     <link rel="dns-prefetch" href="//fonts.gstatic.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
@@ -53,10 +55,14 @@
                     @yield('content')
                 </main>
                 
-                <footer class="text-center py-4 text-muted small mt-auto">
-                    © 2015-<span class="get-year">2025</span> Workfitdxr® Global Inc. | 
-                    <a href="https://workfitdx.com/terms-and-conditions/" target="_blank" class="text-decoration-none text-muted ms-2">Terms</a> | 
-                    <a href="https://workfitdx.com/privacy-policy-2/" target="_blank" class="text-decoration-none text-muted ms-2">Privacy</a>
+                <footer class="app-footer">
+                    <div class="d-flex align-items-center justify-content-center gap-1 flex-wrap">
+                        <span>&copy; 2015&ndash;<span class="get-year">2025</span> Workfitdx&reg; Global Inc.</span>
+                        <span class="text-muted mx-1">&middot;</span>
+                        <a href="https://workfitdx.com/terms-and-conditions/" target="_blank">Terms</a>
+                        <span class="text-muted mx-1">&middot;</span>
+                        <a href="https://workfitdx.com/privacy-policy-2/" target="_blank">Privacy</a>
+                    </div>
                 </footer>
             </div>
         </div>
@@ -97,24 +103,39 @@
     <style>
         .main-content-wrapper {
             min-height: 100vh;
-            background-color: #f1f5f9; /* Slate 100 */
+            background-color: #f1f5f9;
             display: flex;
             flex-direction: column;
             transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        
-        /* Desktop: Sidebar is 280px */
+
+        .app-footer {
+            text-align: center;
+            padding: 1.5rem 1rem;
+            color: #94a3b8;
+            font-size: 0.8125rem;
+            margin-top: auto;
+            border-top: 1px solid #e2e8f0;
+        }
+        .app-footer a {
+            color: #94a3b8;
+            text-decoration: none;
+            transition: color 0.15s ease;
+        }
+        .app-footer a:hover {
+            color: #4f46e5;
+        }
+
         @media (min-width: 768px) {
             .main-content-wrapper {
-                margin-left: 280px;
+                margin-left: 272px;
             }
         }
-        
-        /* Mobile: Sidebar is hidden/off-canvas */
+
         @media (max-width: 767.98px) {
             .main-content-wrapper {
                 margin-left: 0;
-                padding-top: 60px; /* Space for the toggle button */
+                padding-top: 60px;
             }
         }
     </style>

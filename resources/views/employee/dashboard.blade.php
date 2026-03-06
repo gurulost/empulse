@@ -4,53 +4,56 @@
 
 @section('content')
     <div class="container py-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h1 class="h3 mb-1">Employee Dashboard</h1>
-                <p class="text-muted mb-0">Your current survey, progress, and recent assignment history.</p>
-            </div>
+        <div class="page-header">
+            <h1 class="page-title">Employee Dashboard</h1>
+            <p class="page-subtitle">Your current survey, progress, and recent assignment history.</p>
         </div>
 
         <div class="row g-4">
             <div class="col-lg-7">
-                <div class="card shadow-sm h-100">
-                    <div class="card-body">
+                <div class="card shadow-sm h-100 border-0">
+                    <div class="card-body p-4">
                         @if(!$assignment)
-                            <h5 class="mb-2">No survey is assigned right now</h5>
-                            <p class="text-muted mb-3">
-                                Your next survey link will appear here as soon as your manager launches a wave for your team.
-                            </p>
-                            <div class="small text-muted">
-                                If you expected a survey already, contact your manager or support team.
+                            <div class="empty-state py-4">
+                                <div class="empty-state-icon">
+                                    <i class="bi bi-clipboard2-check"></i>
+                                </div>
+                                <h5 class="empty-state-title">No survey is assigned right now</h5>
+                                <p class="empty-state-text">
+                                    Your next survey link will appear here as soon as your manager launches a wave for your team.
+                                </p>
+                                <p class="small text-muted mt-3">
+                                    If you expected a survey already, contact your manager or support team.
+                                </p>
                             </div>
                         @else
-                            <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                            <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
                                 <div>
-                                    <div class="text-muted small text-uppercase">Current Assignment</div>
-                                    <h5 class="mb-1">{{ $assignment->wave_label ?? 'Active survey' }}</h5>
+                                    <div class="stat-label" style="margin-bottom: 0.25rem;">Current Assignment</div>
+                                    <h4 class="mb-1 fw-bold" style="font-family: 'Outfit', sans-serif; letter-spacing: -0.02em;">{{ $assignment->wave_label ?? 'Active survey' }}</h4>
                                     <div class="small text-muted">
                                         Status: {{ ucfirst($assignment->status ?? 'pending') }}
                                         @if($assignment->invite_status === 'sent' && $assignment->invited_at)
-                                            · Invited {{ $assignment->invited_at->format('M d, Y H:i') }}
+                                            &middot; Invited {{ $assignment->invited_at->format('M d, Y H:i') }}
                                         @endif
                                     </div>
                                 </div>
-                                <span class="badge {{ $assignment->draft_answers ? 'bg-warning text-dark' : 'bg-primary' }}">
+                                <span class="badge rounded-pill px-3 py-2 {{ $assignment->draft_answers ? 'bg-warning text-dark' : 'bg-primary' }}">
                                     {{ $assignment->draft_answers ? 'Draft in progress' : 'Ready to respond' }}
                                 </span>
                             </div>
 
                             <div class="row g-3 mb-4">
                                 <div class="col-md-4">
-                                    <div class="border rounded p-3 h-100">
-                                        <div class="small text-muted text-uppercase">Due Date</div>
-                                        <div class="fw-semibold">{{ optional($assignment->due_at)->format('M d, Y') ?? 'No due date set' }}</div>
+                                    <div class="stat-card h-100">
+                                        <div class="stat-label">Due Date</div>
+                                        <div class="stat-value" style="font-size: 1.125rem;">{{ optional($assignment->due_at)->format('M d, Y') ?? 'No due date set' }}</div>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
-                                    <div class="border rounded p-3 h-100">
-                                        <div class="small text-muted text-uppercase">Resume Point</div>
-                                        <div class="fw-semibold">
+                                    <div class="stat-card h-100">
+                                        <div class="stat-label">Resume Point</div>
+                                        <div class="stat-value" style="font-size: 1.125rem;">
                                             @if($assignment->draft_answers)
                                                 Draft saved
                                             @else
@@ -58,24 +61,23 @@
                                             @endif
                                         </div>
                                         @if($assignment->last_autosaved_at)
-                                            <div class="small text-muted">Last saved {{ $assignment->last_autosaved_at->format('M d, Y H:i') }}</div>
+                                            <div class="stat-detail">Last saved {{ $assignment->last_autosaved_at->format('M d, Y H:i') }}</div>
                                         @endif
                                     </div>
                                 </div>
                                 <div class="col-md-4">
-                                    <div class="border rounded p-3 h-100">
-                                        <div class="small text-muted text-uppercase">Wave</div>
-                                        <div class="fw-semibold">{{ $assignment->surveyWave?->label ?? $assignment->wave_label ?? 'Current survey' }}</div>
+                                    <div class="stat-card h-100">
+                                        <div class="stat-label">Wave</div>
+                                        <div class="stat-value" style="font-size: 1.125rem;">{{ $assignment->surveyWave?->label ?? $assignment->wave_label ?? 'Current survey' }}</div>
                                     </div>
                                 </div>
                             </div>
 
-                            <a
-                                class="btn btn-primary"
+                            <a class="btn btn-primary rounded-pill px-4 fw-semibold"
                                 href="{{ route('survey.take', $assignment->token) }}"
                                 target="_blank"
-                                rel="noreferrer"
-                            >
+                                rel="noreferrer">
+                                <i class="bi bi-{{ $assignment->draft_answers ? 'pencil-square' : 'play-fill' }} me-2"></i>
                                 {{ $assignment->draft_answers ? 'Resume Survey' : 'Open Survey' }}
                             </a>
                         @endif
@@ -84,38 +86,41 @@
             </div>
 
             <div class="col-lg-5">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header bg-white">
-                        <h5 class="mb-0">Recent History</h5>
+                <div class="card shadow-sm h-100 border-0">
+                    <div class="card-header bg-white border-bottom py-3 px-4">
+                        <h5 class="mb-0 fw-bold" style="font-family: 'Outfit', sans-serif; font-size: 1.0625rem;">Recent History</h5>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table mb-0">
                                 <thead>
                                     <tr>
-                                        <th>Wave</th>
+                                        <th class="ps-4">Wave</th>
                                         <th>Status</th>
-                                        <th>Submitted</th>
+                                        <th class="pe-4">Submitted</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @forelse($assignmentHistory as $historyAssignment)
                                         <tr>
-                                            <td>{{ $historyAssignment->wave_label ?? 'Survey assignment' }}</td>
+                                            <td class="ps-4">{{ $historyAssignment->wave_label ?? 'Survey assignment' }}</td>
                                             <td>
                                                 @if($historyAssignment->status === 'completed')
-                                                    <span class="badge bg-success">Completed</span>
+                                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-2">Completed</span>
                                                 @elseif($historyAssignment->draft_answers)
-                                                    <span class="badge bg-warning text-dark">Draft</span>
+                                                    <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 rounded-pill px-2">Draft</span>
                                                 @else
-                                                    <span class="badge bg-secondary">Pending</span>
+                                                    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 rounded-pill px-2">Pending</span>
                                                 @endif
                                             </td>
-                                            <td>{{ optional($historyAssignment->response)->submitted_at?->format('M d, Y') ?? '—' }}</td>
+                                            <td class="pe-4 text-muted">{{ optional($historyAssignment->response)->submitted_at?->format('M d, Y') ?? '—' }}</td>
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="3" class="text-center py-3 text-muted">No assignment history yet.</td>
+                                            <td colspan="3" class="text-center py-4 text-muted">
+                                                <i class="bi bi-clock-history d-block mb-2" style="font-size: 1.5rem; opacity: 0.4;"></i>
+                                                No assignment history yet.
+                                            </td>
                                         </tr>
                                     @endforelse
                                 </tbody>
