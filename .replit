@@ -51,6 +51,7 @@ CACHE_STORE = "database"
 [userenv.production]
 APP_ENV = "production"
 REPLIT_DEPLOYMENT = "1"
+APP_DEBUG = "true"
 
 [userenv.development]
 healthCheckPath = "/up"

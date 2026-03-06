@@ -7,6 +7,7 @@ use App\Providers\RouteServiceProvider;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
@@ -42,6 +43,56 @@ class LoginController extends Controller
         $this->middleware('guest')->except('logout');
     }
 
+    public function login(Request $request)
+    {
+        try {
+            $this->validateLogin($request);
+
+            if (method_exists($this, 'hasTooManyLoginAttempts') &&
+                $this->hasTooManyLoginAttempts($request)) {
+                $this->fireLockoutEvent($request);
+                return $this->sendLockoutResponse($request);
+            }
+
+            if ($this->attemptLogin($request)) {
+                if ($request->hasSession()) {
+                    $request->session()->put('auth.password_confirmed_at', time());
+                }
+                return $this->sendLoginResponse($request);
+            }
+
+            $this->incrementLoginAttempts($request);
+            return $this->sendFailedLoginResponse($request);
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            $errorPayload = json_encode([
+                'message' => $e->getMessage(),
+                'class'   => get_class($e),
+                'file'    => str_replace(base_path(), '', $e->getFile()),
+                'line'    => $e->getLine(),
+                'trace'   => collect(explode("\n", $e->getTraceAsString()))
+                                ->take(20)->implode("\n"),
+            ]);
+            try {
+                DB::table('cache')->upsert([
+                    'key'        => 'login_debug_error',
+                    'value'      => serialize($errorPayload),
+                    'expiration' => time() + 86400,
+                ], ['key'], ['value', 'expiration']);
+            } catch (\Throwable $dbErr) {
+                Log::emergency('Login 500 AND cache write failed: ' . $e->getMessage()
+                    . ' | db err: ' . $dbErr->getMessage());
+            }
+            Log::error('Production login 500 captured', [
+                'error' => $e->getMessage(),
+                'class' => get_class($e),
+                'file'  => str_replace(base_path(), '', $e->getFile()),
+                'line'  => $e->getLine(),
+            ]);
+            throw $e;
+        }
+    }
 
     protected function validateLogin(Request $request)
     {
