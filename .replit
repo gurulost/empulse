@@ -46,6 +46,7 @@ DB_CONNECTION = "pgsql"
 SURVEY_STRICT_VALIDATION_ENABLED = "false"
 SESSION_DRIVER = "database"
 QUEUE_CONNECTION = "database"
+CACHE_STORE = "database"
 
 [userenv.production]
 APP_ENV = "production"
