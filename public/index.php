@@ -7,6 +7,35 @@ define('LARAVEL_START', microtime(true));
 
 /*
 |--------------------------------------------------------------------------
+| Bootstrap Environment From Parent Process
+|--------------------------------------------------------------------------
+|
+| PHP's built-in web server spawns worker processes that do not inherit
+| the parent's environment variables. We read the parent process environ
+| and copy any missing variables so that Dotenv and config() work correctly
+| for DB, cache, session, and queue settings.
+|
+*/
+if (function_exists('posix_getppid') && !getenv('DB_HOST')) {
+    $ppidEnvFile = '/proc/' . posix_getppid() . '/environ';
+    if (is_readable($ppidEnvFile)) {
+        $parentEnv = @file_get_contents($ppidEnvFile);
+        if ($parentEnv) {
+            foreach (explode("\0", $parentEnv) as $entry) {
+                if ($entry === '' || strpos($entry, '=') === false) continue;
+                [$key, $val] = explode('=', $entry, 2);
+                if ($key && !getenv($key)) {
+                    putenv($entry);
+                    $_ENV[$key]    = $val;
+                    $_SERVER[$key] = $val;
+                }
+            }
+        }
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
 | Check If The Application Is Under Maintenance
 |--------------------------------------------------------------------------
 |

@@ -3,6 +3,28 @@
 ## Overview
 Empulse (Workfitdx) is a multi-tenant Laravel 11 application with a Vue.js frontend designed for comprehensive employee lifecycle management. Its core purpose is to streamline company onboarding, employee management, and facilitate employee feedback through an integrated survey engine. The platform also includes a robust subscription billing system powered by Stripe. The project aims to provide a modern, scalable solution for businesses to manage their workforce and gather insights effectively.
 
+## Production Login Fix (March 2026)
+
+### Root Cause
+PHP's built-in web server (`php artisan serve`) spawns worker processes for each request. These worker processes do **not** inherit environment variables from the parent process via `getenv()` or `$_ENV`, even though the parent has them in `/proc/PID/environ`. This meant `DB_HOST`, `DB_PASSWORD`, `CACHE_STORE`, `SESSION_DRIVER`, etc. all resolved to their defaults (localhost, file, etc.) on every web request, causing POST /login to 500.
+
+### Fixes Applied
+1. **`public/index.php` parent-process env shim**: Reads the parent process's `/proc/<ppid>/environ` at the very start of each request if `DB_HOST` is missing. This copies all missing env vars into the current worker process via `putenv()` before Laravel bootstraps, making Dotenv and config() work correctly in production without any change to `.replit` or the build/run commands.
+
+2. **`config/cache.php` env key fix**: The file read `env('CACHE_DRIVER', 'file')` but `.replit` sets `CACHE_STORE=database`. Changed to `env('CACHE_STORE', env('CACHE_DRIVER', 'database'))` so the database cache is used.
+
+3. **`LoginController.php` throttle hardening**: Used trait aliasing (`hasTooManyLoginAttempts as traitHasTooManyLoginAttempts`) to wrap all rate-limiter calls in try-catch. Also added a full `login()` override that captures any unexpected exception to the `cache` table for production diagnostics.
+
+4. **`.env` file** (gitignored, dev only): Written with `DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `APP_KEY`, `CACHE_STORE=database`, `SESSION_DRIVER=database`, `QUEUE_CONNECTION=database` as belt-and-suspenders for the dev workflow.
+
+5. **`tests/Feature/LoginDatabaseCacheTest.php`**: Added test suite covering login with database cache, including the case where cache tables are missing.
+
+### Verified Working
+- `GET /login` → 200 ✓
+- `POST /login` wrong password → 302 back to /login ✓
+- `POST /login` correct credentials → 302 to /home ✓
+- All tested both with and without DB secrets in `.env` (parent-process shim handles the no-.env case)
+
 ## Recent Changes (December 2024)
 
 ### Critical Fixes Applied
@@ -85,7 +107,7 @@ Empulse (Workfitdx) is a multi-tenant Laravel 11 application with a Vue.js front
 
 ## External Dependencies
 
-- **Database**: PostgreSQL 16.10 (Replit's `helium` service)
+- **Database**: Neon PostgreSQL (external, accessed via `DB_HOST` secret — Replit's local `helium` PostgreSQL is present in the environment but NOT used)
 - **Payment Gateway**: Stripe (via Laravel Cashier)
 - **Email Service**: Brevo (for transactional emails, e.g., password resets, survey invitations)
 - **Social Authentication**: Google OAuth, Facebook OAuth
