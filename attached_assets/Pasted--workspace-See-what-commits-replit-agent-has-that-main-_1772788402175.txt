@@ -1,0 +1,202 @@
+~/workspace$ # See what commits replit-agent has that main doesn't
+git log main..replit-agent --oneline
+
+# See if the actual file content differs between the two branch tips 
+git diff main replit-agent --name-only
+f0832ad (replit-agent) Resolve login controller conflicts with correct formatting
+463a792 Resolve conflicts in login controller and update documentation
+e234474 Published your App
+516bd56 Improve login functionality and application environment handling
+9c7068a Published your App
+543e908 Add error capture for login failures to aid debugging
+430e9b8 Published your App
+638825d Improve login security by handling cache failures gracefully
+3d6fb44 Saved progress at the end of the loop
+129275a Saved progress at the end of the loop
+ed36720 Published your App
+7ae4953 Published your App
+add342e Published your App
+705b705 Published your App
+60ef967 Published your App
+d213f38 Saved progress at the end of the loop
+7f17e21 Update Brevo email configuration to use the correct API key
+f0fa76b Saved progress at the end of the loop
+b662044 Update server process and add deployment notes
+5a7c86c Published your App
+b464e12 Published your App
+3a855ce Published your App
+b0c6a0e Saved progress at the end of the loop
+7d25b20 Ensure application storage directories are writable for production
+47c7175 Published your App
+0097320 Transitioned from Plan to Build mode
+6bdfd1e Saved progress at the end of the loop
+94fc954 Add safe database migrations and optional demo data seeding to deployments
+e54e650 Published your App
+46b8026 Remove app initialization from release step and start web server
+29188de Saved progress at the end of the loop
+4971b21 Saved progress at the end of the loop
+02843e8 Saved progress at the end of the loop
+581cb7c Transitioned from Plan to Build mode
+131e3fc Transitioned from Plan to Build mode
+3307101 Saved progress at the end of the loop
+fdf9459 (gitsafe-backup/main) Saved progress at the end of the loop
+13dc527 Fix database transaction errors and improve deployment stability
+b24a04b Fix database transaction errors and improve deployment stability
+efb81be Saved progress at the end of the loop
+716ff7e Saved progress at the end of the loop
+3997e5b Saved progress at the end of the loop
+44b2422 Saved progress at the end of the loop
+10329d2 Saved progress at the end of the loop
+92564e8 Saved progress at the end of the loop
+1b6b2e5 Saved progress at the end of the loop
+af8cbfb Saved progress at the end of the loop
+1f64c45 Saved progress at the end of the loop
+8832f11 Add a table to store background processing jobs
+9b400dd Transitioned from Plan to Build mode
+11e51a0 Published your App
+9dc97c4 Saved progress at the end of the loop
+c400eab Saved progress at the end of the loop
+0b7ddcd Published your App
+cb59692 Remove unused health check route from web routes file
+5373a2b Add a fast health check route bypassing session middleware
+b8c101d Saved progress at the end of the loop
+441c367 Saved progress at the end of the loop
+92c40e3 Saved progress at the end of the loop
+55ece84 Transitioned from Plan to Build mode
+a47367d Saved progress at the end of the loop
+1131007 Add a dedicated health check route to improve application mo
+nitoring
+43951df Transitioned from Plan to Build mode
+ccc04fd Add a dedicated health check route to the application
+3f4c9fd Saved progress at the end of the loop
+50629b7 Saved progress at the end of the loop
+17a3ddf Update database configuration for deployment environments
+65b69be Resolve merge conflict by accepting current version
+f8e03bb Configure database connection to use local or remote based o
+n deployment status
+8fd1cc8 Saved progress at the end of the loop
+8deacad Update deployment instructions to use external database cred
+entials
+e77736c Add screenshot of development database credentials to aid de
+bugging
+129cb48 Update database configuration to use production credentials
+f820e35 Update database configuration to use production secrets
+d583316 Update database configuration to use production credentials 
+automatically
+10047ae Saved progress at the end of the loop
+489a925 Saved progress at the end of the loop
+ebbbb5a Add missing application key to production environment secret
+s
+986dd51 Saved progress at the end of the loop
+e6c8961 Saved progress at the end of the loop
+ea4ba09 Saved progress at the end of the loop
+0032106 Saved progress at the end of the loop
+5662d17 Saved progress at the end of the loop
+14092a7 Saved progress at the end of the loop
+13c9b09 Saved progress at the end of the loop
+06bb1f2 Add demo data seeding to the deployment process
+0dfaf4c Published your App
+9fef1ef Saved progress at the end of the loop
+be87e56 Saved progress at the end of the loop
+d651be7 Saved progress at the end of the loop
+e0e440b Saved progress at the end of the loop
+f7e0256 Update database configuration to properly use environment va
+riables
+cd18a06 Saved progress at the end of the loop
+dd79f87 Saved progress at the end of the loop
+a877701 Update database configuration to use production environment 
+variables
+d486ffa Update database configuration to use production environment 
+variables
+4dd5ed5 Add company logo to guest navigation and improve text readab
+ility
+6c73041 Add company logo to guest navigation and improve text readab
+ility
+fb655ba Improve readability of landing page text by adding white col
+or
+60f3568 Improve readability of landing page text by adding white col
+or
+4705612 Style the guest navigation bar with a dark gradient and clea
+n links
+558d577 Style the guest navigation bar with a dark gradient and clea
+n links
+af1df3f Saved progress at the end of the loop
+4a0efc5 Update logo image path for proper display in the sidebar
+b03a825 Update logo and branding to use the Empulse logo consistentl
+y
+1117433 Restored to 6dbd53b560c13d6791cb54ebe3d38d3148ca4f3d
+d257562 Restored to '6dbd53b560c13d6791cb54ebe3d38d3148ca4f3d'
+f52b7ee Update how Vue components are mounted and update vendor JS f
+iles
+31153c7 Update how Vue components are mounted and update vendor JS f
+iles
+58ba334 Update Vue mounting to preserve existing HTML content
+6dbd53b Update Vue mounting to preserve existing HTML content
+d20cd2b Published your App
+fb61c23 Adjust session settings to work within the Replit iframe env
+ironment
+dc07786 Enable database sessions and create the necessary table
+8375e92 Update session settings to improve site compatibility
+f73206d Saved progress at the end of the loop
+7dd3b99 Published your App
+9eeeb2f Saved progress at the end of the loop
+5959612 Published your App
+deac68c Saved progress at the end of the loop
+c6002b5 Rename CSS file and remove unused backup file
+2c95981 Fix issues with authentication, role handling, and legacy co
+de
+78711ae Update authentication and role checks across the application
+1d74319 Saved progress at the end of the loop
+ead7614 Refactor code to improve maintainability and fix typos
+7787447 Restore legacy features and fix application errors
+5e4be80 Improve user management and billing setup functionalities
+de63cdd Saved progress at the end of the loop
+b02f24f Enhance social login, payment processing, and admin function
+alities
+8a6d7f5 Saved progress at the end of the loop
+27fd0c2 Improve website functionality and user experience across mul
+tiple features
+9182f62 Saved progress at the end of the loop
+5a5f482 Update project overview and audit findings documentation
+a53ad28 Update application settings and user authentication logic
+cab9994 Saved progress at the end of the loop
+3f555a0 Saved progress at the end of the loop
+e12adf9 Improve code quality by using configuration settings instead
+ of environment variables
+5a4d7d8 Saved progress at the end of the loop
+c7478eb Fix broken database queries and improve asset URL handling
+382b3a1 Published your App
+f3f1a95 Securely handle API keys and improve UI consistency
+1b5d107 Ensure all pages render correctly with consistent UI styling
+b775aae Improve UI rendering by updating pagination and Vite configu
+ration
+5282969 Set Bootstrap 5 as the default pagination view for the appli
+cation
+ebe0f82 Published your App
+f7a12a8 Update project documentation with recent security fixes and 
+remaining issues
+fdda2de Improve user role management and system security
+3195ec8 Published your App
+6bdbe2d Saved progress at the end of the loop
+07f4de0 Update application to match database schema and clarify conf
+iguration
+5ad4b9a Update project assets and dependencies for improved function
+ality
+87f78bd Complete various system updates and refactors across modules
+1e8e186 Saved progress at the end of the loop
+88a5882 Saved progress at the end of the loop
+c7f2d38 Update documentation to reflect recent authentication system
+ redesign
+21c99c2 Update website authentication pages with modern styling and 
+improved user experience
+1ae7c0b Prevent Vue from clearing the landing page content
+5a10f78 Update application setup to ensure assets load correctly on 
+Replit
+064a692 Fix application styling by making asset URLs relative
+e15f93c Ensure website assets load correctly by dynamically setting 
+the app URL
+a9b0e47 Saved progress at the end of the loop
+084c6d5 Update application to correctly handle asset URLs across dif
+ferent environments
+0242bcf Configure Vite server for improved development environment a
+ccessibility
