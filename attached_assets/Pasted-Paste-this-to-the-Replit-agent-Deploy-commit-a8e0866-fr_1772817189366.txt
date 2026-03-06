@@ -1,0 +1,88 @@
+Paste this to the Replit agent:
+
+Deploy commit `a8e0866` from `origin/main`.
+
+This commit includes the completed activation/onboarding bundle:
+- manager-facing no-live-survey states now explicitly say survey content is owned by Workfit admin
+- Workfit admin onboarding now has a global survey-content status banner via `GET /admin/api/onboarding`
+- employee dashboard and survey entry now show a `Before you start` reassurance block
+- `GET /survey/{token}/definition` now includes `survey_meta.question_count` and `survey_meta.estimated_minutes`
+- onboarding telemetry now includes:
+  - `survey_activation_handoff_viewed`
+  - `survey_activation_handoff_clicked`
+  - `employee_survey_entry_viewed`
+  - `employee_survey_launch_clicked`
+
+Required deploy steps:
+
+1. Pull the latest code from `origin/main` so commit `a8e0866` is present.
+
+2. Run:
+```bash
+php artisan migrate --force
+```
+Why:
+- the onboarding reporting/telemetry features depend on the `onboarding_events` table from migration `2026_03_06_090000_create_onboarding_events_table.php`
+- if this is missing, onboarding event writes and the Workfit admin onboarding report can fail
+
+3. Run:
+```bash
+npm run build
+```
+Why:
+- this release changes compiled frontend assets for:
+  - the manager onboarding checklist and handoff states
+  - the Workfit admin onboarding tab/banner
+  - the employee dashboard trust block
+  - the survey app trust block
+
+4. Restart or redeploy:
+- web app
+- queue worker
+- scheduler process
+Why:
+- workers can keep old PHP code loaded after deploy
+- survey-wave and telemetry behavior needs the updated code everywhere, not just in the web process
+
+Post-deploy smoke checks:
+
+1. Workfit admin check
+- log in as a Workfit admin
+- open `/admin`
+- open the `Onboarding` tab
+- confirm the `Survey Content Status` section renders
+- if there is no live survey version, confirm the warning banner appears and links to `/admin/builder`
+
+2. Manager check
+- log in as a manager
+- open `/surveys/manage`
+- open `/survey-waves`
+- open the analytics/dashboard view
+- if there is no live survey, confirm the copy says Workfit admin owns survey activation and the main CTA goes to `/contact`
+
+3. Employee check
+- log in as an employee with an active assignment
+- open the employee dashboard
+- confirm the `Before you start` block appears near the survey CTA
+- start the survey
+- confirm the survey page also shows the reassurance block with autosave and estimated time
+
+Optional API verification:
+- manager `GET /analytics/api/dashboard`
+  - confirm `setup.can_manage_survey_content`
+  - confirm `setup.survey_content_owner`
+- Workfit admin `GET /admin/api/onboarding`
+  - confirm `system_status` exists
+- survey `GET /survey/{token}/definition`
+  - confirm `survey_meta.question_count`
+  - confirm `survey_meta.estimated_minutes`
+
+Important behavior note:
+- managers are still intentionally blocked if no live survey version exists
+- that is expected, because survey content remains globally shared and Workfit-admin owned
+- if no live survey exists after deploy, Workfit admin must publish or activate one for managers to proceed past that blocker
+
+If anything fails:
+- missing table / onboarding report error: rerun `php artisan migrate --force`
+- stale UI / missing new copy: rerun `npm run build` and restart web
+- inconsistent wave/job behavior: restart queue worker and scheduler
