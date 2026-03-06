@@ -32,6 +32,7 @@ use App\Http\Controllers\TeamController;
 use App\Http\Controllers\DashboardAnalyticsController;
 use App\Http\Controllers\AnalyticsApiController;
 use App\Http\Controllers\EmployeeDashboardController;
+use App\Http\Controllers\OnboardingEventController;
 
 /*
 |--------------------------------------------------------------------------
@@ -163,6 +164,7 @@ Route::group(['middleware' => 'auth'], function () {
             Route::prefix('/api')->group(function () {
                 Route::get('/companies', [WorkfitAdminController::class, 'getCompanies']);
                 Route::get('/users', [WorkfitAdminController::class, 'getUsers']);
+                Route::get('/onboarding', [WorkfitAdminController::class, 'getOnboardingReport']);
                 Route::delete('/users/{id}', [WorkfitAdminController::class, 'deleteUser']);
                 Route::post('/users/{id}/impersonate', [WorkfitAdminController::class, 'impersonate']);
             });
@@ -199,4 +201,7 @@ Route::group(['middleware' => 'auth'], function () {
 
     Route::get('/analytics/api/dashboard', [AnalyticsApiController::class, 'index'])->middleware('admin')
         ->name('analytics.api.dashboard');
+
+    Route::post('/onboarding/events', [OnboardingEventController::class, 'store'])
+        ->name('onboarding.events.store');
 });

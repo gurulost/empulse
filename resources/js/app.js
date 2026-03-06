@@ -1,5 +1,18 @@
 import './bootstrap';
 import { createApp } from 'vue';
+import {
+    ensureOnboardingSessionStarted,
+    getOrCreateOnboardingSession,
+    trackOnboardingEvent,
+    trackOnboardingEventOnce,
+} from './lib/onboardingTelemetry';
+
+window.empulseOnboardingTelemetry = {
+    ensureSessionStarted: ensureOnboardingSessionStarted,
+    getSession: getOrCreateOnboardingSession,
+    track: trackOnboardingEvent,
+    trackOnce: trackOnboardingEventOnce,
+};
 
 const parseProp = (raw) => {
     if (raw === null || raw === undefined) return undefined;

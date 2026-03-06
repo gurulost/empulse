@@ -120,9 +120,42 @@
             </div>
 
             <!-- Empty State -->
-            <div v-else class="text-center py-5 text-muted">
-                <i class="bi bi-people display-4 mb-3 d-block"></i>
-                <p>No team members found</p>
+            <div v-else class="py-5">
+                <div v-if="isFiltered" class="text-center text-muted">
+                    <i class="bi bi-funnel display-4 mb-3 d-block"></i>
+                    <p class="mb-3">No team members match the current filters.</p>
+                    <button class="btn btn-outline-secondary" @click="clearFilters">
+                        <i class="bi bi-x-circle me-1"></i>Clear Filters
+                    </button>
+                </div>
+                <div v-else class="empty-state py-4">
+                    <div class="empty-state-icon">
+                        <i class="bi bi-people"></i>
+                    </div>
+                    <h5 class="empty-state-title">Start with the people who will receive your first wave</h5>
+                    <p class="empty-state-text">
+                        Import a roster if you already have one, or add one teammate manually. Once at least one recipient exists,
+                        you can move on to creating and dispatching a survey wave.
+                    </p>
+                    <div class="d-flex flex-wrap justify-content-center gap-2 mt-3">
+                        <button class="btn btn-success" @click="showImportModal = true">
+                            <i class="bi bi-upload me-1"></i>Import Roster
+                        </button>
+                        <button class="btn btn-primary" @click="showAddModal = true">
+                            <i class="bi bi-person-plus me-1"></i>Add First Member
+                        </button>
+                        <button
+                            v-if="canManageDepartments"
+                            class="btn btn-outline-secondary"
+                            @click="emit('open-departments')"
+                        >
+                            <i class="bi bi-building me-1"></i>{{ departments.length ? 'Review Departments' : 'Create Department' }}
+                        </button>
+                    </div>
+                    <p v-if="canManageDepartments && !departments.length" class="small text-muted mt-3 mb-0">
+                        Departments are optional for launch, but adding them now makes later comparisons and filtering easier.
+                    </p>
+                </div>
             </div>
         </div>
 
@@ -177,7 +210,7 @@ const props = defineProps({
     canManageDepartments: { type: Boolean, default: false }
 });
 
-const emit = defineEmits(['refresh-departments']);
+const emit = defineEmits(['refresh-departments', 'open-departments']);
 
 const api = useTeamApi();
 const toast =useToast();
@@ -196,6 +229,7 @@ const selectedFile = ref(null);
 let searchTimeout = null;
 
 const canFilterRole = computed(() => props.userRole === 1 || props.userRole === 2);
+const isFiltered = computed(() => Boolean(filters.value.search || filters.value.role || filters.value.department));
 
 const availableRoles = computed(() => {
     if (props.userRole === 1) {

@@ -8,6 +8,8 @@ use App\Models\SurveyWaveLog;
 use App\Models\Survey;
 use App\Models\SurveyVersion;
 use App\Jobs\ProcessSurveyWave;
+use App\Services\OnboardingTelemetryService;
+use App\Services\SurveyAnalyticsService;
 use App\Support\CompanyBilling;
 use App\Support\SurveyWaveAutomation;
 use Illuminate\Http\Request;
@@ -17,6 +19,13 @@ use Illuminate\Validation\ValidationException;
 
 class SurveyWaveController extends Controller
 {
+    public function __construct(
+        protected SurveyAnalyticsService $analytics,
+        protected OnboardingTelemetryService $telemetry
+    )
+    {
+    }
+
     public function index()
     {
         $this->authorizeAccess();
@@ -98,6 +107,24 @@ class SurveyWaveController extends Controller
         $billingLabel = SurveyWaveAutomation::billingStatusLabel($billingStatus);
         $planLabel = SurveyWaveAutomation::planLabel((int) $user->tariff);
         $canUseDrip = SurveyWaveAutomation::dripEnabledForTariff((int) $user->tariff);
+        $setupSummary = $hasCompanyContext
+            ? $this->analytics->companySetupSummary((int) $user->company_id)
+            : [];
+
+        if ($hasCompanyContext && !$activeSurveyVersion) {
+            $this->telemetry->record([
+                'company_id' => (int) $user->company_id,
+                'name' => 'survey_activation_handoff_viewed',
+                'context_surface' => 'survey-waves',
+                'task_id' => 'survey_activation',
+                'user_segment' => 'novice',
+                'guidance_level' => 'light',
+                'properties' => [
+                    'surface' => 'survey-waves',
+                    'has_live_survey' => false,
+                ],
+            ], $user);
+        }
 
         return view('survey_waves.index', compact(
             'waves',
@@ -111,6 +138,7 @@ class SurveyWaveController extends Controller
             'billingLabel',
             'planLabel',
             'canUseDrip',
+            'setupSummary',
             'hasCompanyContext',
             'hasSurveySetup',
             'roleOptions',

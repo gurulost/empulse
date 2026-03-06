@@ -41,6 +41,15 @@
                             <span v-if="!isSidebarCollapsed">Subscriptions</span>
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a href="#"
+                           class="nav-link"
+                           :class="{ 'active': activeTab === 'onboarding' }"
+                           @click.prevent="activeTab = 'onboarding'">
+                            <i class="bi bi-signpost-split fs-5" :class="{ 'me-3': !isSidebarCollapsed }"></i>
+                            <span v-if="!isSidebarCollapsed">Onboarding</span>
+                        </a>
+                    </li>
                     <li class="nav-item mt-4">
                         <div class="text-uppercase small text-white-50 fw-bold px-3 mb-2" v-if="!isSidebarCollapsed">System</div>
                         <a href="/home" class="nav-link text-white-50 hover-white">
@@ -129,6 +138,16 @@
                             :subscriptions="subscriptions" 
                             @page-change="fetchSubscriptions"
                         />
+
+                        <onboarding-report
+                            v-else-if="activeTab === 'onboarding'"
+                            :report="onboardingReport"
+                            v-model:searchQuery="onboardingSearchQuery"
+                            v-model:stageFilter="onboardingStageFilter"
+                            @search="fetchOnboardingReport(1)"
+                            @stage-change="fetchOnboardingReport(1)"
+                            @page-change="fetchOnboardingReport"
+                        />
                     </div>
                 </div>
             </main>
@@ -142,6 +161,7 @@ import axios from 'axios';
 import CompanyList from './CompanyList.vue';
 import UserList from './UserList.vue';
 import SubscriptionList from './SubscriptionList.vue';
+import OnboardingReport from './OnboardingReport.vue';
 
 const props = defineProps({
     user: {
@@ -154,8 +174,25 @@ const activeTab = ref('companies');
 const companies = ref({ data: [], current_page: 1, last_page: 1 });
 const users = ref({ data: [], current_page: 1, last_page: 1 });
 const subscriptions = ref({ data: [], current_page: 1, last_page: 1 });
+const onboardingReport = ref({
+    summary: {},
+    system_status: {
+        has_live_survey: false,
+        live_survey: null,
+        survey_content_owner: 'workfit_admin',
+        blocking_companies_count: 0,
+    },
+    filters: { stage: 'all', stage_options: [] },
+    stage_breakdown: [],
+    plan_breakdown: [],
+    companies: { data: [], current_page: 1, last_page: 1 },
+    alerts: [],
+    recent_events: [],
+});
 const loading = ref(false);
 const searchQuery = ref('');
+const onboardingSearchQuery = ref('');
+const onboardingStageFilter = ref('all');
 const companyFilter = ref(null);
 const isSidebarCollapsed = ref(false);
 const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
@@ -169,7 +206,8 @@ const pageTitle = computed(() => {
     const titles = {
         companies: 'Company Management',
         users: 'User Management',
-        subscriptions: 'Subscription Management'
+        subscriptions: 'Subscription Management',
+        onboarding: 'Onboarding Operations'
     };
     return titles[activeTab.value] ?? 'Dashboard';
 });
@@ -217,6 +255,26 @@ const fetchSubscriptions = async (page = 1) => {
     }
 };
 
+const fetchOnboardingReport = async (page = 1) => {
+    loading.value = true;
+    try {
+        const { data } = await axios.get('/admin/api/onboarding', {
+            params: {
+                page,
+                search: onboardingSearchQuery.value,
+                stage: onboardingStageFilter.value,
+            },
+        });
+        onboardingReport.value = data;
+        onboardingStageFilter.value = data?.filters?.stage || 'all';
+    } catch (e) {
+        console.error(e);
+        alert('Failed to load onboarding telemetry');
+    } finally {
+        loading.value = false;
+    }
+};
+
 const deleteUser = async (id) => {
     if (!confirm('Are you sure you want to delete this user?')) return;
     try {
@@ -255,12 +313,14 @@ const refreshCurrentTab = () => {
     if (activeTab.value === 'companies') fetchCompanies(companies.value.current_page);
     else if (activeTab.value === 'users') fetchUsers(users.value.current_page);
     else if (activeTab.value === 'subscriptions') fetchSubscriptions(subscriptions.value.current_page);
+    else if (activeTab.value === 'onboarding') fetchOnboardingReport(onboardingReport.value.companies?.current_page || 1);
 };
 
 watch(activeTab, (newTab) => {
     if (newTab === 'companies' && companies.value.data.length === 0) fetchCompanies();
     if (newTab === 'users' && users.value.data.length === 0) fetchUsers();
     if (newTab === 'subscriptions' && subscriptions.value.data.length === 0) fetchSubscriptions();
+    if (newTab === 'onboarding' && onboardingReport.value.companies.data.length === 0) fetchOnboardingReport();
 });
 
 onMounted(() => {

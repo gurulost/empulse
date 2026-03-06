@@ -51,6 +51,16 @@ test('workfit admin user list shows chief role label', async ({ page }) => {
     await expect(page.locator('tbody')).toContainText('Chief');
 });
 
+test('workfit admin onboarding tab renders', async ({ page }) => {
+    await login(page, 'admin@workfit.com');
+    await page.goto('/admin');
+    await page.waitForLoadState('networkidle');
+    await page.getByRole('link', { name: 'Onboarding' }).click();
+    await page.waitForLoadState('networkidle');
+    await expect(page.locator('body')).toContainText('Activation By Company');
+    await expect(page.locator('body')).toContainText('Survey Content Status');
+});
+
 test('manager routes render', async ({ page }) => {
     await login(page, 'manager@acme.com');
     await expectHealthyPage(page, '/home', 'Dashboard Analytics');
@@ -78,4 +88,6 @@ test('team lead routes render', async ({ page }) => {
 test('employee dashboard renders', async ({ page }) => {
     await login(page, 'employee1@acme.com');
     await expectHealthyPage(page, '/employee', 'Employee Dashboard');
+    await expect(page.locator('body')).toContainText('Before you start');
+    await expect(page.locator('body')).toContainText('Progress autosaves');
 });

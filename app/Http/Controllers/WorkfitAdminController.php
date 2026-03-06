@@ -4,12 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Companies;
 use App\Models\User;
+use App\Services\OnboardingReportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class WorkfitAdminController extends Controller
 {
-    public function __construct()
+    public function __construct(protected OnboardingReportService $onboardingReport)
     {
         $this->middleware(['auth', 'workfit_admin']);
     }
@@ -106,6 +107,18 @@ class WorkfitAdminController extends Controller
             ->paginate(10);
 
         return response()->json($subscriptions);
+    }
+
+    public function getOnboardingReport(Request $request)
+    {
+        $report = $this->onboardingReport->report(
+            page: max(1, (int) $request->input('page', 1)),
+            search: $request->input('search'),
+            perPage: 10,
+            stage: $request->input('stage'),
+        );
+
+        return response()->json($report);
     }
 
     public function getCompanyList()

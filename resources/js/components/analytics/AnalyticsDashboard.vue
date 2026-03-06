@@ -81,20 +81,62 @@
             <button class="btn btn-sm btn-link" @click="fetchData">Try Again</button>
         </div>
 
-        <div v-else-if="!hasAnalyticsData" class="card border-0 shadow-sm">
-            <div class="card-body py-5 text-center">
-                <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 72px; height: 72px;">
-                    <i class="bi bi-bar-chart-line text-secondary fs-2"></i>
-                </div>
-                <h4 class="mb-2">{{ emptyState.title }}</h4>
-                <p class="text-muted mb-4">{{ emptyState.body }}</p>
-                <div class="d-flex flex-wrap justify-content-center gap-2">
-                    <a v-if="emptyState.primaryHref" :href="emptyState.primaryHref" class="btn btn-primary">
-                        {{ emptyState.primaryLabel }}
-                    </a>
-                    <a v-if="emptyState.secondaryHref" :href="emptyState.secondaryHref" class="btn btn-outline-secondary">
-                        {{ emptyState.secondaryLabel }}
-                    </a>
+        <div v-else-if="!hasAnalyticsData" class="row g-4">
+            <div class="col-xl-8">
+                <setup-checklist :setup="setup" :user="user" @cta-click="handleChecklistCtaClick" />
+            </div>
+            <div class="col-xl-4">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body p-4">
+                        <div class="small text-uppercase fw-semibold text-primary mb-2">Activation Snapshot</div>
+                        <h4 class="mb-2">{{ emptyState.title }}</h4>
+                        <p class="text-muted mb-4">{{ emptyState.body }}</p>
+
+                        <div class="d-grid gap-2 mb-4">
+                            <a
+                                v-if="activationPrimaryAction"
+                                :href="activationPrimaryAction.href"
+                                class="btn btn-primary"
+                                @click.prevent="handleActivationActionClick(activationPrimaryAction, 'primary')"
+                            >
+                                {{ activationPrimaryAction.label }}
+                            </a>
+                            <a
+                                v-if="activationSecondaryAction"
+                                :href="activationSecondaryAction.href"
+                                class="btn btn-outline-secondary"
+                                @click.prevent="handleActivationActionClick(activationSecondaryAction, 'secondary')"
+                            >
+                                {{ activationSecondaryAction.label }}
+                            </a>
+                        </div>
+
+                        <div class="border rounded-4 p-3 bg-light-subtle">
+                            <div class="small text-uppercase fw-semibold text-secondary mb-3">Current company state</div>
+                            <div class="d-flex flex-column gap-3 small">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-muted">Recipients ready</span>
+                                    <strong>{{ setup.recipient_count ?? 0 }}</strong>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-muted">Departments</span>
+                                    <strong>{{ setup.department_count ?? 0 }}</strong>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-muted">Live survey</span>
+                                    <strong>{{ setup.live_survey?.version ? `v${setup.live_survey.version}` : 'Missing' }}</strong>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-muted">Dispatched waves</span>
+                                    <strong>{{ setup.dispatched_wave_count ?? 0 }}</strong>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-muted">Completed responses</span>
+                                    <strong>{{ setup.response_count ?? 0 }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -198,9 +240,15 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { debounce } from 'lodash';
 import { useAnalyticsApi } from '../../composables/useAnalyticsApi';
+import {
+    ensureOnboardingSessionStarted,
+    trackOnboardingEvent,
+    trackOnboardingEventOnce,
+} from '../../lib/onboardingTelemetry';
 import GapChart from '../dashboard/GapChart.vue';
 import ImpactSnapshot from '../dashboard/ImpactSnapshot.vue';
 import IndicatorList from '../dashboard/IndicatorList.vue';
+import SetupChecklist from './SetupChecklist.vue';
 import TeamCulturePulse from '../dashboard/TeamCulturePulse.vue';
 import TeamScatter from '../dashboard/TeamScatter.vue';
 import TemperatureGauge from '../dashboard/TemperatureGauge.vue';
@@ -229,6 +277,7 @@ const normalizeCompanyId = (value) => {
 
 const inferredCompanyId = computed(() => normalizeCompanyId(props.initialCompanyId) ?? normalizeCompanyId(props.user?.company_id));
 const selectedCompanyIdRaw = ref(inferredCompanyId.value ? String(inferredCompanyId.value) : '');
+const user = computed(() => props.user);
 
 const isWorkfitAdmin = computed(() => Number(props.user?.is_admin ?? 0) === 1 || Number(props.user?.role ?? 0) === 0);
 const selectedCompanyId = computed(() => normalizeCompanyId(selectedCompanyIdRaw.value));
@@ -236,10 +285,16 @@ const hasCompanyContext = computed(() => selectedCompanyId.value !== null);
 const requiresCompanySelection = computed(() => isWorkfitAdmin.value && !hasCompanyContext.value);
 const showNoCompanyContext = computed(() => !isWorkfitAdmin.value && !hasCompanyContext.value);
 const role = computed(() => Number(props.user?.role ?? 0));
+const userSegment = computed(() => {
+    if (isWorkfitAdmin.value) return 'expert';
+    if (role.value === 1) return 'novice';
+    return 'intermediate';
+});
 
 const isLoading = ref(false);
 const error = ref(null);
 const data = ref({});
+const setup = ref({});
 
 const options = reactive({
     departments: [],
@@ -275,6 +330,15 @@ const hasAnalyticsData = computed(() => {
     );
 });
 
+const surveyContentAdminOwnedHandoff = computed(() => {
+    const currentSetup = setup.value || {};
+
+    return !currentSetup.has_live_survey
+        && !currentSetup.can_manage_survey_content
+        && Number(currentSetup.recipient_count ?? 0) > 0
+        && !!currentSetup.billing_allows_scheduling;
+});
+
 const emptyState = computed(() => {
     if (isWorkfitAdmin.value) {
         return {
@@ -288,9 +352,20 @@ const emptyState = computed(() => {
     }
 
     if (role.value === 1) {
+        if (surveyContentAdminOwnedHandoff.value) {
+            return {
+                title: 'Workfit admin still needs to activate the live survey',
+                body: 'Your team and billing can be ready, but survey content is shared globally in Empulse. A Workfit admin must publish the live survey before you can send the first wave.',
+                primaryHref: '/contact',
+                primaryLabel: 'Contact Workfit Admin',
+                secondaryHref: '/surveys/manage',
+                secondaryLabel: 'Review Survey Status',
+            };
+        }
+
         return {
             title: 'Launch your first survey wave',
-            body: 'Import teammates, publish a live survey, and send a wave. Analytics will fill in as soon as responses arrive.',
+            body: 'Import teammates, confirm billing, and send a wave once the live survey is ready. Analytics will fill in as soon as responses arrive.',
             primaryHref: '/survey-waves',
             primaryLabel: 'Create Wave',
             secondaryHref: '/team/manage',
@@ -308,6 +383,211 @@ const emptyState = computed(() => {
     };
 });
 
+const activationPrimaryAction = computed(() => {
+    const currentSetup = setup.value || {};
+
+    if (!Number(currentSetup.recipient_count ?? 0)) {
+        return {
+            href: '/team/manage',
+            label: 'Add Team Members',
+        };
+    }
+
+    if (!currentSetup.billing_allows_scheduling) {
+        if (role.value === 1) {
+            return {
+                href: '/account/billing',
+                label: 'Open Billing',
+            };
+        }
+
+        if (isWorkfitAdmin.value) {
+            return {
+                href: '/admin',
+                label: 'Open Admin Panel',
+            };
+        }
+    }
+
+    if (!currentSetup.has_live_survey) {
+        return currentSetup.can_manage_survey_content
+            ? {
+                href: '/admin/builder',
+                label: 'Open Survey Builder',
+            }
+            : {
+                href: '/contact',
+                label: 'Contact Workfit Admin',
+                handoff: true,
+            };
+    }
+
+    if (!currentSetup.has_dispatched_wave) {
+        return {
+            href: '/survey-waves',
+            label: 'Open Survey Waves',
+        };
+    }
+
+    if (!Number(currentSetup.response_count ?? 0)) {
+        return {
+            href: '/survey-waves',
+            label: 'Check Wave Status',
+        };
+    }
+
+    if (!emptyState.value.primaryHref) {
+        return null;
+    }
+
+    return {
+        href: emptyState.value.primaryHref,
+        label: emptyState.value.primaryLabel,
+    };
+});
+
+const activationSecondaryAction = computed(() => {
+    if (!emptyState.value.secondaryHref) {
+        return null;
+    }
+
+    if (emptyState.value.secondaryHref === activationPrimaryAction.value?.href) {
+        return null;
+    }
+
+    return {
+        href: emptyState.value.secondaryHref,
+        label: emptyState.value.secondaryLabel,
+        handoff: surveyContentAdminOwnedHandoff.value && emptyState.value.secondaryHref === '/surveys/manage',
+    };
+});
+
+const trackDashboardSession = async () => {
+    if (!hasCompanyContext.value) {
+        return;
+    }
+
+    await ensureOnboardingSessionStarted({
+        companyId: selectedCompanyId.value,
+        contextSurface: 'dashboard.analytics',
+        taskId: 'company_activation',
+        userSegment: userSegment.value,
+        guidanceLevel: 'light',
+    });
+};
+
+const trackChecklistView = async () => {
+    if (!hasCompanyContext.value || hasAnalyticsData.value) {
+        return;
+    }
+
+    await trackOnboardingEventOnce({
+        onceId: 'dashboard-checklist-view',
+        companyId: selectedCompanyId.value,
+        name: 'onboarding_checklist_viewed',
+        contextSurface: 'dashboard.analytics',
+        taskId: 'company_activation',
+        userSegment: userSegment.value,
+        guidanceLevel: 'light',
+        properties: {
+            recipient_count: setup.value?.recipient_count ?? 0,
+            response_count: setup.value?.response_count ?? 0,
+            has_live_survey: !!setup.value?.has_live_survey,
+            billing_allows_scheduling: !!setup.value?.billing_allows_scheduling,
+        },
+    });
+};
+
+const trackSurveyActivationHandoffView = async () => {
+    if (!hasCompanyContext.value || !surveyContentAdminOwnedHandoff.value) {
+        return;
+    }
+
+    await trackOnboardingEventOnce({
+        onceId: 'survey-activation-handoff-viewed',
+        companyId: selectedCompanyId.value,
+        name: 'survey_activation_handoff_viewed',
+        contextSurface: 'dashboard.analytics',
+        taskId: 'survey_activation',
+        userSegment: userSegment.value,
+        guidanceLevel: 'light',
+        properties: {
+            survey_content_owner: setup.value?.survey_content_owner ?? 'workfit_admin',
+            can_manage_survey_content: !!setup.value?.can_manage_survey_content,
+            has_live_survey: !!setup.value?.has_live_survey,
+        },
+    });
+};
+
+const trackSurveyActivationHandoffClick = async (destination, origin) => {
+    await trackOnboardingEvent({
+        companyId: selectedCompanyId.value,
+        name: 'survey_activation_handoff_clicked',
+        contextSurface: 'dashboard.analytics',
+        taskId: 'survey_activation',
+        userSegment: userSegment.value,
+        guidanceLevel: 'light',
+        properties: {
+            destination,
+            origin,
+            survey_content_owner: setup.value?.survey_content_owner ?? 'workfit_admin',
+        },
+        useKeepalive: true,
+    });
+};
+
+const handleChecklistCtaClick = async (step) => {
+    const isSurveyHandoff = step?.id === 'survey' && surveyContentAdminOwnedHandoff.value;
+
+    if (isSurveyHandoff) {
+        await trackSurveyActivationHandoffClick(step?.ctaHref ?? null, 'checklist');
+    }
+
+    await trackOnboardingEvent({
+        companyId: selectedCompanyId.value,
+        name: 'onboarding_step_cta_clicked',
+        contextSurface: 'dashboard.analytics',
+        taskId: step?.id || 'company_activation',
+        userSegment: userSegment.value,
+        guidanceLevel: 'light',
+        properties: {
+            destination: step?.ctaHref ?? null,
+            label: step?.ctaLabel ?? null,
+            status: step?.statusLabel ?? null,
+        },
+        useKeepalive: true,
+    });
+
+    if (step?.ctaHref) {
+        window.location.href = step.ctaHref;
+    }
+};
+
+const handleActivationActionClick = async (action, position) => {
+    if (action?.handoff) {
+        await trackSurveyActivationHandoffClick(action?.href ?? null, `activation_${position}`);
+    }
+
+    await trackOnboardingEvent({
+        companyId: selectedCompanyId.value,
+        name: 'onboarding_step_cta_clicked',
+        contextSurface: 'dashboard.analytics',
+        taskId: position === 'primary' ? 'activation_primary' : 'activation_secondary',
+        userSegment: userSegment.value,
+        guidanceLevel: 'light',
+        properties: {
+            destination: action?.href ?? null,
+            label: action?.label ?? null,
+            position,
+        },
+        useKeepalive: true,
+    });
+
+    if (action?.href) {
+        window.location.href = action.href;
+    }
+};
+
 let requestCounter = 0;
 
 const resetFilters = () => {
@@ -321,6 +601,7 @@ const fetchData = async () => {
         isLoading.value = false;
         error.value = null;
         data.value = {};
+        setup.value = {};
         clearFilterOptions();
         return;
     }
@@ -342,6 +623,7 @@ const fetchData = async () => {
         }
 
         data.value = response.data || {};
+        setup.value = response.setup || {};
         options.departments = response.filters?.departments || [];
         options.teamleads = response.filters?.teamleads || [];
         options.waves = response.filters?.waves || [];
@@ -360,6 +642,10 @@ const fetchData = async () => {
 
         isLoading.value = false;
     }
+
+    await trackDashboardSession();
+    await trackChecklistView();
+    await trackSurveyActivationHandoffView();
 };
 
 const debouncedFetch = debounce(fetchData, 400);
@@ -387,6 +673,7 @@ watch(selectedCompanyIdRaw, () => {
     debouncedFetch.cancel();
     resetFilters();
     data.value = {};
+    setup.value = {};
     clearFilterOptions();
 
     if (hasCompanyContext.value) {

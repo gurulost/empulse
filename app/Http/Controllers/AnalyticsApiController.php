@@ -75,9 +75,13 @@ class AnalyticsApiController extends Controller
             ->get();
 
         $waves = $this->analytics->availableWavesForCompany($companyId);
+        $setup = $this->analytics->companySetupSummary($companyId);
+        $setup['can_manage_survey_content'] = $isSuperAdmin;
+        $setup['survey_content_owner'] = 'workfit_admin';
 
         return response()->json([
             'data' => $data,
+            'setup' => $setup,
             'filters' => [
                 'departments' => $departments,
                 'teamleads' => $teamleads,

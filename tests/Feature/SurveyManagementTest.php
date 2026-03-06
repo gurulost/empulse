@@ -166,4 +166,29 @@ class SurveyManagementTest extends TestCase
         $response->assertSee('Culture Foundations');
         $response->assertDontSee('Preview of the placeholder assessment.');
     }
+
+    public function test_survey_management_shows_admin_owned_handoff_when_no_live_survey_exists(): void
+    {
+        $company = Companies::create([
+            'title' => 'Company A',
+            'manager' => 'Manager A',
+            'manager_email' => 'manager-a@example.com',
+        ]);
+
+        $manager = User::factory()->create([
+            'role' => 1,
+            'company' => 1,
+            'company_id' => $company->id,
+            'company_title' => $company->title,
+        ]);
+
+        SurveyVersion::query()->update(['is_active' => false]);
+
+        $response = $this->actingAs($manager)->get('/surveys/manage');
+
+        $response->assertOk();
+        $response->assertSee('Workfit admin still needs to activate the live survey');
+        $response->assertSee('Contact Workfit Admin');
+        $response->assertSee('/contact', false);
+    }
 }

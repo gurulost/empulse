@@ -23,6 +23,7 @@
                 :departments="departments"
                 :can-manage-departments="canManageDepartments"
                 @refresh-departments="loadDepartments"
+                @open-departments="activeTab = 'departments'"
             />
             <DepartmentManager
                 v-else-if="canManageDepartments"

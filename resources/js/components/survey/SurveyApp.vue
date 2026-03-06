@@ -38,6 +38,24 @@
             </div>
             
             <div v-else key="survey">
+                <div class="alert alert-light border-0 shadow-sm rounded-4 mb-4">
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+                        <div>
+                            <div class="small text-uppercase fw-semibold text-secondary mb-2">Before you start</div>
+                            <div class="small text-muted mb-2">
+                                Your responses stay inside Empulse and are attached to this secure survey assignment.
+                            </div>
+                            <div class="small text-muted mb-0">
+                                Progress autosaves while you move through the survey, so you can pause and return without losing your place.
+                            </div>
+                        </div>
+                        <div class="text-md-end">
+                            <div class="fw-semibold text-dark">{{ surveyMeta.estimated_minutes }} min</div>
+                            <div class="small text-muted">{{ surveyMeta.question_count }} question{{ surveyMeta.question_count === 1 ? '' : 's' }}</div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Progress Bar -->
                 <div class="mb-4 px-1">
                     <div class="d-flex justify-content-between text-muted small mb-2 fw-semibold">
@@ -167,6 +185,7 @@ const toast = useToast();
 const loading = ref(true);
 const error = ref(null);
 const definition = ref(null);
+const surveyMeta = ref({ question_count: 0, estimated_minutes: 4 });
 const assignment = ref(null);
 const pages = ref([]);
 const currentPageIndex = ref(0);
@@ -190,6 +209,7 @@ const fetchDefinition = async () => {
     try {
         const { data } = await axios.get(props.definitionUrl);
         definition.value = data.version;
+        surveyMeta.value = data.survey_meta || { question_count: 0, estimated_minutes: 4 };
         assignment.value = data.assignment;
         pages.value = data.pages || [];
         currentPageIndex.value = 0;

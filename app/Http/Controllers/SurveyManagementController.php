@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\OnboardingTelemetryService;
 use App\Services\SurveyAnalyticsService;
 use App\Services\SurveyService;
 use App\Models\SurveyVersion;
@@ -13,12 +14,18 @@ class SurveyManagementController extends Controller
 {
     protected SurveyService $surveyService;
     protected SurveyAnalyticsService $analyticsService;
+    protected OnboardingTelemetryService $telemetry;
 
-    public function __construct(SurveyService $surveyService, SurveyAnalyticsService $analyticsService)
+    public function __construct(
+        SurveyService $surveyService,
+        SurveyAnalyticsService $analyticsService,
+        OnboardingTelemetryService $telemetry
+    )
     {
         $this->middleware(['auth', 'admin']);
         $this->surveyService = $surveyService;
         $this->analyticsService = $analyticsService;
+        $this->telemetry = $telemetry;
     }
 
     public function index(Request $request)
@@ -74,6 +81,21 @@ class SurveyManagementController extends Controller
             $completedResponsesCount = $assignmentQuery
                 ? (clone $assignmentQuery)->where('status', 'completed')->count()
                 : 0;
+        }
+
+        if ($hasCompanyContext && !$activeVersion) {
+            $this->telemetry->record([
+                'company_id' => $companyId,
+                'name' => 'survey_activation_handoff_viewed',
+                'context_surface' => 'surveys.manage',
+                'task_id' => 'survey_activation',
+                'user_segment' => 'novice',
+                'guidance_level' => 'light',
+                'properties' => [
+                    'surface' => 'surveys.manage',
+                    'has_live_survey' => false,
+                ],
+            ], $request->user());
         }
 
         $summary = [

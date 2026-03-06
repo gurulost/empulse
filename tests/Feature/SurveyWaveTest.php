@@ -103,6 +103,25 @@ class SurveyWaveTest extends TestCase
         $this->assertDatabaseCount('survey_waves', 0);
     }
 
+    public function test_wave_page_shows_first_send_dispatch_playbook(): void
+    {
+        [$company, $survey, $version] = $this->createSurveyArtifacts();
+
+        $manager = User::factory()->create([
+            'role' => 1,
+            'company' => 1,
+            'company_id' => $company->id,
+            'tariff' => 1,
+        ]);
+
+        $this->actingAs($manager)
+            ->get(route('survey-waves.index'))
+            ->assertOk()
+            ->assertSee('Fastest path to first data')
+            ->assertSee('Full')
+            ->assertSee('Drip');
+    }
+
     public function test_wave_creation_requires_an_active_survey_version(): void
     {
         $company = Companies::create([
@@ -144,6 +163,27 @@ class SurveyWaveTest extends TestCase
             ->assertSessionHasErrors();
 
         $this->assertDatabaseCount('survey_waves', 0);
+    }
+
+    public function test_wave_page_shows_admin_owned_handoff_when_no_live_survey_exists(): void
+    {
+        [$company] = $this->createSurveyArtifacts();
+
+        SurveyVersion::query()->update(['is_active' => false]);
+
+        $manager = User::factory()->create([
+            'role' => 1,
+            'company' => 1,
+            'company_id' => $company->id,
+            'tariff' => 1,
+        ]);
+
+        $this->actingAs($manager)
+            ->get(route('survey-waves.index'))
+            ->assertOk()
+            ->assertSee('Workfit admin must activate the live survey first')
+            ->assertSee('Contact Workfit Admin')
+            ->assertSee(route('surveys.manage'));
     }
 
     public function test_full_wave_requires_manual_cadence(): void

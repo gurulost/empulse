@@ -3,12 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\SurveyAssignment;
+use App\Services\SurveyDefinitionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class EmployeeDashboardController extends Controller
 {
-    public function __construct()
+    public function __construct(protected SurveyDefinitionService $definitionService)
     {
         $this->middleware('auth');
     }
@@ -34,9 +35,14 @@ class EmployeeDashboardController extends Controller
             ->limit(6)
             ->get();
 
+        $surveyMeta = $currentAssignment
+            ? $this->definitionService->surveyMetaForAssignment($currentAssignment)
+            : null;
+
         return view('employee.dashboard', [
             'assignment' => $currentAssignment,
             'assignmentHistory' => $assignmentHistory,
+            'surveyMeta' => $surveyMeta,
         ]);
     }
 }

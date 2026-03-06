@@ -20,6 +20,7 @@ class SurveyDefinitionService
     {
         $assignment->loadMissing('user');
         $version = $this->resolveVersion($assignment);
+        $surveyMeta = $this->surveyMetaForVersion($version);
 
         $version->loadMissing([
             'scalePresets',
@@ -53,8 +54,16 @@ class SurveyDefinitionService
                 'created_utc' => optional($version->created_utc)->toDateString(),
                 'meta' => $version->meta ?? new \stdClass(),
             ],
+            'survey_meta' => $surveyMeta,
             'pages' => $this->serializePages($version, $scalePresets),
         ];
+    }
+
+    public function surveyMetaForAssignment(SurveyAssignment $assignment): array
+    {
+        $version = $this->resolveVersion($assignment);
+
+        return $this->surveyMetaForVersion($version);
     }
 
     protected function resolveVersion(SurveyAssignment $assignment): SurveyVersion
@@ -153,5 +162,23 @@ class SurveyDefinitionService
         }
 
         return $scaleConfig;
+    }
+
+    protected function surveyMetaForVersion(SurveyVersion $version): array
+    {
+        $version->loadMissing([
+            'pages.sections.items',
+            'pages.items',
+        ]);
+
+        $questionCount = $version->pages->sum(function (SurveyPage $page) {
+            return $page->items->count()
+                + $page->sections->sum(fn (SurveySection $section) => $section->items->count());
+        });
+
+        return [
+            'question_count' => (int) $questionCount,
+            'estimated_minutes' => max(4, (int) ceil(max(0, $questionCount) / 8)),
+        ];
     }
 }

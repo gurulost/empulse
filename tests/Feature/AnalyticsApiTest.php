@@ -141,6 +141,14 @@ class AnalyticsApiTest extends TestCase
             ->andReturn([
                 'wave:' . $wave->id => 'Wave Alpha',
             ]);
+        $mock->shouldReceive('companySetupSummary')
+            ->once()
+            ->with($company->id)
+            ->andReturn([
+                'recipient_count' => 1,
+                'response_count' => 1,
+                'has_live_survey' => true,
+            ]);
 
         $this->app->instance(SurveyAnalyticsService::class, $mock);
 
@@ -148,8 +156,12 @@ class AnalyticsApiTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('data.metrics', [10, 20])
+            ->assertJsonPath('setup.recipient_count', 1)
+            ->assertJsonPath('setup.can_manage_survey_content', true)
+            ->assertJsonPath('setup.survey_content_owner', 'workfit_admin')
             ->assertJsonPath("filters.waves.wave:{$wave->id}", 'Wave Alpha')
             ->assertJsonStructure([
+                'setup',
                 'filters' => ['departments', 'teamleads', 'waves', 'exist_departments'],
             ]);
     }
@@ -182,13 +194,71 @@ class AnalyticsApiTest extends TestCase
             ->once()
             ->with($company->id)
             ->andReturn([]);
+        $mock->shouldReceive('companySetupSummary')
+            ->once()
+            ->with($company->id)
+            ->andReturn([
+                'recipient_count' => 0,
+                'response_count' => 0,
+                'has_live_survey' => false,
+            ]);
 
         $this->app->instance(SurveyAnalyticsService::class, $mock);
 
         $response = $this->actingAs($admin)->getJson("/analytics/api/dashboard?company_id={$company->id}");
 
         $response->assertOk()
-            ->assertJsonPath('data.metrics', [5, 6]);
+            ->assertJsonPath('data.metrics', [5, 6])
+            ->assertJsonPath('setup.can_manage_survey_content', true)
+            ->assertJsonPath('setup.has_live_survey', false);
+    }
+
+    public function test_manager_receives_company_setup_summary_when_dashboard_has_no_responses(): void
+    {
+        $company = Companies::create([
+            'title' => 'Setup Co',
+            'manager' => 'Mia',
+            'manager_email' => 'mia@example.com',
+        ]);
+
+        $manager = User::factory()->create([
+            'role' => 1,
+            'company_id' => $company->id,
+            'company_title' => $company->title,
+            'tariff' => 1,
+        ]);
+
+        SurveyVersion::create([
+            'instrument_id' => 'setup-test',
+            'version' => '1.0.0',
+            'title' => 'Setup Survey',
+            'is_active' => true,
+        ]);
+
+        DB::table('company_department')->insert([
+            'company_id' => $company->id,
+            'title' => 'Operations',
+        ]);
+
+        DB::table('company_worker')->insert([
+            'company_id' => $company->id,
+            'name' => 'Employee One',
+            'email' => 'employee1@setup.test',
+            'department' => 'Operations',
+            'role' => 4,
+        ]);
+
+        $response = $this->actingAs($manager)->getJson('/analytics/api/dashboard');
+
+        $response->assertOk()
+            ->assertJsonPath('data', [])
+            ->assertJsonPath('setup.recipient_count', 1)
+            ->assertJsonPath('setup.department_count', 1)
+            ->assertJsonPath('setup.billing_allows_scheduling', true)
+            ->assertJsonPath('setup.can_manage_survey_content', false)
+            ->assertJsonPath('setup.survey_content_owner', 'workfit_admin')
+            ->assertJsonPath('setup.has_live_survey', true)
+            ->assertJsonPath('setup.response_count', 0);
     }
 
     public function test_wave_filter_accepts_wave_id_keys_from_filter_options(): void

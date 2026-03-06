@@ -15,6 +15,10 @@ use Illuminate\Support\Str;
 
 class SurveyService
 {
+    public function __construct(protected OnboardingTelemetryService $telemetry)
+    {
+    }
+
     public function getOrCreateAssignment(User $user, ?SurveyWave $wave = null): ?SurveyAssignment
     {
         if ($wave) {
@@ -211,6 +215,9 @@ class SurveyService
                     ],
                 ]);
             }
+
+            $response->loadMissing('user');
+            $this->telemetry->recordFirstResponseCompleted($response);
 
             return $response;
         });

@@ -232,3 +232,81 @@ Document any new mappings (QID → indicator/series_role/polarity) inside this f
 - Added analytics answer prefiltering in `latestResponsesWithAnswers()` so dashboard analytics loads only relevant numeric question keys (WCA triplets + team culture + impact series), reducing unnecessary payload at scale.
 - Added command `php artisan analytics:explain {company_id} [--wave=...] [--no-analyze]` (`app/Console/Commands/ExplainAnalytics.php`) to run EXPLAIN plans for the core analytics queries directly in any environment.
 - Added runbook `docs/ANALYTICS_EXPLAIN_CHECKLIST.md` with preflight, budgets, red flags, and release gating so future passes can audit query plans consistently before production releases.
+
+### Sub-update – Manager onboarding checklist + setup summary (2026-03-06)
+- `GET /analytics/api/dashboard` now returns a `setup` object alongside `data` and `filters`. The payload comes from `SurveyAnalyticsService::companySetupSummary()` and includes company recipient counts, department counts, billing dispatch eligibility, live-survey presence, wave counts/latest wave, assignment counts, and completed response counts.
+- `resources/js/components/analytics/AnalyticsDashboard.vue` now uses this setup payload when the dashboard is empty. Instead of a single generic empty state, managers/admins see a setup-aware checklist (`SetupChecklist.vue`) that points at the first incomplete activation step: team, billing, live survey, first dispatched wave, first completed response.
+- `resources/js/components/team/TeamMemberTable.vue` now distinguishes between “no matches for current filters” and “no team yet”, and the empty roster state includes onboarding CTAs for importing a roster, adding the first member, and creating/reviewing departments.
+- Also fixed the authenticated sidebar help link to use `/contact` (the real route) instead of `/contact-us`.
+- Deeper reasoning and follow-up recommendations are documented in `docs/ONBOARDING_FLUENCY_AUDIT_2026-03-06.md`.
+
+### Sub-update – Survey wave playbook + onboarding telemetry (2026-03-06, later pass)
+- Added `onboarding_events` table via migration `2026_03_06_090000_create_onboarding_events_table.php`. This is a lightweight first-party telemetry store for onboarding events only; run `php artisan migrate` after pulling.
+- Added `POST /onboarding/events` (`OnboardingEventController`) plus `OnboardingTelemetryService`. The browser now records `session_started`, `onboarding_checklist_viewed`, `onboarding_step_cta_clicked`, `survey_wave_explainer_viewed`, and `survey_wave_action_selected`. Payloads include context surface, task id, user segment, guidance level, session id, elapsed seconds, and JSON properties.
+- `ProcessSurveyWave` now records a company-level `first_wave_dispatched` event the first time any wave actually queues assignments, and `SurveyService::recordResponse()` records `first_response_completed` the first time a company receives a completed response. This gives us a durable backend source for time-to-first-wave/time-to-first-response analysis.
+- Added shared browser helper `resources/js/lib/onboardingTelemetry.js` and exposed it on `window.empulseOnboardingTelemetry` so both Vue and Blade surfaces can log the same event contract without third-party analytics.
+- `resources/views/survey_waves/index.blade.php` now includes a manager-facing “Fastest path to first data” dispatch playbook above the create-wave form. It explains when to use Full vs Drip, reflects launch blockers (recipients, billing, live survey), and instruments kind/cadence changes plus create/dispatch submits.
+- Coverage now includes `tests/Feature/OnboardingEventTest.php` for endpoint auth and first-wave/first-response instrumentation, plus the survey-waves page test that checks the new playbook copy.
+
+### Sub-update – Internal onboarding report for Workfit admin (2026-03-06, latest)
+- Added `OnboardingReportService` and `GET /admin/api/onboarding` (`WorkfitAdminController::getOnboardingReport`) so the internal admin UI can aggregate onboarding telemetry by company.
+- The Workfit admin dashboard now has an **Onboarding** tab (`resources/js/components/admin/OnboardingReport.vue`, wired through `AdminDashboard.vue`). It shows:
+  - summary cards for companies started / first wave reached / first response reached / recent event volume
+  - a company table with current activation stage, first session timestamp, first wave timestamp, first response timestamp, checklist/CTA counts, and latest event
+  - a recent-event feed for quick operational scanning
+- Stage labels currently derive from telemetry milestones:
+  - `Dormant` = no `session_started`
+  - `Started` = session started but no first wave
+  - `Wave Sent` = first wave dispatched but no first response
+  - `Live Data` = first response completed
+- Search is supported on the onboarding report by company title / manager / manager email. Backend coverage lives in `tests/Feature/WorkfitAdminControllerTest.php`; the admin smoke test now also clicks the Onboarding tab (`tests/e2e/role-smoke.spec.js`).
+
+### Sub-update – Onboarding ops cohorts + action queue (2026-03-06, later latest)
+- `OnboardingReportService::report()` now supports a `stage` filter and returns richer operational payloads:
+  - `stage_breakdown` for Dormant / Started / Wave Sent / Live Data cohorts
+  - `plan_breakdown` grouped by manager tariff label (`Starter`, `Pulse (Drip Enabled)`, or `No Manager Account`)
+  - `alerts`, which are company-level intervention rows instead of raw telemetry only
+- Alert logic is intentionally opinionated so internal ops can work a queue instead of reading dashboards:
+  - `no_session_started` for dormant companies with an older manager account but no onboarding session
+  - `billing_blocked_before_first_wave` when setup started but billing does not allow dispatch
+  - `engaged_without_wave` when managers are viewing checklists/clicking CTAs but still have not sent a wave
+  - `first_wave_delayed` when setup started 48h+ ago with no first wave
+  - `no_response_after_wave` when the first wave was sent 72h+ ago with no completed response
+- Dormant-age calculations fall back to the manager user’s `created_at` timestamp because `companies.created_at` is unreliable in this codebase (`Companies` disables model timestamps).
+- The Workfit admin onboarding tab now behaves like an operations console:
+  - clickable stage cohort cards double as queue filters
+  - the company table includes plan/billing context and per-company alert summaries
+  - the action queue surfaces severity, reason, recommended next step, and manager contact info
+- Coverage was expanded in `tests/Feature/WorkfitAdminControllerTest.php` for stage filtering, plan cohorts, alert generation, and dormant-company fallback behavior.
+
+### Sub-update – Activation bundle: admin-owned survey handoff + employee trust cues (2026-03-06, latest)
+- Survey content ownership remains global and Workfit-admin only. `GET /analytics/api/dashboard` now returns `setup.can_manage_survey_content` and `setup.survey_content_owner`, so manager-facing UI no longer infers survey-publishing capability from role labels or route access.
+- Manager no-live-survey states were rewritten to be explicit handoffs rather than dead ends:
+  - `resources/js/components/analytics/AnalyticsDashboard.vue` and `SetupChecklist.vue` now explain that Workfit admin must publish the live survey before a manager can dispatch a wave
+  - `resources/views/surveys/manage.blade.php` and `resources/views/survey_waves/index.blade.php` now point blocked managers to `/contact` and keep `/surveys/manage` as the status page instead of implying self-service publishing
+  - the dashboard only promotes the survey-content blocker to the main empty state when team setup and billing are already ready; otherwise the survey dependency stays visible in the checklist without obscuring earlier blockers
+- `GET /admin/api/onboarding` now includes a top-level `system_status` object from `OnboardingReportService`:
+  - `has_live_survey`
+  - `live_survey`
+  - `survey_content_owner`
+  - `blocking_companies_count`
+  This is a single global blocker for shared survey content, not one alert per company. `resources/js/components/admin/OnboardingReport.vue` now shows a top banner with a direct `/admin/builder` CTA whenever no live survey version exists.
+- Employee launch surfaces now include a factual reassurance bundle instead of sending employees straight into the form with no context:
+  - `EmployeeDashboardController` computes survey metadata for the current assignment and passes it to `resources/views/employee/dashboard.blade.php`
+  - the employee dashboard shows a compact “Before you start” block covering secure assignment context, autosave behavior, estimated minutes, and question count
+  - `resources/js/components/survey/SurveyApp.vue` renders the same reassurance block at the top of the survey-taking experience for direct-link entrants
+- `SurveyDefinitionService` now exposes `survey_meta` on `GET /survey/{token}/definition`. The payload includes deterministic `question_count` and `estimated_minutes`, using `max(4, ceil(question_count / 8))`, so the employee dashboard and survey renderer stay in sync.
+- New activation telemetry stays on `onboarding_events`; no second analytics store was introduced. Added events:
+  - `survey_activation_handoff_viewed`
+  - `survey_activation_handoff_clicked`
+  - `employee_survey_entry_viewed`
+  - `employee_survey_launch_clicked`
+  These events include surface context and survey timing metadata where relevant so later ops/trend work can compare trust exposure, handoff friction, and completion behavior.
+- Coverage additions for this pass:
+  - `tests/Feature/AnalyticsApiTest.php` for the new setup capability flags
+  - `tests/Feature/SurveyManagementTest.php` and `tests/Feature/SurveyWaveTest.php` for admin-owned handoff copy
+  - `tests/Feature/WorkfitAdminControllerTest.php` for `system_status` and the global no-live-survey blocker
+  - `tests/Feature/SurveyControllerTest.php` for `survey_meta` and employee entry telemetry
+  - `tests/Feature/EmployeeDashboardTest.php` for the reassurance block
+  - `tests/Feature/OnboardingEventTest.php` for the new handoff/employee event ingestion
+  - `tests/e2e/role-smoke.spec.js` for the Workfit admin onboarding tab and employee trust-copy smoke path

@@ -74,12 +74,27 @@
                             </div>
 
                             <a class="btn btn-primary rounded-pill px-4 fw-semibold"
+                                id="employee-survey-launch-cta"
                                 href="{{ route('survey.take', $assignment->token) }}"
                                 target="_blank"
-                                rel="noreferrer">
+                                rel="noreferrer"
+                                data-estimated-minutes="{{ (int) ($surveyMeta['estimated_minutes'] ?? 4) }}">
                                 <i class="bi bi-{{ $assignment->draft_answers ? 'pencil-square' : 'play-fill' }} me-2"></i>
                                 {{ $assignment->draft_answers ? 'Resume Survey' : 'Open Survey' }}
                             </a>
+
+                            <div class="border rounded-4 bg-light-subtle p-3 mt-4">
+                                <div class="small text-uppercase fw-semibold text-secondary mb-2">Before you start</div>
+                                <div class="small text-muted mb-2">
+                                    Your responses stay inside Empulse and are attached to this secure assignment link.
+                                </div>
+                                <div class="small text-muted mb-2">
+                                    Progress autosaves while you move through the survey, so you can pause and return without losing your place.
+                                </div>
+                                <div class="small text-muted mb-0">
+                                    Most people finish in about {{ (int) ($surveyMeta['estimated_minutes'] ?? 4) }} minute{{ (int) ($surveyMeta['estimated_minutes'] ?? 4) === 1 ? '' : 's' }} across {{ (int) ($surveyMeta['question_count'] ?? 0) }} question{{ (int) ($surveyMeta['question_count'] ?? 0) === 1 ? '' : 's' }}.
+                                </div>
+                            </div>
                         @endif
                     </div>
                 </div>
@@ -131,4 +146,37 @@
             </div>
         </div>
     </div>
+@endsection
+
+@section('script')
+@if($assignment)
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const telemetry = window.empulseOnboardingTelemetry;
+        const button = document.getElementById('employee-survey-launch-cta');
+        const companyId = {{ (int) (auth()->user()->company_id ?? 0) }};
+
+        if (!telemetry || !button || !companyId) {
+            return;
+        }
+
+        button.addEventListener('click', function () {
+            telemetry.track({
+                companyId,
+                name: 'employee_survey_launch_clicked',
+                contextSurface: 'employee.dashboard',
+                taskId: 'survey_launch',
+                userSegment: 'employee',
+                guidanceLevel: 'light',
+                useKeepalive: true,
+                properties: {
+                    destination: button.getAttribute('href'),
+                    assignment_id: {{ (int) $assignment->id }},
+                    estimated_minutes: Number(button.dataset.estimatedMinutes || 4),
+                },
+            });
+        });
+    });
+</script>
+@endif
 @endsection

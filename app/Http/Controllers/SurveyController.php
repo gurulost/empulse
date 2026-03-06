@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\SurveyAssignment;
 use App\Services\SurveyDefinitionService;
+use App\Services\OnboardingTelemetryService;
 use App\Services\SurveyResponseValidationService;
 use App\Services\SurveyService;
 use Illuminate\Http\Request;
@@ -13,22 +14,24 @@ class SurveyController extends Controller
     protected SurveyService $surveyService;
     protected SurveyDefinitionService $definitionService;
     protected SurveyResponseValidationService $validationService;
+    protected OnboardingTelemetryService $telemetry;
 
     public function __construct(
         SurveyService $surveyService,
         SurveyDefinitionService $definitionService,
-        SurveyResponseValidationService $validationService
+        SurveyResponseValidationService $validationService,
+        OnboardingTelemetryService $telemetry
     )
     {
         $this->surveyService = $surveyService;
         $this->definitionService = $definitionService;
         $this->validationService = $validationService;
+        $this->telemetry = $telemetry;
     }
 
     public function show(string $token)
     {
         $assignment = SurveyAssignment::where('token', $token)->with(['survey.questions', 'user'])->firstOrFail();
-        $survey = $assignment->survey;
 
         if ($assignment->status === 'completed' && $assignment->response) {
             return view('surveys.thank_you', [
@@ -36,6 +39,9 @@ class SurveyController extends Controller
                 'user' => $assignment->user,
             ]);
         }
+
+        $surveyMeta = $this->definitionService->surveyMetaForAssignment($assignment);
+        $this->recordEmployeeSurveyEntryView($assignment, $surveyMeta);
 
         return view('surveys.show', [
             'assignment' => $assignment,
@@ -99,5 +105,30 @@ class SurveyController extends Controller
         ]);
 
         return response()->json(['status' => 'ok']);
+    }
+
+    protected function recordEmployeeSurveyEntryView(SurveyAssignment $assignment, array $surveyMeta): void
+    {
+        $assignment->loadMissing('user');
+
+        if ((int) ($assignment->user?->role ?? 0) !== 4) {
+            return;
+        }
+
+        $this->telemetry->record([
+            'user_id' => $assignment->user_id,
+            'company_id' => $assignment->user?->company_id,
+            'name' => 'employee_survey_entry_viewed',
+            'context_surface' => 'survey.take',
+            'task_id' => 'survey_take',
+            'user_segment' => 'employee',
+            'guidance_level' => 'light',
+            'properties' => [
+                'assignment_id' => $assignment->id,
+                'survey_version_id' => $assignment->survey_version_id,
+                'question_count' => $surveyMeta['question_count'] ?? null,
+                'estimated_minutes' => $surveyMeta['estimated_minutes'] ?? null,
+            ],
+        ], $assignment->user);
     }
 }

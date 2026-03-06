@@ -6,6 +6,7 @@ use App\Jobs\SendSurveyAssignmentInvitation;
 use App\Models\SurveyAssignment;
 use App\Models\SurveyWave;
 use App\Models\SurveyWaveLog;
+use App\Services\OnboardingTelemetryService;
 use App\Models\User;
 use App\Services\SurveyService;
 use App\Support\CompanyBilling;
@@ -36,8 +37,9 @@ class ProcessSurveyWave implements ShouldQueue, ShouldBeUnique
         return "survey-wave:{$this->waveId}";
     }
 
-    public function handle(SurveyService $surveyService): void
+    public function handle(SurveyService $surveyService, ?OnboardingTelemetryService $telemetry = null): void
     {
+        $telemetry = $telemetry ?: app(OnboardingTelemetryService::class);
         $wave = SurveyWave::with('survey', 'surveyVersion')->find($this->waveId);
         if (!$wave || !$wave->survey || !$wave->company_id) {
             return;
@@ -133,7 +135,7 @@ class ProcessSurveyWave implements ShouldQueue, ShouldBeUnique
             }
         }
 
-        $this->finalizeWave($wave, $stats);
+        $this->finalizeWave($wave, $stats, $telemetry);
     }
 
     public function failed(Throwable $exception): void
@@ -197,7 +199,7 @@ class ProcessSurveyWave implements ShouldQueue, ShouldBeUnique
         return null;
     }
 
-    protected function finalizeWave(SurveyWave $wave, array $stats): void
+    protected function finalizeWave(SurveyWave $wave, array $stats, OnboardingTelemetryService $telemetry): void
     {
         $nextStatus = $this->determineNextStatus($wave);
 
@@ -207,6 +209,10 @@ class ProcessSurveyWave implements ShouldQueue, ShouldBeUnique
         }
 
         $wave->update($update);
+
+        if ($stats['dispatched'] > 0) {
+            $telemetry->recordFirstWaveDispatched($wave, CompanyBilling::manager($wave->company_id));
+        }
 
         $this->logEvent(
             $wave,

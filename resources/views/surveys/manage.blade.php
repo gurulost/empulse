@@ -30,10 +30,21 @@
                     @elseif(!$survey || !$activeVersion)
                         <div class="empty-state py-3">
                             <div class="empty-state-icon"><i class="bi bi-file-earmark-text"></i></div>
-                            <h5 class="empty-state-title">No live survey is ready</h5>
+                            <h5 class="empty-state-title">Workfit admin still needs to activate the live survey</h5>
                             <p class="empty-state-text">
-                                Publish an active survey version before dispatching waves or reviewing submissions.
+                                Survey content is shared across Empulse. A Workfit admin must publish one live survey version before your company can dispatch a wave.
                             </p>
+                            <p class="small text-muted mt-2 mb-3">
+                                Use this page to confirm the blocker, then contact Workfit admin so they can activate the survey content for managers.
+                            </p>
+                            <div class="d-flex flex-wrap justify-content-center gap-2">
+                                <a href="/contact" class="btn btn-primary btn-sm rounded-pill px-3" id="survey-management-handoff-cta">
+                                    Contact Workfit Admin
+                                </a>
+                                <a href="{{ route('home') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+                                    Back to Dashboard
+                                </a>
+                            </div>
                         </div>
                     @else
                         <div class="row g-3 mb-4">
@@ -191,4 +202,35 @@
         </div>
     </div>
 </div>
+@endsection
+
+@section('script')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const telemetry = window.empulseOnboardingTelemetry;
+        const button = document.getElementById('survey-management-handoff-cta');
+        const companyId = {{ (int) (auth()->user()->company_id ?? 0) }};
+
+        if (!telemetry || !button || !companyId) {
+            return;
+        }
+
+        button.addEventListener('click', function () {
+            telemetry.track({
+                companyId,
+                name: 'survey_activation_handoff_clicked',
+                contextSurface: 'surveys.manage',
+                taskId: 'survey_activation',
+                userSegment: 'novice',
+                guidanceLevel: 'light',
+                useKeepalive: true,
+                properties: {
+                    destination: '/contact',
+                    origin: 'survey_management_empty_state',
+                    survey_content_owner: 'workfit_admin',
+                },
+            });
+        });
+    });
+</script>
 @endsection

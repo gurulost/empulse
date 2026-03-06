@@ -47,6 +47,13 @@ class DashboardAnalyticsTest extends TestCase
             ->once()
             ->with($company->id)
             ->andReturn([]);
+        $mock->shouldReceive('companySetupSummary')
+            ->once()
+            ->with($company->id)
+            ->andReturn([
+                'recipient_count' => 0,
+                'response_count' => 0,
+            ]);
 
         $this->app->instance(SurveyAnalyticsService::class, $mock);
 
@@ -55,6 +62,10 @@ class DashboardAnalyticsTest extends TestCase
         $response->assertOk();
         $response->assertJson([
             'data' => ['metrics' => []],
+            'setup' => [
+                'recipient_count' => 0,
+                'response_count' => 0,
+            ],
         ]);
     }
 }

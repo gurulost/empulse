@@ -2,11 +2,14 @@
 
 namespace App\Services;
 
+use App\Models\SurveyAssignment;
 use App\Models\SurveyAnswer;
 use App\Models\SurveyResponse;
 use App\Models\SurveyVersion;
 use App\Models\SurveyWave;
 use App\Models\User;
+use App\Support\CompanyBilling;
+use App\Support\SurveyWaveAutomation;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -367,6 +370,127 @@ class SurveyAnalyticsService
         }
 
         return round($sum / $weight, 2);
+    }
+
+    public function companySetupSummary(int $companyId): array
+    {
+        $summary = [
+            'has_company_context' => $companyId > 0,
+            'member_count' => 0,
+            'recipient_count' => 0,
+            'department_count' => 0,
+            'billing_status' => 'none',
+            'billing_label' => SurveyWaveAutomation::billingStatusLabel('none'),
+            'billing_allows_scheduling' => false,
+            'plan_label' => SurveyWaveAutomation::planLabel(null),
+            'drip_available' => false,
+            'can_manage_survey_content' => false,
+            'survey_content_owner' => 'workfit_admin',
+            'has_live_survey' => false,
+            'live_survey' => null,
+            'wave_count' => 0,
+            'dispatched_wave_count' => 0,
+            'has_dispatched_wave' => false,
+            'latest_wave' => null,
+            'assignment_count' => 0,
+            'response_count' => 0,
+        ];
+
+        if ($companyId <= 0) {
+            return $summary;
+        }
+
+        $manager = CompanyBilling::manager($companyId);
+        $billingStatus = CompanyBilling::status($manager);
+        $activeVersion = SurveyVersion::query()
+            ->where('is_active', true)
+            ->orderByDesc('id')
+            ->first(['id', 'version', 'title']);
+        $latestWave = SurveyWave::query()
+            ->where('company_id', $companyId)
+            ->orderByRaw('COALESCE(last_dispatched_at, opens_at, due_at, created_at) DESC')
+            ->orderByDesc('id')
+            ->first([
+                'id',
+                'label',
+                'status',
+                'kind',
+                'cadence',
+                'survey_version_id',
+                'opens_at',
+                'due_at',
+                'last_dispatched_at',
+            ]);
+
+        $memberCount = (int) DB::table('company_worker')
+            ->where('company_id', $companyId)
+            ->count();
+        $recipientCount = (int) DB::table('company_worker')
+            ->where('company_id', $companyId)
+            ->whereIn('role', [2, 3, 4])
+            ->count();
+        $departmentCount = (int) DB::table('company_department')
+            ->where('company_id', $companyId)
+            ->count();
+        $waveCount = (int) SurveyWave::query()
+            ->where('company_id', $companyId)
+            ->count();
+        $dispatchedWaveCount = (int) SurveyWave::query()
+            ->where('company_id', $companyId)
+            ->whereNotNull('last_dispatched_at')
+            ->count();
+        $assignmentCount = (int) SurveyAssignment::query()
+            ->from('survey_assignments as sa')
+            ->join('users as u', function ($join) use ($companyId) {
+                $join->on('u.id', '=', 'sa.user_id')
+                    ->where('u.company_id', '=', $companyId);
+            })
+            ->count('sa.id');
+        $responseCount = (int) SurveyResponse::query()
+            ->from('survey_responses as sr')
+            ->join('users as u', function ($join) use ($companyId) {
+                $join->on('u.id', '=', 'sr.user_id')
+                    ->where('u.company_id', '=', $companyId);
+            })
+            ->whereNotNull('sr.submitted_at')
+            ->count('sr.id');
+
+        return array_merge($summary, [
+            'member_count' => $memberCount,
+            'recipient_count' => $recipientCount,
+            'department_count' => $departmentCount,
+            'billing_status' => $billingStatus,
+            'billing_label' => SurveyWaveAutomation::billingStatusLabel($billingStatus),
+            'billing_allows_scheduling' => CompanyBilling::allowsScheduling($manager),
+            'plan_label' => SurveyWaveAutomation::planLabel($manager?->tariff),
+            'drip_available' => SurveyWaveAutomation::dripEnabledForTariff($manager?->tariff),
+            'has_live_survey' => $activeVersion !== null,
+            'live_survey' => $activeVersion
+                ? [
+                    'id' => $activeVersion->id,
+                    'version' => $activeVersion->version,
+                    'title' => $activeVersion->title,
+                ]
+                : null,
+            'wave_count' => $waveCount,
+            'dispatched_wave_count' => $dispatchedWaveCount,
+            'has_dispatched_wave' => $dispatchedWaveCount > 0,
+            'latest_wave' => $latestWave
+                ? [
+                    'id' => $latestWave->id,
+                    'label' => $latestWave->label,
+                    'status' => $latestWave->status,
+                    'kind' => $latestWave->kind,
+                    'cadence' => $latestWave->cadence,
+                    'survey_version_id' => $latestWave->survey_version_id,
+                    'opens_at' => $latestWave->opens_at?->toIso8601String(),
+                    'due_at' => $latestWave->due_at?->toIso8601String(),
+                    'last_dispatched_at' => $latestWave->last_dispatched_at?->toIso8601String(),
+                ]
+                : null,
+            'assignment_count' => $assignmentCount,
+            'response_count' => $responseCount,
+        ]);
     }
 
     public function availableWavesForCompany(int $companyId): array
