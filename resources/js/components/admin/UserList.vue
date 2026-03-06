@@ -80,7 +80,7 @@ defineProps({
 defineEmits(['update:searchQuery', 'search', 'clear-filter', 'page-change', 'impersonate', 'delete']);
 
 const getRoleLabel = (role) => {
-    const roles = { 0: 'Super Admin', 1: 'Manager', 3: 'Team Lead', 4: 'Employee' };
+    const roles = { 0: 'Super Admin', 1: 'Manager', 2: 'Chief', 3: 'Team Lead', 4: 'Employee' };
     return roles[role] ?? 'Unknown';
 };
 
@@ -88,6 +88,7 @@ const getRoleBadgeClass = (role) => {
     const classes = {
         0: 'bg-danger-subtle text-danger', // Super Admin
         1: 'bg-primary-subtle text-primary', // Manager
+        2: 'bg-warning-subtle text-warning', // Chief
         3: 'bg-info-subtle text-info', // Team Lead
         4: 'bg-secondary-subtle text-secondary' // Employee
     };

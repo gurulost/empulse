@@ -219,6 +219,8 @@
                                 $completedAssigned = $stats->completed ?? 0;
                                 $invitedAssigned = $stats->invited ?? 0;
                                 $failedInvites = $stats->invite_failed ?? 0;
+                                $canDispatchWave = $wave->status === 'scheduled';
+                                $canToggleWaveStatus = in_array($wave->status, ['scheduled', 'paused'], true);
                             @endphp
                             <tr>
                                 <td class="ps-4 fw-semibold">{{ $wave->label }}</td>
@@ -251,16 +253,38 @@
                                 <td class="text-muted small">{{ optional($wave->last_dispatched_at)->format('M d, H:i') ?? '—' }}</td>
                                 <td class="text-end pe-4">
                                     <div class="d-flex gap-1 justify-content-end">
+                                        <button
+                                            class="btn btn-sm btn-outline-dark rounded-pill px-2"
+                                            type="button"
+                                            data-bs-toggle="collapse"
+                                            data-bs-target="#wave-edit-{{ $wave->id }}"
+                                            aria-expanded="false"
+                                            aria-controls="wave-edit-{{ $wave->id }}"
+                                            title="Edit wave"
+                                            @disabled($wave->status === 'processing')
+                                        >
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
                                         <form method="POST" action="{{ route('survey-waves.dispatch', $wave) }}">
                                             @csrf
-                                            <button class="btn btn-sm btn-outline-primary rounded-pill px-2" type="submit" title="Run now">
+                                            <button
+                                                class="btn btn-sm btn-outline-primary rounded-pill px-2"
+                                                type="submit"
+                                                title="{{ $canDispatchWave ? 'Run now' : ($wave->status === 'paused' ? 'Resume before dispatching' : ($wave->status === 'processing' ? 'Wave is already processing' : 'Completed waves cannot be re-run')) }}"
+                                                @disabled(!$canDispatchWave)
+                                            >
                                                 <i class="bi bi-play-fill"></i>
                                             </button>
                                         </form>
                                         <form method="POST" action="{{ route('survey-waves.status', $wave) }}">
                                             @csrf
                                             <input type="hidden" name="status" value="{{ $wave->status === 'paused' ? 'scheduled' : 'paused' }}">
-                                            <button class="btn btn-sm btn-outline-secondary rounded-pill px-2" type="submit" title="{{ $wave->status === 'paused' ? 'Resume' : 'Pause' }}">
+                                            <button
+                                                class="btn btn-sm btn-outline-secondary rounded-pill px-2"
+                                                type="submit"
+                                                title="{{ $canToggleWaveStatus ? ($wave->status === 'paused' ? 'Resume' : 'Pause') : ($wave->status === 'processing' ? 'Wait for processing to finish' : 'Completed waves cannot be paused') }}"
+                                                @disabled(!$canToggleWaveStatus)
+                                            >
                                                 <i class="bi bi-{{ $wave->status === 'paused' ? 'play' : 'pause' }}-fill"></i>
                                             </button>
                                         </form>
@@ -290,6 +314,91 @@
                                             @endforelse
                                         </ul>
                                     </details>
+                                </td>
+                            </tr>
+                            <tr class="collapse" id="wave-edit-{{ $wave->id }}">
+                                <td colspan="13" class="ps-4 pe-4 py-3 bg-white border-bottom">
+                                    @if($wave->status === 'processing')
+                                        <div class="alert alert-warning mb-0">
+                                            This wave is processing right now. Wait for the dispatch to finish before editing it.
+                                        </div>
+                                    @else
+                                        <form method="POST" action="{{ route('survey-waves.update', $wave) }}">
+                                            @csrf
+                                            @method('PUT')
+                                            <div class="row g-3">
+                                                <div class="col-md-4">
+                                                    <label class="form-label fw-semibold small">Label</label>
+                                                    <input type="text" name="label" class="form-control" required value="{{ $wave->label }}">
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <label class="form-label fw-semibold small">Status</label>
+                                                    @if($wave->status === 'completed')
+                                                        <input type="hidden" name="status" value="completed">
+                                                        <input type="text" class="form-control" value="Completed" disabled>
+                                                    @else
+                                                        <select name="status" class="form-select" required>
+                                                            <option value="scheduled" @selected($wave->status === 'scheduled')>Scheduled</option>
+                                                            <option value="paused" @selected($wave->status === 'paused')>Paused</option>
+                                                        </select>
+                                                    @endif
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <label class="form-label fw-semibold small">Cadence</label>
+                                                    <select name="cadence" class="form-select" required>
+                                                        @foreach($cadenceOptions as $value => $label)
+                                                            <option value="{{ $value }}" @selected($wave->cadence === $value) @disabled((!$canUseDrip && $value !== 'manual') || ($wave->kind === 'full' && $value !== 'manual'))>
+                                                                {{ $label }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <label class="form-label fw-semibold small">Opens At</label>
+                                                    <input type="datetime-local" name="opens_at" class="form-control" value="{{ optional($wave->opens_at)->format('Y-m-d\\TH:i') }}">
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <label class="form-label fw-semibold small">Due At</label>
+                                                    <input type="datetime-local" name="due_at" class="form-control" value="{{ optional($wave->due_at)->format('Y-m-d\\TH:i') }}">
+                                                </div>
+                                                <div class="col-md-12">
+                                                    <label class="form-label fw-semibold small">Audience</label>
+                                                    <div class="border rounded-3 p-3 bg-light">
+                                                        <div class="row g-2">
+                                                            @foreach($roleOptions as $roleValue => $roleLabel)
+                                                                <div class="col-sm-3">
+                                                                    <div class="form-check">
+                                                                        <input
+                                                                            class="form-check-input"
+                                                                            type="checkbox"
+                                                                            name="target_roles[]"
+                                                                            id="wave-{{ $wave->id }}-role-{{ $roleValue }}"
+                                                                            value="{{ $roleValue }}"
+                                                                            @checked(in_array((int) $roleValue, $wave->target_roles ?? $defaultTargetRoles, true))
+                                                                        >
+                                                                        <label class="form-check-label small" for="wave-{{ $wave->id }}-role-{{ $roleValue }}">{{ $roleLabel }}</label>
+                                                                    </div>
+                                                                </div>
+                                                            @endforeach
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="mt-3 d-flex justify-content-end gap-2">
+                                                <button
+                                                    class="btn btn-outline-secondary rounded-pill px-4"
+                                                    type="button"
+                                                    data-bs-toggle="collapse"
+                                                    data-bs-target="#wave-edit-{{ $wave->id }}"
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button class="btn btn-primary rounded-pill px-4 fw-semibold" type="submit">
+                                                    Save Changes
+                                                </button>
+                                            </div>
+                                        </form>
+                                    @endif
                                 </td>
                             </tr>
                         @empty

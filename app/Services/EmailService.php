@@ -12,10 +12,27 @@ class EmailService
     protected string $senderEmail = 'billing@workfitdx.com';
     protected string $adminEmail = 'empulse@wercinstitute.org';
 
+    protected function providerUnavailableResponse(): array
+    {
+        return [
+            'status' => 503,
+            'message' => 'Email delivery is unavailable because Brevo is not configured for this environment.',
+        ];
+    }
+
     public function sendLetter(string $email, string $name, string $subject, string $content): array
     {
-        if (App::environment('testing') || empty(config('services.brevo.key'))) {
+        if (App::environment('testing')) {
             return ['status' => 200];
+        }
+
+        if (empty(config('services.brevo.key'))) {
+            Log::warning('Email send skipped: Brevo is not configured', [
+                'recipient' => $email,
+                'subject' => $subject,
+            ]);
+
+            return $this->providerUnavailableResponse();
         }
 
         try {
@@ -85,8 +102,16 @@ class EmailService
 
     public function sendToAdmin(string $subject, string $content): array
     {
-        if (App::environment('testing') || empty(config('services.brevo.key'))) {
+        if (App::environment('testing')) {
             return ['status' => 200];
+        }
+
+        if (empty(config('services.brevo.key'))) {
+            Log::warning('Admin email send skipped: Brevo is not configured', [
+                'subject' => $subject,
+            ]);
+
+            return $this->providerUnavailableResponse();
         }
 
         try {

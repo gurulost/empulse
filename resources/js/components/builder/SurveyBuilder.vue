@@ -130,6 +130,7 @@
             <div class="col-md-6">
                 <div v-if="selectedItem && selectedType === 'item'">
                     <question-editor
+                        :key="selectedItem.id"
                         :item="selectedItem"
                         :saving="saving"
                         :read-only="structure.is_active"

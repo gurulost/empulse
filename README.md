@@ -58,10 +58,11 @@ Stripe Subscriptions
 
 Production Runtime
 - The checked-in `Procfile` declares:
-  - `web`: Apache/PHP runtime
+  - `web`: Apache/PHP runtime via `heroku-php-apache2 public/` for Herokuish/buildpack platforms
   - `worker`: queue worker for survey jobs and invitation delivery
   - `scheduler`: Laravel scheduler process
-- A multi-stage `Dockerfile` is available for container deployments; the platform-native Procfile remains the primary deployment story.
+- A multi-stage `Dockerfile` is available for container deployments.
+- If your platform does not provide the `heroku-php-apache2` runtime command, use the checked-in `Dockerfile` or the platform's native Apache/nginx+PHP runtime instead of falling back to `php artisan serve`.
 
 CI
 - GitHub Actions runs:

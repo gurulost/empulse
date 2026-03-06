@@ -49,8 +49,10 @@ class WorkfitAdminController extends Controller
         $query = User::query();
 
         if ($search = $request->input('search')) {
-            $query->where('name', 'like', "%{$search}%")
-                ->orWhere('email', 'like', "%{$search}%");
+            $query->where(function ($builder) use ($search) {
+                $builder->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
         }
 
         if ($companyId = $request->input('company_id')) {
