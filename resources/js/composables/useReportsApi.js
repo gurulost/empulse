@@ -24,8 +24,19 @@ export function useReportsApi() {
         return data;
     };
 
+    const getOptions = async (companyId = null) => {
+        const params = {};
+        if (companyId) {
+            params.company_id = companyId;
+        }
+
+        const { data } = await axios.get('/reports/options', { params });
+        return data;
+    };
+
     return {
         getTrends,
-        getComparison
+        getComparison,
+        getOptions,
     };
 }

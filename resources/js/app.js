@@ -78,12 +78,10 @@ const boot = async () => {
             }),
         ),
         () => mountById('survey-builder-root', () => import('./components/builder/SurveyBuilder.vue'), (element) => {
-            const initialVersionId = parseInt(element.dataset.initialVersionId ?? '', 10);
-            const surveyId = parseInt(element.dataset.surveyId ?? '', 10);
-
-            if (!Number.isFinite(initialVersionId) || !Number.isFinite(surveyId)) {
-                return null;
-            }
+            const rawInitialVersionId = parseProp(element.dataset.initialVersionId ?? '');
+            const rawSurveyId = parseProp(element.dataset.surveyId ?? '');
+            const initialVersionId = Number.isFinite(Number(rawInitialVersionId)) ? Number(rawInitialVersionId) : null;
+            const surveyId = Number.isFinite(Number(rawSurveyId)) ? Number(rawSurveyId) : null;
 
             return { initialVersionId, surveyId };
         }),

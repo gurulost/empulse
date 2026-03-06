@@ -65,6 +65,7 @@ Route::get('/survey/{token}/definition', [SurveyController::class, 'definition']
 Route::get('/reports', [ReportController::class, 'index'])->middleware(['auth', 'admin'])->name('reports.index');
 Route::get('/reports/trends', [App\Http\Controllers\ReportsApiController::class, 'getTrends'])->middleware(['auth', 'admin']);
 Route::get('/reports/comparison', [App\Http\Controllers\ReportsApiController::class, 'getComparison'])->middleware(['auth', 'admin'])->name('reports.comparison');
+Route::get('/reports/options', [App\Http\Controllers\ReportsApiController::class, 'getOptions'])->middleware(['auth', 'admin'])->name('reports.options');
 
 Route::post('/survey/{token}/autosave', [SurveyController::class, 'autosave'])->name('survey.autosave');
 Route::post('/survey/{token}', [SurveyController::class, 'submit'])->name('survey.submit');
@@ -170,6 +171,8 @@ Route::group(['middleware' => 'auth'], function () {
                 Route::get('/structure/{versionId}', [SurveyBuilderController::class, 'getStructure']);
                 Route::post('/draft/{surveyId}', [SurveyBuilderController::class, 'createDraft']);
                 Route::post('/publish/{versionId}', [SurveyBuilderController::class, 'publishVersion']);
+                Route::post('/page/{pageId}', [SurveyBuilderController::class, 'updatePage']);
+                Route::post('/section/{sectionId}', [SurveyBuilderController::class, 'updateSection']);
                 Route::post('/item/{itemId}', [SurveyBuilderController::class, 'updateItem']);
                 Route::post('/reorder', [SurveyBuilderController::class, 'reorderItems']);
             });

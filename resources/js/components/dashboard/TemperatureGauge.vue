@@ -1,20 +1,24 @@
 <template>
     <div class="temperature-gauge text-center">
-        <small class="text-muted d-block mb-1">Weighted Indicator</small>
-        <div class="position-relative d-inline-block" style="width: 100%; max-width: 200px;">
-            <!-- Simple semi-circle gauge using CSS/SVG could go here, for now using a styled progress bar with a 'gauge' look -->
-            <div class="progress" style="height: 12px; border-radius: 6px;">
-                <div
-                    class="progress-bar bg-gradient-success"
-                    role="progressbar"
-                    :style="{ width: percent + '%' }"
-                    :aria-valuenow="score"
-                    aria-valuemin="0"
-                    aria-valuemax="10"
-                ></div>
+        <small class="text-muted d-block mb-1">Temperature Index</small>
+        <template v-if="hasScore">
+            <div class="position-relative d-inline-block" style="width: 100%; max-width: 200px;">
+                <div class="progress" style="height: 12px; border-radius: 6px;">
+                    <div
+                        class="progress-bar bg-gradient-success"
+                        role="progressbar"
+                        :style="{ width: percent + '%' }"
+                        :aria-valuenow="score"
+                        aria-valuemin="0"
+                        aria-valuemax="10"
+                    ></div>
+                </div>
             </div>
+            <div class="fw-bold mt-1 fs-5">{{ formatNumber(score) }}/10</div>
+        </template>
+        <div v-else class="text-muted mt-2">
+            No data yet
         </div>
-        <div class="fw-bold mt-1 fs-5">{{ formatNumber(score) }}/10</div>
     </div>
 </template>
 
@@ -22,10 +26,17 @@
 export default {
     name: 'TemperatureGauge',
     props: {
-        score: { type: Number, default: 0 },
+        score: { type: Number, default: null },
     },
     computed: {
+        hasScore() {
+            return this.score !== null && this.score !== undefined && !Number.isNaN(Number(this.score));
+        },
         percent() {
+            if (!this.hasScore) {
+                return 0;
+            }
+
             return Math.max(0, Math.min((this.score / 10) * 100, 100));
         }
     },

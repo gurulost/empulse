@@ -28,3 +28,5 @@ yarn-error.log*
 # Project-specific
 /upload/
 /temp/
+/public/build/
+/test-results/

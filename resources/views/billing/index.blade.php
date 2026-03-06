@@ -15,6 +15,10 @@
             <div class="alert alert-success">{{ session('status') }}</div>
         @endif
 
+        @if($errors->any())
+            <div class="alert alert-danger">{{ $errors->first() }}</div>
+        @endif
+
         <div class="row g-3">
             <div class="col-lg-6">
                 <div class="card h-100">
@@ -37,10 +41,16 @@
                         <p class="mb-1"><strong>Stripe Price:</strong> {{ $sub?->stripe_price ?? '—' }}</p>
                         <p class="mb-1"><strong>Renews:</strong> {{ $sub?->ends_at ? $sub->ends_at->toDateString() : 'Auto-renew' }}</p>
 
-                        <form action="{{ route('billing.portal') }}" method="POST" class="d-inline">
-                            @csrf
-                            <button class="btn btn-outline-secondary btn-sm" type="submit">Open Stripe Billing Portal</button>
-                        </form>
+                        @if($portalAvailable)
+                            <form action="{{ route('billing.portal') }}" method="POST" class="d-inline">
+                                @csrf
+                                <button class="btn btn-outline-secondary btn-sm" type="submit">Open Stripe Billing Portal</button>
+                            </form>
+                        @else
+                            <div class="alert alert-warning py-2 px-3 small mb-0">
+                                Billing portal access is unavailable until Stripe is configured for this environment.
+                            </div>
+                        @endif
 
                         <div class="mt-3">
                             @if($active && !$onGrace)

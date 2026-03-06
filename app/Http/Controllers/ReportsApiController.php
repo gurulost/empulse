@@ -82,6 +82,18 @@ class ReportsApiController extends Controller
         return response()->json($data);
     }
 
+    public function getOptions(Request $request)
+    {
+        [$companyId, $errorResponse] = $this->resolveCompanyContext($request);
+        if ($errorResponse) {
+            return $errorResponse;
+        }
+
+        return response()->json([
+            'waves' => $this->analytics->availableWavesForCompany($companyId),
+        ]);
+    }
+
     protected function resolveCompanyContext(Request $request): array
     {
         $user = Auth::user();

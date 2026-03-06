@@ -1,2 +1,4 @@
 release: sh -lc 'php artisan migrate --force && if [ "${SEED_DEMO_ON_RELEASE:-false}" = "true" ]; then php artisan demo:seed --import-instrument --employees=${DEMO_SEED_EMPLOYEES:-120} --months=${DEMO_SEED_MONTHS:-6} --force --if-empty; fi'
-web: php artisan serve --host=0.0.0.0 --port=${PORT:-5000}
+web: vendor/bin/heroku-php-apache2 public/
+worker: php artisan queue:work --tries=1 --sleep=1 --timeout=120
+scheduler: php artisan schedule:work

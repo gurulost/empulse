@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Services\SurveyAnalyticsService;
 use App\Services\SurveyService;
+use App\Models\SurveyVersion;
+use App\Models\SurveyWave;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -22,20 +24,37 @@ class SurveyManagementController extends Controller
     public function index(Request $request)
     {
         $companyId = (int) ($request->user()->company_id ?? 0);
+        $hasCompanyContext = $companyId > 0;
         $survey = $this->surveyService->defaultSurvey();
+        $activeVersion = SurveyVersion::query()
+            ->with([
+                'pages' => function ($query) {
+                    $query->orderBy('sort_order');
+                },
+                'pages.sections' => function ($query) {
+                    $query->orderBy('sort_order');
+                },
+                'pages.items',
+                'pages.sections.items',
+            ])
+            ->where('is_active', true)
+            ->orderByDesc('id')
+            ->first();
+        $latestWave = $hasCompanyContext
+            ? SurveyWave::query()
+                ->with('surveyVersion')
+                ->where('company_id', $companyId)
+                ->orderByRaw('COALESCE(opens_at, due_at, created_at) DESC')
+                ->orderByDesc('id')
+                ->first()
+            : null;
         $assignmentQuery = null;
 
-        if ($survey) {
+        if ($survey && $hasCompanyContext) {
             $assignmentQuery = $survey->assignments()
                 ->with(['user', 'response'])
                 ->whereHas('user', function ($query) use ($companyId) {
-                    if ($companyId > 0) {
-                        $query->where('company_id', $companyId);
-                        return;
-                    }
-
-                    // Fail closed if a manager is not attached to a company.
-                    $query->whereNull('id');
+                    $query->where('company_id', $companyId);
                 });
 
             $assignments = (clone $assignmentQuery)
@@ -47,7 +66,7 @@ class SurveyManagementController extends Controller
 
         $analytics = null;
         $completedResponsesCount = 0;
-        if ($companyId > 0) {
+        if ($hasCompanyContext) {
             $analytics = $this->analyticsService->companyDashboardAnalytics([
                 'company_id' => $companyId,
             ]);
@@ -57,11 +76,28 @@ class SurveyManagementController extends Controller
                 : 0;
         }
 
+        $summary = [
+            'pages' => $activeVersion?->pages?->count() ?? 0,
+            'sections' => $activeVersion
+                ? $activeVersion->pages->sum(fn ($page) => $page->sections->count())
+                : 0,
+            'items' => $activeVersion
+                ? $activeVersion->pages->sum(fn ($page) => $page->items->count() + $page->sections->sum(fn ($section) => $section->items->count()))
+                : 0,
+            'assignments' => $assignmentQuery ? (clone $assignmentQuery)->count() : 0,
+            'completed' => $completedResponsesCount,
+            'pending' => $assignmentQuery ? (clone $assignmentQuery)->where('status', '!=', 'completed')->count() : 0,
+        ];
+
         return view('surveys.manage', [
             'survey' => $survey,
+            'activeVersion' => $activeVersion,
+            'latestWave' => $latestWave,
             'assignments' => $assignments,
             'analytics' => $analytics,
             'completedResponsesCount' => $completedResponsesCount,
+            'hasCompanyContext' => $hasCompanyContext,
+            'summary' => $summary,
         ]);
     }
 }

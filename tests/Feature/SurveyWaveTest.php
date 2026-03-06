@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Jobs\ProcessSurveyWave;
+use App\Jobs\SendSurveyAssignmentInvitation;
 use App\Models\Companies;
 use App\Models\Survey;
 use App\Models\SurveyAssignment;
@@ -10,7 +11,9 @@ use App\Models\SurveyVersion;
 use App\Models\SurveyWave;
 use App\Models\SurveyWaveLog;
 use App\Models\User;
+use App\Services\EmailService;
 use App\Services\SurveyService;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -67,6 +70,105 @@ class SurveyWaveTest extends TestCase
 
         $this->assertDatabaseCount('survey_waves', 0);
         $this->assertTrue($response->isRedirect() || $response->getStatusCode() === 403);
+    }
+
+    public function test_manager_without_company_context_sees_blocked_state_and_cannot_create_wave(): void
+    {
+        [$company, $survey, $version] = $this->createSurveyArtifacts();
+
+        $manager = User::factory()->create([
+            'role' => 1,
+            'company' => 1,
+            'company_id' => null,
+        ]);
+
+        $this->actingAs($manager)
+            ->get(route('survey-waves.index'))
+            ->assertOk()
+            ->assertSee('No company context yet');
+
+        $this->actingAs($manager)
+            ->post(route('survey-waves.store'), [
+                'survey_id' => $survey->id,
+                'survey_version_id' => $version->id,
+                'kind' => 'full',
+                'label' => 'Blocked Wave',
+                'target_roles' => [4],
+                'status' => 'scheduled',
+                'cadence' => 'manual',
+            ])
+            ->assertSessionHasErrors();
+
+        $this->assertDatabaseCount('survey_waves', 0);
+    }
+
+    public function test_wave_creation_requires_an_active_survey_version(): void
+    {
+        $company = Companies::create([
+            'title' => 'Acme',
+            'manager' => 'Manager',
+            'manager_email' => 'manager@example.com',
+        ]);
+
+        $survey = Survey::create([
+            'company_id' => $company->id,
+            'title' => 'Org Survey',
+            'is_default' => true,
+        ]);
+
+        $draftVersion = SurveyVersion::create([
+            'instrument_id' => 'test',
+            'version' => '0.9.0',
+            'title' => 'Draft Survey',
+            'is_active' => false,
+        ]);
+
+        $manager = User::factory()->create([
+            'role' => 1,
+            'company' => 1,
+            'company_id' => $company->id,
+            'tariff' => 1,
+        ]);
+
+        $this->actingAs($manager)
+            ->post(route('survey-waves.store'), [
+                'survey_id' => $survey->id,
+                'survey_version_id' => $draftVersion->id,
+                'kind' => 'full',
+                'label' => 'Blocked Wave',
+                'target_roles' => [4],
+                'status' => 'scheduled',
+                'cadence' => 'manual',
+            ])
+            ->assertSessionHasErrors();
+
+        $this->assertDatabaseCount('survey_waves', 0);
+    }
+
+    public function test_full_wave_requires_manual_cadence(): void
+    {
+        [$company, $survey, $version] = $this->createSurveyArtifacts();
+
+        $manager = User::factory()->create([
+            'role' => 1,
+            'company' => 1,
+            'company_id' => $company->id,
+            'tariff' => 1,
+        ]);
+
+        $this->actingAs($manager)
+            ->post(route('survey-waves.store'), [
+                'survey_id' => $survey->id,
+                'survey_version_id' => $version->id,
+                'kind' => 'full',
+                'label' => 'Invalid Full Wave',
+                'target_roles' => [4],
+                'status' => 'scheduled',
+                'cadence' => 'weekly',
+            ])
+            ->assertSessionHasErrors('cadence');
+
+        $this->assertDatabaseCount('survey_waves', 0);
     }
 
     public function test_paused_wave_is_skipped_by_scheduler(): void
@@ -245,6 +347,105 @@ class SurveyWaveTest extends TestCase
                 ->whereIn('survey_wave_id', [$waveOne->id, $waveTwo->id])
                 ->count()
         );
+    }
+
+    public function test_process_wave_respects_target_roles_and_queues_invitations(): void
+    {
+        [$company, $survey, $version] = $this->createSurveyArtifacts();
+
+        $manager = User::factory()->create([
+            'role' => 1,
+            'company' => 1,
+            'company_id' => $company->id,
+            'tariff' => 1,
+        ]);
+
+        $chief = User::factory()->create([
+            'role' => 2,
+            'company_id' => $company->id,
+            'tariff' => 1,
+        ]);
+
+        $employee = User::factory()->create([
+            'role' => 4,
+            'company_id' => $company->id,
+            'tariff' => 1,
+        ]);
+
+        $wave = SurveyWave::create([
+            'company_id' => $company->id,
+            'survey_id' => $survey->id,
+            'survey_version_id' => $version->id,
+            'kind' => 'full',
+            'label' => 'Employees Only',
+            'target_roles' => [4],
+            'status' => 'scheduled',
+            'cadence' => 'manual',
+        ]);
+
+        Queue::fake();
+
+        (new ProcessSurveyWave($wave->id))->handle(app(SurveyService::class));
+
+        $assignment = SurveyAssignment::where('survey_wave_id', $wave->id)
+            ->where('user_id', $employee->id)
+            ->first();
+
+        $this->assertNotNull($assignment);
+        $this->assertSame('queued', $assignment->invite_status);
+        $this->assertNotNull($assignment->last_dispatched_at);
+
+        $this->assertDatabaseMissing('survey_assignments', [
+            'survey_wave_id' => $wave->id,
+            'user_id' => $manager->id,
+        ]);
+
+        $this->assertDatabaseMissing('survey_assignments', [
+            'survey_wave_id' => $wave->id,
+            'user_id' => $chief->id,
+        ]);
+
+        Queue::assertPushed(SendSurveyAssignmentInvitation::class, 1);
+    }
+
+    public function test_invitation_job_marks_assignment_as_sent_in_testing(): void
+    {
+        [$company, $survey, $version] = $this->createSurveyArtifacts();
+
+        $employee = User::factory()->create([
+            'role' => 4,
+            'company_id' => $company->id,
+            'company_title' => $company->title,
+        ]);
+
+        $wave = SurveyWave::create([
+            'company_id' => $company->id,
+            'survey_id' => $survey->id,
+            'survey_version_id' => $version->id,
+            'kind' => 'full',
+            'label' => 'Pulse',
+            'target_roles' => [4],
+            'status' => 'scheduled',
+            'cadence' => 'manual',
+        ]);
+
+        $assignment = SurveyAssignment::create([
+            'survey_id' => $survey->id,
+            'survey_version_id' => $version->id,
+            'survey_wave_id' => $wave->id,
+            'user_id' => $employee->id,
+            'token' => 'invite-token',
+            'status' => 'pending',
+            'wave_label' => $wave->label,
+            'invite_status' => 'queued',
+        ]);
+
+        (new SendSurveyAssignmentInvitation($assignment->id))->handle(app(EmailService::class));
+
+        $assignment->refresh();
+        $this->assertSame('sent', $assignment->invite_status);
+        $this->assertNotNull($assignment->invited_at);
+        $this->assertNull($assignment->invite_error);
     }
 
     public function test_scheduler_creates_new_assignment_after_completed_drip_cycle(): void
@@ -433,5 +634,20 @@ class SurveyWaveTest extends TestCase
         $this->assertSame('error', $errorLog->status);
         $this->assertStringContainsString('Queue job failed', $errorLog->message);
         $this->assertStringContainsString('Wave reset to scheduled', $errorLog->message);
+    }
+
+    public function test_legacy_email_command_is_not_scheduled(): void
+    {
+        $commands = collect(app(Schedule::class)->events())
+            ->map(fn ($event) => $event->command);
+
+        $this->assertFalse($commands->contains(fn ($command) => is_string($command) && str_contains($command, 'email:link')));
+    }
+
+    public function test_legacy_email_command_is_disabled(): void
+    {
+        Artisan::call('email:link');
+
+        $this->assertStringContainsString('email:link is deprecated', Artisan::output());
     }
 }

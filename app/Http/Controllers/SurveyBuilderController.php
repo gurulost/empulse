@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Survey;
 use App\Models\SurveyItem;
+use App\Models\SurveyPage;
+use App\Models\SurveySection;
 use App\Models\SurveyVersion;
 use App\Services\SurveyService;
 use Illuminate\Http\Request;
@@ -21,13 +23,12 @@ class SurveyBuilderController extends Controller
 
     public function index()
     {
-        // Default to latest version for now
-        $version = SurveyVersion::orderByDesc('id')->firstOrFail();
-        $survey = Survey::firstOrFail(); // Simplified for single survey app
+        $version = SurveyVersion::orderByDesc('is_active')->orderByDesc('id')->first();
+        $survey = Survey::orderByDesc('is_default')->orderBy('id')->first();
 
         return view('surveys.builder', [
-            'versionId' => $version->id,
-            'surveyId' => $survey->id,
+            'versionId' => $version?->id,
+            'surveyId' => $survey?->id,
         ]);
     }
 
@@ -48,20 +49,13 @@ class SurveyBuilderController extends Controller
     public function createDraft(Request $request, $surveyId)
     {
         $survey = Survey::findOrFail($surveyId);
-        // Find the latest version associated with this survey (assuming survey_id link or instrument_id convention)
-        // For now, we'll assume the survey has a 'metadata' field or similar that might hold the instrument_id, 
-        // or we just look for the latest version that matches this survey's "type".
-        // Given the previous hardcoding, let's try to find *any* version for this survey if possible, 
-        // or fallback to the hardcoded 'eng_v1' if it's a specific system constant.
-        
-        // Better approach: Find the latest version for this survey_id directly if the column exists, 
-        // otherwise fallback to the known instrument_id.
+
         $latestVersion = SurveyVersion::where('is_active', true)
             ->orderByDesc('id')
             ->first();
 
         if (!$latestVersion) {
-             $latestVersion = SurveyVersion::orderByDesc('id')->first();
+            $latestVersion = SurveyVersion::orderByDesc('id')->first();
         }
 
         if (!$latestVersion) {
@@ -94,27 +88,100 @@ class SurveyBuilderController extends Controller
             return response()->json(['message' => 'Cannot edit active version'], 403);
         }
 
-        $item->update($request->only([
-            'question', 'type', 'scale_config', 'metadata', 'display_logic'
-        ]));
+        $validated = $request->validate([
+            'question' => 'required|string',
+            'type' => 'required|string|in:slider,text,text_short,text_long,number_integer,dropdown,single_select,single_select_text,multi_select',
+            'scale_config' => 'nullable|array',
+            'scale_config.min' => 'nullable|numeric',
+            'scale_config.max' => 'nullable|numeric|gte:scale_config.min',
+            'scale_config.step' => 'nullable|numeric|gt:0',
+            'scale_config.left_label' => 'nullable|string|max:255',
+            'scale_config.right_label' => 'nullable|string|max:255',
+            'metadata' => 'nullable|array',
+            'display_logic' => 'nullable|array',
+            'options' => 'nullable|array',
+            'options.*.value' => 'required',
+            'options.*.label' => 'required|string|max:255',
+            'options.*.exclusive' => 'nullable|boolean',
+            'options.*.meta' => 'nullable|array',
+        ]);
 
-        if ($request->has('options')) {
+        $item->update([
+            'question' => $validated['question'],
+            'type' => $validated['type'],
+            'scale_config' => $validated['scale_config'] ?? null,
+            'metadata' => $validated['metadata'] ?? null,
+            'display_logic' => $validated['display_logic'] ?? null,
+        ]);
+
+        if (array_key_exists('options', $validated)) {
             $item->options()->delete();
-            foreach ($request->input('options') as $opt) {
-                $item->options()->create($opt);
+            foreach ($validated['options'] as $index => $opt) {
+                $item->options()->create([
+                    'value' => $opt['value'],
+                    'label' => $opt['label'],
+                    'exclusive' => (bool) ($opt['exclusive'] ?? false),
+                    'meta' => $opt['meta'] ?? null,
+                    'sort_order' => $index,
+                ]);
             }
         }
 
         return response()->json($item->fresh('options'));
     }
+
+    public function updatePage(Request $request, $pageId)
+    {
+        $page = SurveyPage::with('version')->findOrFail($pageId);
+
+        if ($page->version?->is_active) {
+            return response()->json(['message' => 'Cannot edit active version'], 403);
+        }
+
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+        ]);
+
+        $page->update(['title' => $validated['title']]);
+
+        return response()->json($page->fresh());
+    }
+
+    public function updateSection(Request $request, $sectionId)
+    {
+        $section = SurveySection::with('page.version')->findOrFail($sectionId);
+
+        if ($section->page?->version?->is_active) {
+            return response()->json(['message' => 'Cannot edit active version'], 403);
+        }
+
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+        ]);
+
+        $section->update(['title' => $validated['title']]);
+
+        return response()->json($section->fresh());
+    }
     
     public function reorderItems(Request $request)
     {
-        $items = $request->input('items'); // Array of {id, sort_order}
-        
+        $validated = $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.id' => 'required|integer|exists:survey_items,id',
+            'items.*.sort_order' => 'required|integer|min:0',
+        ]);
+
+        $items = collect($validated['items']);
+
         DB::transaction(function () use ($items) {
             foreach ($items as $itemData) {
-                SurveyItem::where('id', $itemData['id'])->update(['sort_order' => $itemData['sort_order']]);
+                $item = SurveyItem::with('version')->find($itemData['id']);
+                if (!$item || $item->version?->is_active) {
+                    continue;
+                }
+
+                $item->update(['sort_order' => $itemData['sort_order']]);
             }
         });
 

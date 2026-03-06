@@ -9,6 +9,10 @@ class SurveyAssignment extends Model
 {
     use HasFactory;
 
+    protected $attributes = [
+        'invite_status' => 'pending',
+    ];
+
     protected $fillable = [
         'survey_id',
         'survey_version_id',
@@ -21,6 +25,9 @@ class SurveyAssignment extends Model
         'last_autosaved_at',
         'last_dispatched_at',
         'dispatch_count',
+        'invited_at',
+        'invite_status',
+        'invite_error',
         'due_at',
         'completed_at',
     ];
@@ -29,6 +36,7 @@ class SurveyAssignment extends Model
         'draft_answers' => 'array',
         'last_autosaved_at' => 'datetime',
         'last_dispatched_at' => 'datetime',
+        'invited_at' => 'datetime',
         'due_at' => 'datetime',
         'completed_at' => 'datetime',
     ];

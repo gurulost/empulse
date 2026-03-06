@@ -60,6 +60,11 @@ class RouteResilienceMatrixTest extends TestCase
             ->get('/reports')
             ->assertOk()
             ->assertSee('reports-dashboard-root');
+
+        $this->actingAs($workfitAdmin)
+            ->get('/admin/builder')
+            ->assertOk()
+            ->assertSee('survey-builder-root');
     }
 
     public function test_employee_is_redirected_away_from_admin_dashboard_routes(): void
@@ -81,4 +86,3 @@ class RouteResilienceMatrixTest extends TestCase
         $this->actingAs($employee)->get('/team/manage')->assertRedirect(route('employee.dashboard'));
     }
 }
-

@@ -20,16 +20,23 @@ class EmployeeDashboardController extends Controller
             return redirect()->route('home');
         }
 
-        $assignment = SurveyAssignment::query()
+        $currentAssignment = SurveyAssignment::query()
             ->where('user_id', $user->id)
-            ->orderByRaw("CASE WHEN status = 'completed' THEN 1 ELSE 0 END")
+            ->where('status', '!=', 'completed')
             ->orderByDesc('id')
-            ->with('response')
+            ->with(['response', 'surveyWave'])
             ->first();
 
+        $assignmentHistory = SurveyAssignment::query()
+            ->where('user_id', $user->id)
+            ->orderByDesc('id')
+            ->with(['response', 'surveyWave'])
+            ->limit(6)
+            ->get();
+
         return view('employee.dashboard', [
-            'assignment' => $assignment,
+            'assignment' => $currentAssignment,
+            'assignmentHistory' => $assignmentHistory,
         ]);
     }
 }
-

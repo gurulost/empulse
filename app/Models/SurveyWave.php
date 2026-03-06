@@ -9,6 +9,10 @@ class SurveyWave extends Model
 {
     use HasFactory;
 
+    protected $attributes = [
+        'target_roles' => '[1,2,3,4]',
+    ];
+
     protected $fillable = [
         'company_id',
         'survey_id',
@@ -17,12 +21,14 @@ class SurveyWave extends Model
         'status',
         'cadence',
         'label',
+        'target_roles',
         'opens_at',
         'due_at',
         'last_dispatched_at',
     ];
 
     protected $casts = [
+        'target_roles' => 'array',
         'opens_at' => 'datetime',
         'due_at' => 'datetime',
         'last_dispatched_at' => 'datetime',
