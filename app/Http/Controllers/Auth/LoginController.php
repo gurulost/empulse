@@ -7,6 +7,7 @@ use App\Providers\RouteServiceProvider;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class LoginController extends Controller
@@ -66,5 +67,45 @@ class LoginController extends Controller
         }
 
         return RouteServiceProvider::HOME;
+    }
+
+    protected function hasTooManyLoginAttempts(Request $request): bool
+    {
+        try {
+            return $this->limiter()->tooManyAttempts(
+                $this->throttleKey($request),
+                $this->maxAttempts()
+            );
+        } catch (\Throwable $e) {
+            Log::warning('Login throttle check failed (cache unavailable) — degrading safely.', [
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    protected function incrementLoginAttempts(Request $request): void
+    {
+        try {
+            $this->limiter()->hit(
+                $this->throttleKey($request),
+                $this->decayMinutes() * 60
+            );
+        } catch (\Throwable $e) {
+            Log::warning('Login attempt increment failed (cache unavailable) — skipping.', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    protected function clearLoginAttempts(Request $request): void
+    {
+        try {
+            $this->limiter()->clear($this->throttleKey($request));
+        } catch (\Throwable $e) {
+            Log::warning('Login attempt clear failed (cache unavailable) — skipping.', [
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }
