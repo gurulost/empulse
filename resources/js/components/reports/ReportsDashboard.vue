@@ -94,14 +94,14 @@
                         <div v-if="loading" class="text-center py-5">
                             <div class="spinner-border text-primary" role="status"></div>
                         </div>
-                        <div v-else-if="trendData" class="chart-container" style="position: relative; height: 400px;">
+                        <div v-else-if="hasTrendData" class="chart-container" style="position: relative; height: 400px;">
                             <trend-chart :data="trendData" />
                         </div>
                         <div v-else class="text-center py-5 text-muted">
                             <div class="bg-light rounded-circle p-4 mb-3 d-inline-block">
                                 <i class="bi bi-graph-up text-secondary display-4"></i>
                             </div>
-                            <p>No data available for the selected period.</p>
+                            <p>No completed survey waves are available yet. Trends will appear once your team has historical responses.</p>
                         </div>
                     </div>
                 </div>
@@ -114,6 +114,12 @@
                             <p class="text-muted small mb-0">Compare performance across different groups.</p>
                         </div>
                         <div class="d-flex gap-2">
+                            <select class="form-select form-select-sm bg-light border-0 fw-semibold" v-model="comparisonWave" @change="fetchComparison">
+                                <option value="">Latest available wave</option>
+                                <option v-for="(label, key) in waveOptions" :key="key" :value="key">
+                                    {{ label }}
+                                </option>
+                            </select>
                             <select class="form-select form-select-sm bg-light border-0 fw-semibold" v-model="comparisonDimension" @change="fetchComparison">
                                 <option value="department">By Department</option>
                                 <option value="team">By Team (Supervisor)</option>
@@ -124,14 +130,14 @@
                         <div v-if="loading" class="text-center py-5">
                             <div class="spinner-border text-primary" role="status"></div>
                         </div>
-                        <div v-else-if="comparisonData" class="chart-container" style="position: relative; height: 400px;">
+                        <div v-else-if="hasComparisonData" class="chart-container" style="position: relative; height: 400px;">
                             <comparison-chart :data="comparisonData" />
                         </div>
                         <div v-else class="text-center py-5 text-muted">
                             <div class="bg-light rounded-circle p-4 mb-3 d-inline-block">
                                 <i class="bi bi-bar-chart text-secondary display-4"></i>
                             </div>
-                            <p>No comparison data available.</p>
+                            <p>{{ comparisonEmptyMessage }}</p>
                         </div>
                     </div>
                 </div>
@@ -161,7 +167,7 @@ const props = defineProps({
     },
 });
 
-const { getTrends, getComparison } = useReportsApi();
+const { getTrends, getComparison, getOptions } = useReportsApi();
 
 const normalizeCompanyId = (value) => {
     const parsed = Number(value);
@@ -187,8 +193,40 @@ const trendData = ref(null);
 
 // Comparison State
 const comparisonDimension = ref('department');
+const comparisonWave = ref('');
 const comparisonData = ref(null);
+const waveOptions = ref({});
 let requestCounter = 0;
+
+const hasTrendData = computed(() => Array.isArray(trendData.value?.labels) && trendData.value.labels.length > 0);
+const hasComparisonData = computed(() => Array.isArray(comparisonData.value?.labels) && comparisonData.value.labels.length > 0);
+const comparisonEmptyMessage = computed(() => {
+    if (!Object.keys(waveOptions.value).length) {
+        return 'Create and complete a survey wave to unlock comparison reports.';
+    }
+
+    if (comparisonWave.value) {
+        return 'No comparison data is available for the selected wave yet.';
+    }
+
+    return 'No comparison data is available yet.';
+});
+
+const fetchOptions = async () => {
+    if (!hasCompanyContext.value) {
+        waveOptions.value = {};
+        comparisonWave.value = '';
+        return;
+    }
+
+    try {
+        const result = await getOptions(selectedCompanyId.value);
+        waveOptions.value = result?.waves || {};
+    } catch (error) {
+        console.error(error);
+        waveOptions.value = {};
+    }
+};
 
 const fetchTrends = async () => {
     if (!hasCompanyContext.value) {
@@ -232,7 +270,7 @@ const fetchComparison = async () => {
     const requestId = ++requestCounter;
 
     try {
-        const result = await getComparison(comparisonDimension.value, null, selectedCompanyId.value);
+        const result = await getComparison(comparisonDimension.value, comparisonWave.value || null, selectedCompanyId.value);
         if (requestId !== requestCounter) {
             return;
         }
@@ -240,6 +278,12 @@ const fetchComparison = async () => {
         comparisonData.value = result;
     } catch (error) {
         if (requestId !== requestCounter) {
+            return;
+        }
+
+        if (error?.response?.status === 404) {
+            comparisonData.value = { labels: [], datasets: [] };
+            globalError.value = null;
             return;
         }
 
@@ -282,16 +326,20 @@ watch(selectedCompanyIdRaw, () => {
     trendData.value = null;
     comparisonData.value = null;
     globalError.value = null;
+    comparisonWave.value = '';
+    waveOptions.value = {};
 
     if (!hasCompanyContext.value) {
         return;
     }
 
+    fetchOptions();
     refreshActiveTab();
 });
 
 onMounted(() => {
     if (hasCompanyContext.value) {
+        fetchOptions();
         fetchTrends();
     }
 });

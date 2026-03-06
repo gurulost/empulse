@@ -81,6 +81,24 @@
             <button class="btn btn-sm btn-link" @click="fetchData">Try Again</button>
         </div>
 
+        <div v-else-if="!hasAnalyticsData" class="card border-0 shadow-sm">
+            <div class="card-body py-5 text-center">
+                <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 72px; height: 72px;">
+                    <i class="bi bi-bar-chart-line text-secondary fs-2"></i>
+                </div>
+                <h4 class="mb-2">{{ emptyState.title }}</h4>
+                <p class="text-muted mb-4">{{ emptyState.body }}</p>
+                <div class="d-flex flex-wrap justify-content-center gap-2">
+                    <a v-if="emptyState.primaryHref" :href="emptyState.primaryHref" class="btn btn-primary">
+                        {{ emptyState.primaryLabel }}
+                    </a>
+                    <a v-if="emptyState.secondaryHref" :href="emptyState.secondaryHref" class="btn btn-outline-secondary">
+                        {{ emptyState.secondaryLabel }}
+                    </a>
+                </div>
+            </div>
+        </div>
+
         <!-- Dashboard Content -->
         <div v-else class="dashboard-content">
             <!-- Top Row: Temperature & Indicators -->
@@ -91,7 +109,7 @@
                             <h6 class="m-0 font-weight-bold text-primary">Temperature Index</h6>
                         </div>
                         <div class="card-body d-flex align-items-center justify-content-center">
-                            <temperature-gauge :score="data.weighted_indicator" />
+                            <temperature-gauge :score="data.temperature" />
                         </div>
                     </div>
                 </div>
@@ -217,6 +235,7 @@ const selectedCompanyId = computed(() => normalizeCompanyId(selectedCompanyIdRaw
 const hasCompanyContext = computed(() => selectedCompanyId.value !== null);
 const requiresCompanySelection = computed(() => isWorkfitAdmin.value && !hasCompanyContext.value);
 const showNoCompanyContext = computed(() => !isWorkfitAdmin.value && !hasCompanyContext.value);
+const role = computed(() => Number(props.user?.role ?? 0));
 
 const isLoading = ref(false);
 const error = ref(null);
@@ -241,6 +260,53 @@ const clearFilterOptions = () => {
     options.waves = [];
     options.exist_departments = [];
 };
+
+const hasAnalyticsData = computed(() => {
+    const payload = data.value || {};
+
+    return Boolean(
+        (Array.isArray(payload.indicators) && payload.indicators.length > 0) ||
+        (Array.isArray(payload.gap_chart) && payload.gap_chart.length > 0) ||
+        (Array.isArray(payload.team_scatter) && payload.team_scatter.length > 0) ||
+        payload.temperature !== null && payload.temperature !== undefined ||
+        payload.weighted_indicator !== null && payload.weighted_indicator !== undefined ||
+        (payload.team_culture && Object.keys(payload.team_culture).length > 0) ||
+        (payload.impact && Object.keys(payload.impact).length > 0)
+    );
+});
+
+const emptyState = computed(() => {
+    if (isWorkfitAdmin.value) {
+        return {
+            title: 'Pick a company or prepare one for demo data',
+            body: 'This dashboard is ready, but there are no survey responses for the current company selection yet.',
+            primaryHref: '/admin/builder',
+            primaryLabel: 'Open Survey Builder',
+            secondaryHref: '/admin',
+            secondaryLabel: 'Open Admin Panel',
+        };
+    }
+
+    if (role.value === 1) {
+        return {
+            title: 'Launch your first survey wave',
+            body: 'Import teammates, publish a live survey, and send a wave. Analytics will fill in as soon as responses arrive.',
+            primaryHref: '/survey-waves',
+            primaryLabel: 'Create Wave',
+            secondaryHref: '/team/manage',
+            secondaryLabel: 'Manage Team',
+        };
+    }
+
+    return {
+        title: 'Waiting for your team’s first responses',
+        body: 'This view is ready for company analytics, but a manager still needs to dispatch a survey wave before the charts can populate.',
+        primaryHref: '/team/manage',
+        primaryLabel: 'View Team',
+        secondaryHref: '',
+        secondaryLabel: '',
+    };
+});
 
 let requestCounter = 0;
 

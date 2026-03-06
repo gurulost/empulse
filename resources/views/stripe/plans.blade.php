@@ -1,87 +1,74 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="container">
-        <section>
-            <div class="container py-5">
+    @php
+        $formatPrice = function ($rawPrice) {
+            $price = (float) $rawPrice;
+            if ($price >= 1000) {
+                $price = $price / 100;
+            }
 
-                <header>
-                    <div class="row">
-                        <div class="col-lg-12 mx-auto">
-                            <h1>Stripe Subscription</h1>
-                            <h3>PRICING</h3>
-                        </div>
-                    </div>
-                </header>
+            return number_format($price, $price == floor($price) ? 0 : 2);
+        };
+    @endphp
 
-                <div class="row text-center align-items-end">
-                    <div class="col-lg-4 mb-5 mb-lg-0">
-                        <div class="bg-white p-5 rounded-lg shadow">
-                            <h1 class="h6 text-uppercase font-weight-bold mb-4">FREE</h1>
-                            <h2 class="h1 font-weight-bold">$0<span class="text small font-weight-normal ml-2">/ free</span></h2>
-
-                            <div class="custom-separator my-4 mx-auto bg-primary"></div>
-
-                            <ul>
-                                <li class="mb-3">
-                                    <i class="fa fa-check mr-2 text-primary"></i>Lorem ipsum dolor sit amet</li>
-                                <li class="mb-3">
-                                    <i class="fa fa-check mr-2 text-primary"></i>Sed ut perspiciatis</li>
-                                <li class="mb-3">
-                                    <i class="fa fa-check mr-2 text-primary"></i>At vero eos et accusamus</li>
-                                <li class="mb-3 text-mutted">
-                                    <i class="fa fa-times mr-2"></i>
-                                    <del>Nam libero tempore</del>
-                                </li>
-                                <li class="mb-3 text-mutted">
-                                    <i class="fa fa-times mr-2"></i>
-                                    <del>Sed ut perspiciatis</del>
-                                </li>
-                                <li class="mb-3 text-mutted">
-                                    <i class="fa fa-times mr-2"></i>
-                                    <del>Sed ut perspiceatis</del>
-                                </li>
-                            </ul>
-                            <a href="#" class="btn btn-primary btn-block shadow rounded-pill">Buy Now</a>
-                        </div>
-                    </div>
-
-                    @foreach($plans as $plan)
-                        <div class="col-lg-4 mb-5 mb-lg-0">
-                            <div class="bg-white p-5 rounded-lg shadow">
-                                <h1 class="h6 text-uppercase font-weight-bold mb-4">{{ $plan->name }}</h1>
-                                <h2 class="h1 font-weight-bold">${{ $plan->price }}<span class="text-small font-weight-normal ml-2">/ month</span></h2>
-
-                                <div class="custom-separator my-4 mx-auto bg-primary"></div>
-
-                                <ul class="list-unstyled my-5 text-small text-left font-weight-normal">
-                                    <li class="mb-3">
-                                        <i class="fa fa-check mr-2 text-primery"></i> Lorem ipsum dolor sit amet
-                                    </li>
-                                    <li class="mb-3">
-                                        <i class="fa fa-check mr-2 text-primery"></i> Sed ut perspiciatis
-                                    </li>
-                                    <li class="mb-3">
-                                        <i class="fa fa-check mr-2 text-primery"></i> At vero eos accusamus
-                                    </li>
-                                    <li class="mb-3">
-                                        <i class="fa fa-check mr-2 text-primery"></i> Nam libero tempore
-                                    </li>
-                                    <li class="mb-3">
-                                        <i class="fa fa-check mr-2 text-primery"></i> Sed ut perspiciatis
-                                    </li>
-                                    <li class="mb-3 text-muted">
-                                        <i class="fa fa-times mr-2"></i>
-                                        <del>Sed ut perspiciatis</del>
-                                    </li>
-                                </ul>
-                                <a href="{{ route('plans.show', $plan->slug) }}" class="btn btn-primary btn-block shadow rounded-pill">Buy Now</a>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
+    <div class="container py-5">
+        <div class="row justify-content-center text-center mb-5">
+            <div class="col-lg-8">
+                <h1 class="display-6 fw-bold">Plans & Billing</h1>
+                <p class="text-muted mb-0">
+                    Choose the subscription that matches how you want to run Empulse in production and demos.
+                </p>
             </div>
-        </section>
+        </div>
 
+        @if(session('status'))
+            <div class="alert alert-success">{{ session('status') }}</div>
+        @endif
+
+        @if($errors->any())
+            <div class="alert alert-danger">{{ $errors->first() }}</div>
+        @endif
+
+        @if(!$billingAvailable)
+            <div class="alert alert-warning">
+                Billing is unavailable in this environment because Stripe is not configured. You can still review plan details and demo the billing pages safely.
+            </div>
+        @endif
+
+        <div class="row g-4 align-items-stretch">
+            @foreach($plans as $plan)
+                @php
+                    $meta = $planMetaBySlug[$plan->slug] ?? [];
+                @endphp
+                <div class="col-lg-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body p-4 d-flex flex-column">
+                            <div class="small text-uppercase text-muted fw-bold mb-2">{{ $meta['eyebrow'] ?? 'Subscription plan' }}</div>
+                            <h2 class="h4 fw-bold mb-2">{{ $plan->name }}</h2>
+                            <div class="display-6 fw-bold mb-2">${{ $formatPrice($plan->price) }}</div>
+                            <div class="text-muted mb-4">per month</div>
+
+                            <p class="text-muted">{{ $meta['summary'] ?? $plan->description }}</p>
+
+                            <ul class="list-unstyled flex-grow-1 mb-4">
+                                @foreach(($meta['features'] ?? []) as $feature)
+                                    <li class="mb-2">
+                                        <i class="bi bi-check2-circle text-success me-2"></i>{{ $feature }}
+                                    </li>
+                                @endforeach
+                            </ul>
+
+                            <a
+                                href="{{ route('plans.show', $plan) }}"
+                                class="btn {{ $billingAvailable ? 'btn-primary' : 'btn-outline-secondary' }} w-100"
+                            >
+                                {{ $billingAvailable ? ($meta['cta'] ?? 'Continue') : 'Review Details' }}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+        </div>
     </div>
 @endsection

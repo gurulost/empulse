@@ -11,17 +11,19 @@
             <!-- Basic Info -->
             <div class="mb-4">
                 <label class="form-label text-secondary small fw-bold text-uppercase">Question Text</label>
-                <input type="text" class="form-control form-control-lg" v-model="localItem.question" placeholder="Enter your question here...">
+                <input type="text" class="form-control form-control-lg" v-model="localItem.question" placeholder="Enter your question here..." :disabled="readOnly">
             </div>
 
             <div class="row mb-4">
                 <div class="col-md-6">
                     <label class="form-label text-secondary small fw-bold text-uppercase">Type</label>
-                    <select class="form-select" v-model="localItem.type">
+                    <select class="form-select" v-model="localItem.type" :disabled="readOnly">
                         <option value="slider">Slider (Scale)</option>
                         <option value="text">Text Input</option>
+                        <option value="text_short">Short Text</option>
                         <option value="text_long">Long Text</option>
                         <option value="number_integer">Number (Integer)</option>
+                        <option value="dropdown">Dropdown</option>
                         <option value="single_select">Single Select</option>
                         <option value="single_select_text">Single Select + Other</option>
                         <option value="multi_select">Multi Select</option>
@@ -39,23 +41,23 @@
                 <div class="row g-3">
                     <div class="col-4">
                         <label class="small text-muted fw-semibold">Min</label>
-                        <input type="number" class="form-control form-control-sm" v-model.number="localItem.scale_config.min">
+                        <input type="number" class="form-control form-control-sm" v-model.number="localItem.scale_config.min" :disabled="readOnly">
                     </div>
                     <div class="col-4">
                         <label class="small text-muted fw-semibold">Max</label>
-                        <input type="number" class="form-control form-control-sm" v-model.number="localItem.scale_config.max">
+                        <input type="number" class="form-control form-control-sm" v-model.number="localItem.scale_config.max" :disabled="readOnly">
                     </div>
                     <div class="col-4">
                         <label class="small text-muted fw-semibold">Step</label>
-                        <input type="number" class="form-control form-control-sm" v-model.number="localItem.scale_config.step">
+                        <input type="number" class="form-control form-control-sm" v-model.number="localItem.scale_config.step" :disabled="readOnly">
                     </div>
                     <div class="col-6">
                         <label class="small text-muted fw-semibold">Left Label</label>
-                        <input type="text" class="form-control form-control-sm" v-model="localItem.scale_config.left_label" placeholder="e.g. Disagree">
+                        <input type="text" class="form-control form-control-sm" v-model="localItem.scale_config.left_label" placeholder="e.g. Disagree" :disabled="readOnly">
                     </div>
                     <div class="col-6">
                         <label class="small text-muted fw-semibold">Right Label</label>
-                        <input type="text" class="form-control form-control-sm" v-model="localItem.scale_config.right_label" placeholder="e.g. Agree">
+                        <input type="text" class="form-control form-control-sm" v-model="localItem.scale_config.right_label" placeholder="e.g. Agree" :disabled="readOnly">
                     </div>
                 </div>
             </div>
@@ -63,14 +65,14 @@
             <div v-if="['single_select', 'multi_select', 'single_select_text'].includes(localItem.type)" class="mb-4 p-4 rounded bg-light border-0">
                 <h6 class="mb-3 d-flex justify-content-between align-items-center fw-bold text-secondary">
                     Options
-                    <button class="btn btn-sm btn-white border shadow-sm text-primary" @click="addOption">
+                    <button class="btn btn-sm btn-white border shadow-sm text-primary" @click="addOption" :disabled="readOnly">
                         <i class="bi bi-plus-lg me-1"></i> Add Option
                     </button>
                 </h6>
                 <div v-for="(opt, idx) in localOptions" :key="idx" class="input-group mb-2 shadow-sm">
                     <span class="input-group-text bg-white border-end-0 text-muted small">{{ opt.value }}</span>
-                    <input type="text" class="form-control border-start-0" v-model="opt.label" placeholder="Label">
-                    <button class="btn btn-white border text-danger" @click="removeOption(idx)">
+                    <input type="text" class="form-control border-start-0" v-model="opt.label" placeholder="Label" :disabled="readOnly">
+                    <button class="btn btn-white border text-danger" @click="removeOption(idx)" :disabled="readOnly">
                         <i class="bi bi-trash"></i>
                     </button>
                 </div>
@@ -89,15 +91,19 @@
                 <div class="collapse" id="logicEditor">
                     <div class="card card-body bg-light border-0 pt-0">
                         <hr class="mt-0 mb-3 opacity-25">
-                        <logic-editor v-model="localItem.display_logic" />
+                        <logic-editor v-model="localItem.display_logic" :disabled="readOnly" />
                     </div>
                 </div>
+            </div>
+
+            <div v-if="readOnly" class="alert alert-light border text-secondary">
+                Live versions are read-only. Create a draft to change this question.
             </div>
 
             <!-- Actions -->
             <div class="d-flex justify-content-end gap-2 pt-4 border-top">
                 <button class="btn btn-light px-4" @click="$emit('cancel')">Cancel</button>
-                <button class="btn btn-primary px-4 shadow-sm" @click="save" :disabled="saving">
+                <button class="btn btn-primary px-4 shadow-sm" @click="save" :disabled="saving || readOnly">
                     <span v-if="saving" class="spinner-border spinner-border-sm me-2"></span>
                     {{ saving ? 'Saving...' : 'Save Changes' }}
                 </button>
@@ -107,12 +113,13 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, watch } from 'vue';
 import LogicEditor from './LogicEditor.vue';
 
 const props = defineProps({
     item: { type: Object, required: true },
-    saving: { type: Boolean, default: false }
+    saving: { type: Boolean, default: false },
+    readOnly: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['save', 'cancel']);
@@ -122,17 +129,6 @@ const localOptions = ref(props.item.options ? JSON.parse(JSON.stringify(props.it
 
 // Ensure config objects exist
 if (!localItem.value.scale_config) localItem.value.scale_config = { min: 1, max: 5, step: 1 };
-
-const logicJson = computed({
-    get: () => JSON.stringify(localItem.value.display_logic || {}, null, 2),
-    set: (val) => {
-        try {
-            localItem.value.display_logic = JSON.parse(val);
-        } catch (e) {
-            // Invalid JSON, ignore or show error
-        }
-    }
-});
 
 const addOption = () => {
     const val = localOptions.value.length + 1;

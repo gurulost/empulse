@@ -11,7 +11,8 @@
                     <input type="text" class="form-control form-control-sm" 
                            v-model="rule.qid" 
                            placeholder="Question ID (e.g. q1)"
-                           style="width: 120px;">
+                           style="width: 120px;"
+                           :disabled="disabled">
                     
                     <select class="form-select form-select-sm" style="width: 100px;" disabled>
                         <option>Equals</option>
@@ -20,17 +21,18 @@
                     <div class="flex-grow-1">
                         <input type="text" class="form-control form-control-sm" 
                                v-model="rule.value" 
-                               placeholder="Value to match">
+                               placeholder="Value to match"
+                               :disabled="disabled">
                     </div>
 
-                    <button class="btn btn-outline-danger btn-sm" @click="removeRule(idx)">
+                    <button class="btn btn-outline-danger btn-sm" @click="removeRule(idx)" :disabled="disabled">
                         <i class="bi bi-trash"></i>
                     </button>
                 </div>
             </div>
         </div>
 
-        <button class="btn btn-sm btn-outline-primary w-100" @click="addRule">
+        <button class="btn btn-sm btn-outline-primary w-100" @click="addRule" :disabled="disabled">
             <i class="bi bi-plus-circle me-1"></i> Add Logic Rule
         </button>
     </div>
@@ -40,7 +42,8 @@
 import { ref, watch, onMounted } from 'vue';
 
 const props = defineProps({
-    modelValue: { type: Object, default: () => ({}) }
+    modelValue: { type: Object, default: () => ({}) },
+    disabled: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -83,11 +86,19 @@ const formatLogic = (uiRules) => {
 };
 
 const addRule = () => {
+    if (props.disabled) {
+        return;
+    }
+
     rules.value.push({ qid: '', value: '' });
     emitUpdate();
 };
 
 const removeRule = (idx) => {
+    if (props.disabled) {
+        return;
+    }
+
     rules.value.splice(idx, 1);
     emitUpdate();
 };

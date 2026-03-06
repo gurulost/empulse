@@ -17,6 +17,11 @@ Quick Start
 - npm install
   - dev: npm run dev (runs Vite HMR)
   - prod: npm run build (writes to public/build)
+  - `public/build` is generated output and should be produced in CI/deploy, not committed manually
+- Quality gates:
+  - lint: npm run lint
+  - backend tests: php artisan test
+  - smoke tests: npm run test:e2e
 - Keep a queue worker (`php artisan queue:work --tries=1`) and the scheduler (`* * * * * php artisan schedule:run >> storage/logs/schedule.log 2>&1`) running so survey automations and drip cadences execute without manual CLI intervention.
 
 Seeded Logins (when using `--seed` or `--seed-if-empty`)
@@ -48,7 +53,23 @@ Internal Surveys
 
 Stripe Subscriptions
 - Manage plans in DB table `plans` (name, slug, stripe_plan, price)
-- Routes: `/plans` to browse; purchase via secure Cashier flow
+- Routes: `/plans` to browse; purchase via the Cashier-backed flow and manage payment state from `/account/billing`
+- Legacy `/payment/*` routes now redirect into the supported billing flow and no longer mutate company tariff state directly
+
+Production Runtime
+- The checked-in `Procfile` declares:
+  - `web`: Apache/PHP runtime
+  - `worker`: queue worker for survey jobs and invitation delivery
+  - `scheduler`: Laravel scheduler process
+- A multi-stage `Dockerfile` is available for container deployments; the platform-native Procfile remains the primary deployment story.
+
+CI
+- GitHub Actions runs:
+  - `php artisan test`
+  - `npm run lint`
+  - `npm run build`
+  - Playwright role smoke tests against a seeded SQLite app
 
 Documentation
 - See `docs/AUDIT.md` for the current audit, priorities, and roadmap.
+- See `docs/PRODUCTION_DEPLOYMENT_RUNBOOK.md` for the production deploy sequence, required env vars, runtime processes, and rollback guidance.

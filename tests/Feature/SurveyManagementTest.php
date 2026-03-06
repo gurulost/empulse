@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\Companies;
 use App\Models\Survey;
 use App\Models\SurveyAssignment;
+use App\Models\SurveyPage;
+use App\Models\SurveyVersion;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -119,6 +121,49 @@ class SurveyManagementTest extends TestCase
 
         $response->assertOk();
         $response->assertDontSee('employee@example.com');
-        $response->assertSee('No assignments found.');
+        $response->assertSee('Assign this manager to a company to start managing submissions.');
+    }
+
+    public function test_survey_management_reads_from_active_version_structure(): void
+    {
+        $company = Companies::create([
+            'title' => 'Company A',
+            'manager' => 'Manager A',
+            'manager_email' => 'manager-a@example.com',
+        ]);
+
+        $manager = User::factory()->create([
+            'role' => 1,
+            'company' => 1,
+            'company_id' => $company->id,
+        ]);
+
+        Survey::updateOrCreate(
+            ['is_default' => true],
+            [
+                'title' => 'Default Survey',
+                'company_id' => $company->id,
+            ]
+        );
+
+        $version = SurveyVersion::create([
+            'instrument_id' => 'demo',
+            'version' => '2.0.0',
+            'title' => 'Live Demo Survey',
+            'is_active' => true,
+        ]);
+
+        SurveyPage::create([
+            'survey_version_id' => $version->id,
+            'page_id' => 'p1',
+            'title' => 'Culture Foundations',
+            'sort_order' => 1,
+        ]);
+
+        $response = $this->actingAs($manager)->get('/surveys/manage');
+
+        $response->assertOk();
+        $response->assertSee('Culture Foundations');
+        $response->assertDontSee('Preview of the placeholder assessment.');
     }
 }

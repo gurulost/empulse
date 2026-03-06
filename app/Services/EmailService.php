@@ -71,15 +71,16 @@ class EmailService
         return $this->sendLetter($email, $name, 'Reset password', $content);
     }
 
-    public function sendSurveyInvitation(string $email, string $name, string $surveyUrl, string $companyName): array
+    public function sendSurveyInvitation(string $email, string $name, string $surveyUrl, string $companyName, ?string $waveLabel = null): array
     {
         $content = view('emails.survey-invitation', [
             'name' => $name,
             'surveyUrl' => $surveyUrl,
-            'companyName' => $companyName
+            'companyName' => $companyName,
+            'waveLabel' => $waveLabel,
         ])->render();
 
-        return $this->sendLetter($email, $name, "Survey Invitation from {$companyName}", $content);
+        return $this->sendLetter($email, $name, "{$companyName} survey invitation", $content);
     }
 
     public function sendToAdmin(string $subject, string $content): array

@@ -1,0 +1,73 @@
+Deploy commit 9783f3cc219b9d52e41d23ace31bfd5fabcea22e from main.
+
+This release is the production/demo-readiness hardening pass. It includes:
+- billing hardening and Stripe/Cashier webhook fixes
+- survey wave audience + invitation tracking
+- builder/no-data safety improvements
+- CI/lint/smoke-test additions
+- removal of committed frontend build artifacts
+
+Important deployment notes:
+- public/build is no longer committed. You must build frontend assets during deploy.
+- There are 2 important new migrations:
+  - 2026_03_05_000000_add_wave_audience_and_invite_tracking
+  - 2026_03_05_010000_align_subscriptions_table_with_cashier
+- Billing now depends on proper Stripe webhook sync through /stripe/webhook.
+- Survey wave dispatch/invitations require both a queue worker and the Laravel scheduler.
+
+Use this runbook as source of truth:
+docs/PRODUCTION_DEPLOYMENT_RUNBOOK.md
+
+Do this in order:
+1. Pull/deploy commit 9783f3cc219b9d52e41d23ace31bfd5fabcea22e.
+2. Install backend dependencies:
+   composer install --no-dev --prefer-dist --optimize-autoloader
+3. Install frontend dependencies:
+   npm ci
+4. Build frontend assets:
+   npm run build
+5. Run database migrations:
+   php artisan migrate --force
+6. Refresh Laravel caches as appropriate:
+   php artisan config:cache
+   php artisan route:cache
+   php artisan view:cache
+7. Ensure runtime processes are live:
+   - web process
+   - php artisan queue:work --tries=1 --sleep=1 --timeout=120
+   - php artisan schedule:work
+   If schedule:work is not supported, run cron with php artisan schedule:run every minute.
+8. Verify required env vars are set correctly:
+   - APP_URL
+   - DB_*
+   - QUEUE_CONNECTION
+   - CACHE_DRIVER
+   - SESSION_DRIVER
+   - STRIPE_KEY
+   - STRIPE_SECRET
+   - STRIPE_WEBHOOK_SECRET
+   - BREVO_KEY
+9. Confirm Stripe webhook is configured for /stripe/webhook and delivery succeeds.
+10. Run post-deploy smoke checks:
+   - guest: / and /login render
+   - manager: /home, /survey-waves, /account/billing
+   - workfit admin: /admin and /admin/builder
+   - employee: /employee
+   - plans page renders
+   - billing page renders
+   - create or inspect a wave and confirm queue/scheduler path is healthy
+
+Do not do these things:
+- do not run migrate:fresh
+- do not run demo seeding unless explicitly requested
+- do not expect public/build to be present from git
+- do not skip queue worker or scheduler startup
+
+Report back with:
+- deployed commit hash
+- migration result
+- confirmation that assets built successfully
+- confirmation that worker and scheduler are running
+- Stripe webhook verification result
+- smoke-test result
+- any errors, blockers, or manual follow-up needed
