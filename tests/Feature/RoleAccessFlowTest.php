@@ -79,6 +79,6 @@ class RoleAccessFlowTest extends TestCase
         $this->actingAs($manager)
             ->get('/account/billing')
             ->assertOk()
-            ->assertSee('Card updates are unavailable until Stripe is configured for this environment.');
+            ->assertSee('Card updates unavailable until Stripe is configured.');
     }
 }

@@ -6,7 +6,9 @@
 
 ## Prerequisites
 - Access to the production environment, database, and deployment platform.
-- PHP 8.2+, Composer, Node 20+, and the platform runtime required by the checked-in [Dockerfile](/Users/davedixon/Downloads/empulse%20code/Dockerfile) or [Procfile](/Users/davedixon/Downloads/empulse%20code/Procfile).
+- PHP 8.2+, Composer, Node 20+, and either:
+  - a Herokuish/buildpack platform that provides `heroku-php-apache2` for the checked-in [Procfile](/Users/davedixon/Downloads/empulse%20code/Procfile), or
+  - a container/native web runtime that matches the checked-in [Dockerfile](/Users/davedixon/Downloads/empulse%20code/Dockerfile).
 - Stripe production keys and webhook secret.
 - Brevo API key for invitation delivery.
 - Queue, session, and cache backends configured for production.
@@ -66,7 +68,8 @@
 
 ## Process Requirements
 - Web:
-  - Use the platform PHP runtime or the checked-in Apache image.
+  - If deploying with the checked-in `Procfile`, run the Apache/PHP buildpack runtime: `heroku-php-apache2 public/`
+  - If your platform does not provide that command, deploy with the checked-in Docker image or the platform's native Apache/nginx + PHP runtime.
 - Queue worker:
   - `php artisan queue:work --tries=1 --sleep=1 --timeout=120`
 - Scheduler:

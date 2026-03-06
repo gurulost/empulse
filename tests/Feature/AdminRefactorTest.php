@@ -17,6 +17,28 @@ class AdminRefactorTest extends TestCase
         $this->assertInstanceOf(EmailService::class, $service);
     }
 
+    public function test_email_service_reports_provider_unavailable_when_brevo_is_missing_outside_testing()
+    {
+        config()->set('services.brevo.key', null);
+
+        $originalEnv = $this->app->environment();
+        $this->app->detectEnvironment(fn () => 'local');
+
+        try {
+            $response = app(EmailService::class)->sendLetter(
+                'person@example.com',
+                'Person',
+                'Subject',
+                '<p>Example</p>'
+            );
+        } finally {
+            $this->app->detectEnvironment(fn () => $originalEnv);
+        }
+
+        $this->assertSame(503, $response['status']);
+        $this->assertStringContainsString('Brevo is not configured', $response['message']);
+    }
+
     public function test_user_service_has_helper_methods()
     {
         $service = app(UserService::class);

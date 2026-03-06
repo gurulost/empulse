@@ -169,12 +169,7 @@ class SurveyWaveController extends Controller
             'company_id' => $companyId,
             'survey_id' => $survey->id,
             'survey_version_id' => $activeVersion->id,
-            'target_roles' => collect($data['target_roles'])
-                ->map(fn ($role) => (int) $role)
-                ->unique()
-                ->sort()
-                ->values()
-                ->all(),
+            'target_roles' => $this->normalizeTargetRoles($data['target_roles']),
         ]));
 
         return redirect()->route('survey-waves.index')->with('status', 'Wave created.');
@@ -184,9 +179,25 @@ class SurveyWaveController extends Controller
     {
         $this->authorizeWave($wave);
 
+        if ($wave->status === 'processing') {
+            return back()->withErrors('Waves cannot be paused or resumed while processing.');
+        }
+
+        if ($wave->status === 'completed') {
+            return back()->withErrors('Completed waves cannot be paused or resumed.');
+        }
+
         $validated = $request->validate([
             'status' => 'required|in:scheduled,paused',
         ]);
+
+        if ($wave->kind === 'drip' && $validated['status'] === 'scheduled') {
+            $this->guardDripAccess($wave->kind, $wave->cadence);
+        }
+
+        if ($wave->status === $validated['status']) {
+            return back()->with('status', 'Wave status unchanged.');
+        }
 
         $wave->update(['status' => $validated['status']]);
 
@@ -199,9 +210,80 @@ class SurveyWaveController extends Controller
         return back()->with('status', 'Wave status updated.');
     }
 
+    public function update(Request $request, SurveyWave $wave)
+    {
+        $this->authorizeWave($wave);
+
+        if ($wave->status === 'processing') {
+            return redirect()
+                ->route('survey-waves.index')
+                ->withErrors('Waves cannot be edited while processing. Wait for the current dispatch to finish.');
+        }
+
+        $validated = $request->validate([
+            'label' => 'required|string|max:255',
+            'target_roles' => 'required|array|min:1',
+            'target_roles.*' => 'integer|in:1,2,3,4',
+            'status' => 'required|in:scheduled,paused,completed',
+            'cadence' => 'required|in:manual,weekly,monthly,quarterly',
+            'opens_at' => 'nullable|date',
+            'due_at' => 'nullable|date|after_or_equal:opens_at',
+        ]);
+
+        if ($wave->status === 'completed') {
+            $validated['status'] = 'completed';
+        }
+
+        if ($wave->kind === 'full' && $validated['cadence'] !== 'manual') {
+            throw ValidationException::withMessages([
+                'cadence' => 'Full waves must use the manual cadence.',
+            ]);
+        }
+
+        if ($wave->kind === 'drip' && $validated['status'] === 'scheduled') {
+            $this->guardDripAccess($wave->kind, $validated['cadence']);
+        }
+
+        $wave->fill([
+            'label' => $validated['label'],
+            'target_roles' => $this->normalizeTargetRoles($validated['target_roles']),
+            'status' => $validated['status'],
+            'cadence' => $validated['cadence'],
+            'opens_at' => $validated['opens_at'] ?? null,
+            'due_at' => $validated['due_at'] ?? null,
+        ]);
+
+        $dirtyKeys = array_keys($wave->getDirty());
+        if (empty($dirtyKeys)) {
+            return redirect()
+                ->route('survey-waves.index')
+                ->with('status', 'No wave changes were saved.');
+        }
+
+        $wave->save();
+
+        SurveyWaveLog::create([
+            'survey_wave_id' => $wave->id,
+            'status' => $wave->status,
+            'message' => 'Wave settings updated: ' . implode(', ', $dirtyKeys) . '.',
+        ]);
+
+        return redirect()
+            ->route('survey-waves.index')
+            ->with('status', 'Wave updated.');
+    }
+
     public function dispatchWave(SurveyWave $wave)
     {
         $this->authorizeWave($wave);
+
+        if ($wave->status === 'processing') {
+            return back()->withErrors('Wave is already processing.');
+        }
+
+        if ($wave->status === 'completed') {
+            return back()->withErrors('Completed waves cannot be dispatched again. Create a new wave instead.');
+        }
 
         $manager = CompanyBilling::manager($wave->company_id);
         if (!CompanyBilling::allowsScheduling($manager)) {
@@ -262,5 +344,16 @@ class SurveyWaveController extends Controller
                 'cadence' => 'Drip scheduling requires an active subscription.',
             ]);
         }
+    }
+
+    protected function normalizeTargetRoles(array $roles): array
+    {
+        return collect($roles)
+            ->map(fn ($role) => (int) $role)
+            ->filter(fn ($role) => in_array($role, [1, 2, 3, 4], true))
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
     }
 }

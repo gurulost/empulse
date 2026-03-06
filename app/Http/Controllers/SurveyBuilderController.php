@@ -40,7 +40,9 @@ class SurveyBuilderController extends Controller
             'pages.items' => function ($q) { $q->orderBy('sort_order'); },
             'pages.sections.items' => function ($q) { $q->orderBy('sort_order'); },
             'pages.items.options',
+            'pages.items.optionSource',
             'pages.sections.items.options',
+            'pages.sections.items.optionSource',
         ])->findOrFail($versionId);
 
         return response()->json($version);
@@ -83,6 +85,7 @@ class SurveyBuilderController extends Controller
     public function updateItem(Request $request, $itemId)
     {
         $item = SurveyItem::findOrFail($itemId);
+        $optionTypes = ['dropdown', 'single_select', 'single_select_text', 'multi_select'];
         
         if ($item->version->is_active) {
             return response()->json(['message' => 'Cannot edit active version'], 403);
@@ -109,12 +112,15 @@ class SurveyBuilderController extends Controller
         $item->update([
             'question' => $validated['question'],
             'type' => $validated['type'],
-            'scale_config' => $validated['scale_config'] ?? null,
+            'scale_config' => $validated['type'] === 'slider' ? ($validated['scale_config'] ?? null) : null,
             'metadata' => $validated['metadata'] ?? null,
             'display_logic' => $validated['display_logic'] ?? null,
         ]);
 
-        if (array_key_exists('options', $validated)) {
+        if (!in_array($validated['type'], $optionTypes, true)) {
+            $item->options()->delete();
+            $item->optionSource()->delete();
+        } elseif (array_key_exists('options', $validated)) {
             $item->options()->delete();
             foreach ($validated['options'] as $index => $opt) {
                 $item->options()->create([
@@ -127,7 +133,7 @@ class SurveyBuilderController extends Controller
             }
         }
 
-        return response()->json($item->fresh('options'));
+        return response()->json($item->fresh(['options', 'optionSource']));
     }
 
     public function updatePage(Request $request, $pageId)

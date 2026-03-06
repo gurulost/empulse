@@ -38,6 +38,19 @@ test('workfit admin routes render', async ({ page }) => {
     await expectHealthyPage(page, '/admin/builder', 'Survey Status');
 });
 
+test('workfit admin user list shows chief role label', async ({ page }) => {
+    await login(page, 'admin@workfit.com');
+    await page.goto('/admin');
+    await page.waitForLoadState('networkidle');
+    await page.getByRole('link', { name: 'Users' }).click();
+    await page.waitForLoadState('networkidle');
+    await page.getByPlaceholder('Search users...').fill('chief@acme.com');
+    await page.getByPlaceholder('Search users...').press('Enter');
+    await page.waitForLoadState('networkidle');
+    await expect(page.locator('tbody')).toContainText('chief@acme.com');
+    await expect(page.locator('tbody')).toContainText('Chief');
+});
+
 test('manager routes render', async ({ page }) => {
     await login(page, 'manager@acme.com');
     await expectHealthyPage(page, '/home', 'Dashboard Analytics');
