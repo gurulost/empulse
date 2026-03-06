@@ -24,7 +24,11 @@ class LoginController extends Controller
     |
     */
 
-    use AuthenticatesUsers;
+    use AuthenticatesUsers {
+        hasTooManyLoginAttempts as protected traitHasTooManyLoginAttempts;
+        incrementLoginAttempts  as protected traitIncrementLoginAttempts;
+        clearLoginAttempts      as protected traitClearLoginAttempts;
+    }
 
     /**
      * Where to redirect users after login.
@@ -43,6 +47,9 @@ class LoginController extends Controller
         $this->middleware('guest')->except('logout');
     }
 
+    /**
+     * Handle a login request with full exception capture for production diagnostics.
+     */
     public function login(Request $request)
     {
         try {
@@ -99,7 +106,6 @@ class LoginController extends Controller
         $request->validate([
             $this->username() => ['required', 'string', 'email'],
             'password' => ['required', 'string'],
-            // 'g-recaptcha-response' => ['required', 'captcha'],
         ]);
     }
 
@@ -120,42 +126,42 @@ class LoginController extends Controller
         return RouteServiceProvider::HOME;
     }
 
-    protected function hasTooManyLoginAttempts(Request $request): bool
+    protected function hasTooManyLoginAttempts(Request $request)
     {
         try {
-            return $this->limiter()->tooManyAttempts(
-                $this->throttleKey($request),
-                $this->maxAttempts()
-            );
-        } catch (\Throwable $e) {
-            Log::warning('Login throttle check failed (cache unavailable) — degrading safely.', [
-                'error' => $e->getMessage(),
+            return $this->traitHasTooManyLoginAttempts($request);
+        } catch (\Throwable $exception) {
+            Log::warning('Login rate limiter unavailable during lockout check.', [
+                'email' => $request->input($this->username()),
+                'ip'    => $request->ip(),
+                'error' => $exception->getMessage(),
             ]);
             return false;
         }
     }
 
-    protected function incrementLoginAttempts(Request $request): void
+    protected function incrementLoginAttempts(Request $request)
     {
         try {
-            $this->limiter()->hit(
-                $this->throttleKey($request),
-                $this->decayMinutes() * 60
-            );
-        } catch (\Throwable $e) {
-            Log::warning('Login attempt increment failed (cache unavailable) — skipping.', [
-                'error' => $e->getMessage(),
+            $this->traitIncrementLoginAttempts($request);
+        } catch (\Throwable $exception) {
+            Log::warning('Login rate limiter unavailable while recording failed attempt.', [
+                'email' => $request->input($this->username()),
+                'ip'    => $request->ip(),
+                'error' => $exception->getMessage(),
             ]);
         }
     }
 
-    protected function clearLoginAttempts(Request $request): void
+    protected function clearLoginAttempts(Request $request)
     {
         try {
-            $this->limiter()->clear($this->throttleKey($request));
-        } catch (\Throwable $e) {
-            Log::warning('Login attempt clear failed (cache unavailable) — skipping.', [
-                'error' => $e->getMessage(),
+            $this->traitClearLoginAttempts($request);
+        } catch (\Throwable $exception) {
+            Log::warning('Login rate limiter unavailable while clearing attempts.', [
+                'email' => $request->input($this->username()),
+                'ip'    => $request->ip(),
+                'error' => $exception->getMessage(),
             ]);
         }
     }
