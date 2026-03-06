@@ -1,0 +1,45 @@
+~/workspace$ # See what commits replit-agent has that main doesn't
+git log main..replit-agent --oneline
+
+# See if the actual file content differs between the two branch tips 
+git diff main replit-agent --name-only
+f0832ad (replit-agent) Resolve login controller conflicts with correct formatting
+463a792 Resolve conflicts in login controller and update documentation
+e234474 Published your App
+516bd56 Improve login functionality and application environment handling
+9c7068a Published your App
+543e908 Add error capture for login failures to aid debugging
+430e9b8 Published your App
+638825d Improve login security by handling cache failures gracefully
+3d6fb44 Saved progress at the end of the loop
+129275a Saved progress at the end of the loop
+ed36720 Published your App
+7ae4953 Published your App
+add342e Published your App
+705b705 Published your App
+60ef967 Published your App
+d213f38 Saved progress at the end of the loop
+7f17e21 Update Brevo email configuration to use the correct API key
+f0fa76b Saved progress at the end of the loop
+b662044 Update server process and add deployment notes
+5a7c86c Published your App
+b464e12 Published your App
+3a855ce Published your App
+b0c6a0e Saved progress at the end of the loop
+7d25b20 Ensure application storage directories are writable for production
+47c7175 Published your App
+0097320 Transitioned from Plan to Build mode
+6bdfd1e Saved progress at the end of the loop
+94fc954 Add safe database migrations and optional demo data seeding to deployments
+e54e650 Published your App
+46b8026 Remove app initialization from release step and start web server
+29188de Saved progress at the end of the loop
+4971b21 Saved progress at the end of the loop
+02843e8 Saved progress at the end of the loop
+581cb7c Transitioned from Plan to Build mode
+131e3fc Transitioned from Plan to Build mode
+3307101 Saved progress at the end of the loop
+fdf9459 (gitsafe-backup/main) Saved progress at the end of the loop
+13dc527 Fix database transaction errors and improve deployment stability
+b24a04b Fix database transaction errors and improve deployment stability
+efb81be Saved progress at the end of the loop
