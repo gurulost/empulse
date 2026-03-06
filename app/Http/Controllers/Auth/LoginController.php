@@ -7,6 +7,7 @@ use App\Providers\RouteServiceProvider;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class LoginController extends Controller
@@ -22,7 +23,11 @@ class LoginController extends Controller
     |
     */
 
-    use AuthenticatesUsers;
+    use AuthenticatesUsers {
+        hasTooManyLoginAttempts as protected traitHasTooManyLoginAttempts;
+        incrementLoginAttempts as protected traitIncrementLoginAttempts;
+        clearLoginAttempts as protected traitClearLoginAttempts;
+    }
 
     /**
      * Where to redirect users after login.
@@ -66,5 +71,46 @@ class LoginController extends Controller
         }
 
         return RouteServiceProvider::HOME;
+    }
+
+    protected function hasTooManyLoginAttempts(Request $request)
+    {
+        try {
+            return $this->traitHasTooManyLoginAttempts($request);
+        } catch (\Throwable $exception) {
+            Log::warning('Login rate limiter unavailable during lockout check.', [
+                'email' => $request->input($this->username()),
+                'ip' => $request->ip(),
+                'error' => $exception->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+
+    protected function incrementLoginAttempts(Request $request)
+    {
+        try {
+            $this->traitIncrementLoginAttempts($request);
+        } catch (\Throwable $exception) {
+            Log::warning('Login rate limiter unavailable while recording failed attempt.', [
+                'email' => $request->input($this->username()),
+                'ip' => $request->ip(),
+                'error' => $exception->getMessage(),
+            ]);
+        }
+    }
+
+    protected function clearLoginAttempts(Request $request)
+    {
+        try {
+            $this->traitClearLoginAttempts($request);
+        } catch (\Throwable $exception) {
+            Log::warning('Login rate limiter unavailable while clearing attempts.', [
+                'email' => $request->input($this->username()),
+                'ip' => $request->ip(),
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 }

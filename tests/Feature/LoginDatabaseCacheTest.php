@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class LoginDatabaseCacheTest extends TestCase
@@ -57,5 +58,26 @@ class LoginDatabaseCacheTest extends TestCase
 
         $response->assertRedirect('/home');
         $this->assertAuthenticated();
+    }
+
+    public function test_login_does_not_crash_when_database_cache_tables_are_missing(): void
+    {
+        Schema::dropIfExists('cache_locks');
+        Schema::dropIfExists('cache');
+
+        User::factory()->create([
+            'email' => 'manager@example.com',
+            'password' => bcrypt('correct-password'),
+            'role' => 1,
+            'company_id' => 1,
+        ]);
+
+        $response = $this->from('/login')->post('/login', [
+            'email' => 'manager@example.com',
+            'password' => 'wrong-password',
+        ]);
+
+        $response->assertRedirect('/login');
+        $response->assertSessionHasErrors('email');
     }
 }
