@@ -1,0 +1,71 @@
+I reproduced the live site again just now.
+
+Current deployed behavior on `https://empulse-real.replit.app` is:
+- `GET /login` is now healthy
+- all links/form targets are HTTPS
+- `POST /login` still returns `500`
+
+That means the proxy/HTTPS fix is live there, but the remaining failure is in the login POST path itself. I pushed a second hardening fix for that at `f968478` on `origin/main`.
+
+What `f968478` changes:
+- [LoginController.php](/Users/davedixon/Downloads/empulse%20code/app/Http/Controllers/Auth/LoginController.php) now degrades safely if Laravel’s login rate limiter/cache backend is broken. Instead of a raw 500, login continues and logs a warning.
+- [LoginDatabaseCacheTest.php](/Users/davedixon/Downloads/empulse%20code/tests/Feature/LoginDatabaseCacheTest.php) now proves login still works even if the `cache` tables are missing.
+
+This is specifically aimed at the current live symptom:
+- page render works
+- every login POST 500s
+- that is exactly what happens when auth throttling hits a bad cache backend
+
+**Deploy Agent Instructions**
+Deploy `origin/main` at commit `f968478`.
+
+Run, in order:
+
+```bash
+git fetch origin
+git checkout main
+git reset --hard origin/main
+composer install --no-dev --prefer-dist --optimize-autoloader
+npm ci
+npm run build
+php artisan migrate --force
+php artisan optimize:clear
+```
+
+Then restart:
+- web process
+- queue worker
+- scheduler
+
+If your deploy platform supports cache warmup, after `optimize:clear` run:
+
+```bash
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+```
+
+**Important**
+Even though the new code should prevent login from hard-failing when cache throttling is broken, the agent should still run migrations. `main` now expects:
+- `cache`
+- `cache_locks`
+- `sessions`
+- the earlier subscription alignment migration
+
+**Verification checklist**
+After deploy:
+1. Open `https://empulse-real.replit.app/login`
+2. Confirm the page loads normally
+3. Submit a wrong password
+4. Expected result: validation error on the login page, not `500`
+5. Submit `manager@acme.com` / `password`
+6. Expected result: redirect to `/home`
+
+**If it still 500s after deploying `f968478`**
+At that point the remaining issue is almost certainly environment/runtime, not code. The deploy agent should immediately capture the server log line for `POST /login` and check:
+- `CACHE_DRIVER`
+- `SESSION_DRIVER`
+- whether `cache`, `cache_locks`, and `sessions` tables exist
+- whether config cache was cleared after deploy
+
+The key point is: the site currently is not on the final login hardening commit yet. It needs `f968478`, not just the earlier proxy fix.
