@@ -112,30 +112,34 @@ import empulseLogo from '@assets/empulse-logo.png';
 
 const props = defineProps({
     user: { type: Object, required: true },
-    currentRoute: { type: String, default: '' }
+    currentRoute: { type: String, default: '' },
+    capabilities: { type: Array, default: () => [] },
+    billingAccess: { type: Boolean, default: false },
+    avatarUrl: { type: String, default: '/upload/no_image.jpg' },
 });
 
 const role = computed(() => Number(props.user?.role ?? 0));
 const currentRouteName = computed(() => String(props.currentRoute ?? ''));
-const isWorkfitAdmin = computed(() => Number(props.user?.is_admin ?? 0) === 1 || Number(props.user?.role ?? 0) === 0);
+const hasCapability = (capability) => props.capabilities.includes(capability);
+const isWorkfitAdmin = computed(() => hasCapability('workfit.admin'));
 const isEmployee = computed(() => role.value === 4);
 const isManager = computed(() => role.value === 1);
 const hasCompanyContext = computed(() => Number(props.user?.company_id ?? 0) > 0);
 
 const userName = computed(() => props.user?.name ?? '');
-const userAvatar = computed(() => (props.user?.image ? `/upload/${props.user.image}` : '/upload/no_image.jpg'));
+const userAvatar = computed(() => props.avatarUrl);
 const roleName = computed(() => {
     if (isWorkfitAdmin.value) return 'Administrator';
     if (isManager.value) return 'Manager';
     if (isEmployee.value) return 'Employee';
     return 'Member';
 });
-const canAccessCompanyReports = computed(() => !isEmployee.value && hasCompanyContext.value);
-const canAccessActions = computed(() => !isEmployee.value && hasCompanyContext.value);
-const canManageTeam = computed(() => !isEmployee.value && hasCompanyContext.value);
-const canManageSurveys = computed(() => isManager.value);
-const canManageWaves = computed(() => isManager.value);
-const canAccessBilling = computed(() => isManager.value);
+const canAccessCompanyReports = computed(() => hasCapability('analytics.view'));
+const canAccessActions = computed(() => hasCapability('actions.view') && (hasCompanyContext.value || isWorkfitAdmin.value));
+const canManageTeam = computed(() => hasCapability('team.manage'));
+const canManageSurveys = computed(() => hasCapability('survey.manage'));
+const canManageWaves = computed(() => hasCapability('survey-waves.manage'));
+const canAccessBilling = computed(() => props.billingAccess);
 const dashboardHref = computed(() => (isEmployee.value ? '/employee' : '/home'));
 const dashboardActive = computed(() => {
     if (isEmployee.value) {

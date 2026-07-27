@@ -4,7 +4,7 @@ Source of truth for the full pre-deployment production-readiness program. Update
 
 ## Metadata
 - Created: 2026-07-27T12:30:02
-- Last Updated: 2026-07-27T17:05:36-04:00
+- Last Updated: 2026-07-27T19:13:39-04:00
 - Branch: `codex/production-readiness`
 - Checklist Doc: `docs/EMPULSE_PRODUCTION_READINESS_CHECKLIST.md`
 
@@ -24,13 +24,13 @@ Source of truth for the full pre-deployment production-readiness program. Update
 - [ ] G-009 [status:open] Gate E production assurance and fresh review are verified.
 
 ## Rerun Matrix
-- [ ] G-010 [status:open] If code changes after any checked `V-*`, reset affected validation items to unchecked.
-- [ ] G-011 [status:open] Final sign-off only after a full validation pass completed after the last code edit.
+- [x] G-010 [status:verified] No checked validation item relies on evidence invalidated by a later code change.
+- [x] G-011 [status:verified] The complete repository validation pass was rerun after the last implementation edit; later documentation-only changes reran documentation/checklist contracts and the complete backend suite.
 
 ## Audit Queue
 - [x] Q-001 [status:verified] Create checklist and baseline scope.
 - [x] Q-002 [status:verified] Complete discovery/audit of impacted systems.
-  - Evidence: owner-supplied 753-line audit and validated 75-ticket JSON; current-source confirmation; baseline `composer test` passes 101 tests/382 assertions.
+  - Evidence: owner-supplied 753-line audit and validated 75-ticket JSON; [`AUDIT_BACKLOG_TRACEABILITY_2026-07-27.md`](AUDIT_BACKLOG_TRACEABILITY_2026-07-27.md) accounts for every ticket exactly once and records its evidence or external/deferred disposition; the documentation contract enforces the 75-ID set.
 - [x] Q-003 [status:verified] Implement Gate A direct foundational reset.
 - [x] Q-004 [status:verified] Implement Gate B trustworthy diagnosis and respondent experience.
 - [x] Q-005 [status:verified] Implement Gate C findings-to-action-to-learning product loop.
@@ -43,7 +43,7 @@ Source of truth for the full pre-deployment production-readiness program. Update
 
 ### Gate A
 - [x] Q-100 [status:verified] EMP-001–005: remove dangerous trust paths and establish a provider-neutral Laravel/PostgreSQL runtime contract.
-  - Evidence: P-001 authorization containment verified. Strict survey validation now defaults on; unsafe Replit deployment declaration removed; production config checker, PostgreSQL Apache image, separate Procfile/Compose web-worker-scheduler processes, no-build/startup migration rule, liveness, and DB/runtime-table readiness implemented. Docker execution and clean PostgreSQL integration remain unverified because Docker is unavailable in this workspace.
+  - Evidence: P-001 authorization containment verified. Strict survey validation now defaults on; unsafe Replit deployment declaration removed; production config checker, PostgreSQL Apache image, separate Procfile/Compose web-worker-scheduler processes, no-build/startup migration rule, liveness, and DB/runtime-table readiness implemented. Clean PostgreSQL 14 integration passes locally and PostgreSQL 16 passes committed-SHA CI; container execution remains a selected-provider staging gate.
 - [x] Q-101 [status:verified] EMP-006 plus EMP-101–110: replace destructive tenant/roster identity with organizations, memberships, capabilities, units, deactivation, invitations, and audit events.
   - Evidence: effective-dated organization truth, restrictive evidence keys, transactional registration, single-use invitations, deactivation, row scopes, append-only HMAC audit, versioned privacy acknowledgment, verified access/correction/erasure, legal hold, and dry-run/hash-gated retention are implemented. The unsafe direct importer is replaced by encrypted staging, stable external identities, strict row/unit/supervisor validation, cross-tenant conflict detection, explicit preview confirmation, stale-preview rejection, atomic reconciliation, audit, queued account invitations, and sanitized result download.
 - [x] Q-102 [status:verified] EMP-007–011: fix survey structure, mandatory schema validation, access lifecycle, atomic submission, and immutable version binding.
@@ -51,7 +51,7 @@ Source of truth for the full pre-deployment production-readiness program. Update
 - [x] Q-103 [status:verified] EMP-012–014 plus EMP-111: separate roster/launch, establish truthful wave/delivery state, and organization entitlement authority.
   - Evidence: roster/user creation is separate from measurement; delivery has idempotent attempt/provider/delivery/suppression state; waves report collection truth; company-owned entitlements and usage—not manager tariff—authorize dispatch.
 - [x] Q-104 [status:verified] EMP-015: prove the full Gate A PostgreSQL journey and negative cases.
-  - Evidence: clean PostgreSQL migration/canonical seed, 184-test/928-assertion PostgreSQL suite, and all 13 PostgreSQL-backed browser journeys pass together; the expanded 14-journey browser set also passes against a fresh disposable application. The respondent journey renders and persists all 62 canonical answers. Negative authorization, access lifecycle, validation, concurrency, tenant, roster-import authorization, respondent completion, and accessibility cases are included.
+  - Evidence: clean PostgreSQL migration/canonical seed, 200-test/1,121-assertion PostgreSQL suite, and all 17 PostgreSQL-backed browser journeys pass together with real web and queue processes. The respondent journey renders and persists all 62 canonical answers. Negative authorization, access lifecycle, validation, concurrency, tenant, roster-import authorization, respondent completion, accessibility, and the complete action-to-remeasurement loop are included.
 
 ### Gate B
 - [x] Q-200 [status:verified] EMP-108–109 and EMP-201–204: encode respondent promise, methodology dossier, instrument governance, and metric registry.
@@ -64,22 +64,22 @@ Source of truth for the full pre-deployment production-readiness program. Update
 
 ### Gate C
 - [x] Q-300 [status:verified] EMP-301–306: finding, action, communication, follow-up measurement, and outcome evaluation.
-  - Evidence: immutable evidence snapshots, four versioned metric-eligible intervention playbooks with non-causal guardrails, owned actions, predeclared measurement, communication, and comparable outcome evaluation are implemented and tested.
+  - Evidence: immutable evidence snapshots, five versioned evidence-labeled intervention playbooks with non-causal guardrails, owned dated actions, immutable predeclared measurement, append-only communication, and idempotent comparable outcome evaluation are implemented and tested. The manager workspace exposes owner, dates, success criteria, guardrails, follow-up collection state, sample/comparability, target movement, result, and causality limit.
 - [x] Q-301 [status:verified] EMP-307–309: advisor operations, manager loop UX, and product-value telemetry.
-  - Evidence: customer-approved, purpose-bound, expiring/revocable advisor grants are enforced in controller and service layers; no advisor can select an arbitrary customer; grant/revocation is audited.
+  - Evidence: customer-approved, purpose-bound, expiring/revocable advisor grants are enforced in controller and service layers; no advisor can select an arbitrary customer; grant/revocation is audited. Grant-scoped work items, visibility-separated append-only notes, and a versioned privacy-safe admin value-loop report are implemented without answer or employee-identity exposure.
 - [x] Q-302 [status:verified] EMP-310: full diagnosis-to-learning end-to-end proof.
-  - Evidence: feature test covers reliable finding, explicit decision, owned action, required measurement plan, communication, governed three-item Pulse, compatible remeasurement, idempotent outcome, and non-causal interpretation.
+  - Evidence: feature tests and a 29-second PostgreSQL/queue-backed Playwright journey cover reliable finding, explicit decision, owned dated action, required measurement plan, communication, governed three-item Pulse, ten invitations, five employee completions, compatible remeasurement, idempotent outcome, non-causal interpretation, and the WorkFit-admin value report through the UI.
 
 ### Gate D
 - [x] Q-400 [status:verified] EMP-401–406: organization billing, catalog, entitlements, Stripe reconciliation, lifecycle, and usage.
-  - Evidence: fail-closed catalog sync materializes only complete checkout plans; active-respondent usage and assignment dispatch commit under one company-row lock; webhook replay/lifecycle/transfer tests pass.
+  - Evidence: explicit company billing administrators—not static roles—authorize billing; active owners can appoint/revoke administrators and transfer ownership through acceptance-gated continuity. Fail-closed catalog sync materializes only complete checkout plans; immutable catalog/entitlement versions retain historical terms; active-respondent usage and assignment dispatch commit under one company-row lock; webhook replay/lifecycle/transfer tests pass.
 - [x] Q-401 [status:verified] EMP-407–409: governed Pulse variants, recurring audience/fatigue controls, and learning-centered retention.
 - [x] Q-402 [status:verified] EMP-410 remains deferred until confirmed commercial demand.
   - Evidence: Empulse has no customers, sales, deployment, or contracted enterprise requirement. The product north star and owner-supplied audit both require enterprise hierarchy, SSO/SCIM, residency, integrations, and contractual controls to remain out of the core release until validated demand exists.
 
 ### Gate E
 - [ ] Q-500 [status:in_progress] EMP-501–504: PostgreSQL/process CI, static/security gates, Vue tests, and full browser journeys.
-  - Evidence: GitHub run `30303624681` on candidate `d9725de` passes PostgreSQL 16 migration/seed, 170 tests/782 assertions, audits, cache artifacts, Pint/static analysis, frontend lint/two component tests/build, real web/worker readiness, and all 13 browser/accessibility journeys. The proposed-change secret scan is green. The overall workflow remains red only because the corrected `--all` history command finds the three known historical detections.
+  - Evidence: the current local candidate passes 200 tests/1,121 assertions on both SQLite and PostgreSQL 14, six frontend unit assertions across two files, the 182-module production build, and all 17 browser/accessibility/product journeys with real PostgreSQL web and queue processes. Prior GitHub run `30303624681` on candidate `d9725de` passed the then-current PostgreSQL 16 product job. Final committed-SHA CI still must rerun, and its honest `--all` history scan remains gated by the three known historical detections.
 - [ ] Q-501 [status:in_progress] EMP-505–507: load/capacity, observability/SLOs, backup/restore and integrity drills.
   - Evidence: health and heartbeat checks, SLO/capacity runbooks, k6 scenario, and PostgreSQL restore/audit-chain drill exist; approved-scale load and provider alert drills remain.
 - [ ] Q-502 [status:in_progress] EMP-508–510: independent assurance, release/rollback controls, and living runbooks/contracts.
@@ -111,7 +111,7 @@ Source of truth for the full pre-deployment production-readiness program. Update
   - Owner: Gate A
   - Linked Fix: P-004
 - [x] F-007 [status:verified] [P0] [confidence:1.00] Wave and delivery state reported queue intent as collection completion.
-  - Evidence: full-wave processing transitions to `active`, not `completed`; active full waves are not redispatched; completion occurs only when all assignments are completed or the due date passes; regression test proves queued invitations remain pending while wave stays active.
+  - Evidence: full-wave and one-time manual Pulse processing transition to `active`, not `completed`; active one-time waves are not redispatched; completion occurs only when all assignments are completed or the due date passes. The PostgreSQL browser journey caught and verifies both post-dispatch log rendering and live assignment access.
   - Owner: Gate A
   - Linked Fix: P-004
 - [x] F-008 [status:verified] [P0] [confidence:1.00] Company entitlement depended on an arbitrary manager row and stale user tariff.
@@ -151,7 +151,7 @@ Source of truth for the full pre-deployment production-readiness program. Update
   - Evidence: F-004 and F-005 verified; mandatory validation, token lifecycle, optimistic autosave, atomic locked response creation, unique evidence constraints, publish lint, semantic clone equality, one-live-version enforcement, content hashing, and instrument compatibility are implemented and covered.
 - [x] P-004 [status:verified] Separate roster from measurement and establish truthful wave/delivery lifecycle.
   - Addresses: F-006, F-007
-  - Evidence: explicit-wave-only assignment creation and account-only roster invitation; full wave queueing/active/response-complete lifecycle proven in focused feature tests.
+  - Evidence: explicit-wave-only assignment creation and account-only roster invitation; full and one-time Pulse queueing/active/response-complete lifecycle proven in focused feature tests and the process-backed north-star browser journey.
 - [x] P-005 [status:verified] Establish organization-owned entitlement authority.
   - Addresses: F-008
   - Evidence: company-owned billing accounts/admins, normalized plan features/limits, lifecycle reconciliation, replay-safe webhooks, usage, and transfer tests pass.
@@ -174,15 +174,15 @@ Source of truth for the full pre-deployment production-readiness program. Update
 - [x] V-001 [status:verified] Focused Gate A security, tenant, survey, wave, billing, and negative tests.
   - Evidence: all focused slices pass, including privacy, delivery, entitlement, action/Pulse, and process-readiness tests.
 - [x] V-002 [status:verified] `composer test`
-  - Evidence: 170 tests/782 assertions pass on SQLite and PostgreSQL 14 after the final code edit.
+  - Evidence: 200 tests/1,121 assertions pass independently on SQLite and PostgreSQL 14 after the final implementation edits.
 - [x] V-003 [status:verified] `npm run lint`
   - Evidence: ESLint passes on frontend, unit, E2E, and load sources.
 - [x] V-004 [status:verified] `npm run build`
-  - Evidence: Vite 8.1.5 production build passes with 177 transformed modules.
+  - Evidence: Vite 8.1.5 production build passes with 182 transformed modules.
 - [x] V-005 [status:verified] PostgreSQL clean-install, migration, and integration journey.
-  - Evidence: clean PostgreSQL 14 migration/canonical 62-item seed and full 170-test suite pass; latest migration rollback/reapply passes. CI targets PostgreSQL 16 for committed-SHA confirmation.
+  - Evidence: clean PostgreSQL 14 migration/canonical 62-item seed and full 200-test/1,121-assertion suite pass; the four newest evidence/advisor/publication/billing-history migrations roll back and reapply cleanly. PostgreSQL 16 committed-SHA CI passed on the prior candidate and must rerun on the final pushed SHA.
 - [x] V-006 [status:verified] `npm run test:e2e`
-  - Evidence: all 13 role, failure, respondent-completion, and accessibility journeys pass together against a fresh PostgreSQL database with real web and worker processes.
+  - Evidence: all 17 role, failure, respondent-completion, accessibility, admin-governance, and north-star action-loop journeys pass together against a fresh PostgreSQL database with real web and queue-worker processes.
 - [ ] V-007 [status:in_progress] Static analysis, dependency, secret, security, and license gates.
   - Evidence: full-tree Pint is clean; scoped critical-path Larastan passes without a baseline; Composer and npm report zero advisories; PHP and direct JavaScript licenses were inventoried with no unknown direct licenses, and the unused PHPMailer dependency was removed. Current-source and proposed-change Gitleaks scans are clean, but the honest full-history gate finds three pre-existing detections, including an old Sendinblue/Brevo token. A disposable 366-commit mirror rewrite removed both obsolete paths, preserved the release tree exactly, passed `git fsck`, and produced a zero-finding full-history scan. Credential revocation and explicit authorization for the rehearsed remote rewrite remain required.
 - [ ] V-008 [status:in_progress] Accessibility component/browser and manual review.
@@ -190,11 +190,11 @@ Source of truth for the full pre-deployment production-readiness program. Update
 - [ ] V-009 [status:in_progress] Load, concurrency, queue, scheduler, mail, and Stripe test-mode evidence.
   - Evidence: local PostgreSQL k6 smoke passes 7,504 iterations/22,512 requests with zero failures, p95 182.82 ms, and p99 191.15 ms at 20 VUs. Provider-backed 500-respondent, queue-age, mail, Stripe, and worker-failure drills remain.
 - [ ] V-010 [status:in_progress] Backup/restore, migration rollback, readiness, and incident drills.
-  - Evidence: final-state PostgreSQL custom backup restored into a new database; six critical row counts match (1 company, 9 users, 10 assignments, 8 responses, 496 answers, 17 audit events) and restored platform/company audit chains verify. The newest advisor-access migration rolls back and reapplies cleanly. Provider backup/PITR, full application rollback, and alert drills remain.
+  - Evidence: final-state PostgreSQL custom backup restored into a new database; six critical row counts match (1 company, 9 users, 10 assignments, 8 responses, 496 answers, 17 audit events) and restored platform/company audit chains verify. The governed-roster migration and the final four evidence/advisor/publication/billing-history migrations roll back and reapply cleanly. Provider backup/PITR, full application rollback, and alert drills remain.
 - [x] V-011 [status:verified] Fresh-context adversarial review against product, privacy, methodology, security, accessibility, and commercial invariants.
   - Evidence: two independent fresh-context passes found eleven initial and five late current-source blockers. A verification pass found one remaining subgroup-threshold defect. All reported issues now have focused fixes and regression coverage; the reviewer confirmed no P0/P1 remains in the late review scope. Independent human security/privacy, methodology/legal, and accessibility approvals remain external launch gates.
 - [x] V-012 [status:verified] Checklist validator with `--require-signoff`.
-  - Evidence: `php artisan readiness:checklist` validates item syntax, unique identifiers, supported states, checkbox/state consistency, and accountable accepted-risk records; CI runs this structural gate. Six focused tests/16 assertions and the full 184-test/928-assertion suite pass. `--require-signoff` correctly refuses this current checklist while genuine production gates remain open.
+  - Evidence: `php artisan readiness:checklist` validates item syntax, unique identifiers, supported states, checkbox/state consistency, and accountable accepted-risk records; CI runs this structural gate. The full 200-test/1,121-assertion suite passes on SQLite and PostgreSQL. `--require-signoff` correctly refuses this current checklist while genuine production gates remain open.
 
 ## Residual Risks
 - [ ] R-001 [status:open] Independent legal/privacy and methodology review plus exact pricing/contract decisions block customer-facing launch.
@@ -206,7 +206,7 @@ Source of truth for the full pre-deployment production-readiness program. Update
   - Owner: release owner
   - Follow-up trigger/date: before Gate E sign-off.
 - [x] R-003 [status:verified] Governed roster import provides preview, cross-tenant conflict detection, reconciliation, explicit confirmation, atomic commit, and audit.
-  - Evidence: seven focused feature tests/82 assertions pass, covering create/update/deactivate, stable identity mapping, malformed/cross-tenant rejection, stale-preview all-or-nothing behavior, manager-only access, encrypted large-file queueing, repeated-file idempotency, hash-confirmed row retention, and report-only/execute invitation recovery. Full 184-test/928-assertion backend suites pass on SQLite and PostgreSQL 14; a clean PostgreSQL migrate/seed rehearsal and all 14 browser/accessibility journeys pass.
+  - Evidence: focused feature coverage includes create/update/deactivate, stable identity mapping, malformed/cross-tenant rejection, stale-preview all-or-nothing behavior, manager-only access, encrypted large-file queueing, repeated-file idempotency, hash-confirmed row retention, and report-only/execute invitation recovery. Full 200-test/1,121-assertion backend suites pass on SQLite and PostgreSQL 14; a clean PostgreSQL migrate/seed rehearsal and all 17 browser/accessibility/product journeys pass.
 - [ ] R-004 [status:open] Git history contains an old Sendinblue/Brevo token and two generic-key detections in removed legacy attachments.
   - Rationale: current source scans clean, but deleting a file does not remove it from Git history. The mail credential must be revoked/rotated. Rewriting shared `main` history and force-pushing is destructive and requires explicit owner coordination; a real credential must not be silently allowlisted just to make CI green.
   - Owner: repository owner and WorkFit mail administrator
@@ -231,3 +231,5 @@ Source of truth for the full pre-deployment production-readiness program. Update
 - 2026-07-27T16:58:59-04:00: Added a fail-closed checklist validator and CI structural gate. Final sign-off mode requires every item to be checked with `verified` or accountable `accepted_risk` status and correctly rejects this checklist while real production gates remain unresolved. The expanded full suite passes at 176 tests/798 assertions.
 - 2026-07-27T17:05:36-04:00: Archived obsolete “all fixed” checklists, the Laravel 9 audit, and an obsolete deploy handoff behind an explicit non-authoritative archive index; removed machine-specific links; corrected current roster/onboarding copy that promised a disabled CSV importer. Confirmed EMP-410 remains intentionally deferred because there is no contracted enterprise demand.
 - 2026-07-27T17:37:29-04:00: Added a governed two-phase roster importer with encrypted staging, stable tenant-scoped external identities, row reconciliation, fail-closed validation, explicit short-lived confirmation, stale-preview protection, atomic compatibility/history updates, account-only invitations, sanitized results, legal-hold-aware 30-day row retention, and scheduled idempotent invitation recovery. Full SQLite and PostgreSQL suites pass at 184 tests/928 assertions; clean PostgreSQL migration/seed, static analysis, formatting, lint, unit/build, and 14 browser/accessibility journeys pass.
+- 2026-07-27T17:48:45-04:00: Reconciled every owner-supplied audit ticket into a portable 75-ID traceability register with implementation, external-gate, pre-deployment-reset, or governed-deferred disposition. Added an automated completeness/order contract, corrected stale validation evidence, and verified that only provider, history/credential, independent-review, commercial/legal, and final committed-SHA gates remain non-terminal.
+- 2026-07-27T19:13:39-04:00: Completed the final pre-deployment control pass: governed survey publication, immutable action/measurement/communication/outcome records, evidence-labeled playbooks, advisor notes and queue, privacy-safe value-loop reporting, explicit billing-admin appointment/revocation/history, sanitized provider failures, safe contact/avatar handling, and production seeder refusal. A real PostgreSQL/queue browser journey exposed and fixed missing action-form label associations, lazy-loaded post-dispatch wave logs, and one-time Pulse waves being closed at dispatch. Both backend databases now pass 200 tests/1,121 assertions and all 17 browser journeys pass together. Historical credential remediation, final committed-SHA CI, provider staging/drills, approved-scale load, independent human review, and owner commercial/legal decisions remain open.

@@ -20,7 +20,8 @@ class SurveyService
     public function __construct(
         protected OnboardingTelemetryService $telemetry,
         protected SurveyVersionIntegrityService $versionIntegrity,
-        protected OrganizationEntitlementService $entitlements
+        protected OrganizationEntitlementService $entitlements,
+        protected AuditTrailService $audit
     ) {}
 
     public function getOrCreateAssignment(User $user, ?SurveyWave $wave = null): ?SurveyAssignment
@@ -271,6 +272,12 @@ class SurveyService
             $newVersion->content_hash = null;
             $newVersion->published_at = null;
             $newVersion->published_by = null;
+            $newVersion->publication_status = 'draft';
+            $newVersion->change_summary = null;
+            $newVersion->reviewed_by = null;
+            $newVersion->reviewed_at = null;
+            $newVersion->approved_by = null;
+            $newVersion->approved_at = null;
             $newVersion->created_utc = now();
             $newVersion->push();
 
@@ -330,21 +337,109 @@ class SurveyService
         }
     }
 
-    public function publishVersion(SurveyVersion $version): void
-    {
-        $contentHash = $this->versionIntegrity->assertPublishable($version);
+    public function submitVersionForReview(
+        SurveyVersion $version,
+        User $actor,
+        string $changeSummary
+    ): SurveyVersion {
+        if ($version->is_active || $version->publication_status !== 'draft') {
+            throw new \DomainException('Only an editable draft can be submitted for review.');
+        }
 
-        DB::transaction(function () use ($version, $contentHash) {
+        $contentHash = $this->versionIntegrity->assertPublishable($version);
+        $version->update([
+            'publication_status' => 'in_review',
+            'change_summary' => trim($changeSummary),
+            'content_hash' => $contentHash,
+            'reviewed_by' => $actor->id,
+            'reviewed_at' => now(),
+            'approved_by' => null,
+            'approved_at' => null,
+        ]);
+        $this->audit->record(
+            'survey.version_reviewed',
+            $actor,
+            null,
+            SurveyVersion::class,
+            $version->id,
+            [],
+            [
+                'content_hash' => $contentHash,
+                'change_summary_hash' => hash('sha256', trim($changeSummary)),
+            ]
+        );
+
+        return $version->fresh();
+    }
+
+    public function approveVersion(SurveyVersion $version, User $actor): SurveyVersion
+    {
+        if ($version->is_active || $version->publication_status !== 'in_review') {
+            throw new \DomainException('Only a version in review can be approved.');
+        }
+        if (trim((string) $version->change_summary) === '') {
+            throw new \DomainException('A change summary is required before approval.');
+        }
+        $contentHash = $this->versionIntegrity->assertPublishable($version);
+        if (! $version->content_hash || ! hash_equals($version->content_hash, $contentHash)) {
+            throw new \DomainException('Survey content changed after review. Return it to draft and review it again.');
+        }
+
+        $version->update([
+            'publication_status' => 'approved',
+            'approved_by' => $actor->id,
+            'approved_at' => now(),
+        ]);
+        $this->audit->record(
+            'survey.version_approved',
+            $actor,
+            null,
+            SurveyVersion::class,
+            $version->id,
+            [],
+            ['content_hash' => $contentHash]
+        );
+
+        return $version->fresh();
+    }
+
+    public function publishVersion(SurveyVersion $version, User $actor): void
+    {
+        if ($version->is_active || $version->publication_status !== 'approved') {
+            throw new \DomainException('Only an approved survey version can be published.');
+        }
+        if (! $version->approved_by || trim((string) $version->change_summary) === '') {
+            throw new \DomainException('Publication requires an approver and change summary.');
+        }
+        $contentHash = $this->versionIntegrity->assertPublishable($version);
+        if (! $version->content_hash || ! hash_equals($version->content_hash, $contentHash)) {
+            throw new \DomainException('Survey content changed after approval. Review and approve it again.');
+        }
+
+        DB::transaction(function () use ($version, $contentHash, $actor) {
             SurveyVersion::where('id', '!=', $version->id)
                 ->where('is_active', true)
-                ->update(['is_active' => false]);
+                ->update([
+                    'is_active' => false,
+                    'publication_status' => 'retired',
+                ]);
 
             $version->update([
                 'is_active' => true,
+                'publication_status' => 'published',
                 'content_hash' => $contentHash,
                 'published_at' => now(),
-                'published_by' => auth()->id(),
+                'published_by' => $actor->id,
             ]);
+            $this->audit->record(
+                'survey.version_published',
+                $actor,
+                null,
+                SurveyVersion::class,
+                $version->id,
+                [],
+                ['content_hash' => $contentHash]
+            );
         });
     }
 

@@ -14,7 +14,7 @@ The product is not intended to be a generic form builder. Its center is a versio
 ## The product loop
 
 1. A manager creates a company and adds the initial roster.
-2. WorkFit admin keeps the shared survey instrument versioned and publishes the live version.
+2. WorkFit admin keeps the shared survey instrument versioned, records a change summary, reviews and approves the exact content hash, then publishes the live version.
 3. The manager launches a full baseline wave.
 4. Employees receive secure assignments, autosave progress, and submit responses.
 5. Empulse calculates work-content gaps, indicator satisfaction, team culture, impact, and a composite temperature.
@@ -34,10 +34,11 @@ The first completed response is the workflow activation milestone: it proves the
 - scheduled dispatch, invitations, cadence enforcement, logs, and recovery;
 - company, department, team, and wave analytics;
 - trend and comparison reports;
-- WorkFit-admin survey builder, customer activation report, and onboarding action queue;
-- company-owned Stripe subscriptions, explicit billing administrators, entitlement/usage enforcement, and replay-safe webhook reconciliation;
+- WorkFit-admin survey builder with draft/review/approval/publication states, customer activation report, sanitized audit explorer, grant-scoped advisor queue, and privacy-safe action-loop value reporting;
+- company-owned Stripe subscriptions, explicit billing administrators, immutable catalog/entitlement history, entitlement/usage enforcement, and replay-safe webhook reconciliation;
 - versioned respondent privacy acknowledgment and audited data-subject/retention workflows;
-- immutable findings, leadership actions, communications, measurement plans, governed Pulse variants, and non-causal outcomes.
+- immutable findings, evidence-labeled intervention options, leadership actions, communications, measurement plans, governed Pulse variants, and non-causal outcomes;
+- customer-approved WorkFit advisory with scoped queues and append-only customer-shared versus WorkFit-internal notes.
 
 Qualtrics has been replaced for the active survey and analytics path.
 
@@ -86,10 +87,13 @@ npm run build
 The canonical source file in this repository is [`survey_instrument.json`](survey_instrument.json).
 
 ```bash
-php artisan survey:import survey_instrument.json --activate
+php artisan survey:import survey_instrument.json \
+  --activate \
+  --approved-by=<workfit-admin-user-id> \
+  --change-summary="Describe what changed and why this exact version is being published."
 ```
 
-The import is transactional. Activation deactivates the prior version and makes the new normalized version live globally.
+The import is transactional and fails closed unless the canonical content passes publication lint and metric-compatibility checks. `--activate` additionally requires a named active WorkFit survey administrator and a change summary; it records review, approval, content hash, publisher, and platform audit evidence before retiring the prior live version. For ordinary content changes, use `/admin/builder` and its draft → review → approved → published workflow.
 
 Do not rename question IDs or change analytics mappings without reviewing [`config/survey.php`](config/survey.php), the product methodology, and analytics tests.
 
@@ -114,7 +118,7 @@ Detailed preview/result rows expire after 30 days through the hash-confirmed ret
 
 ## Demo data
 
-`php artisan migrate:fresh --seed` is the deterministic browser/CI fixture: it imports the canonical 62-item WorkFit baseline, creates two hash-pinned cycles, and gives the role accounts a complete respondent journey. Use it only in an isolated disposable database.
+`php artisan migrate:fresh --seed` is the deterministic browser/CI fixture: it imports the canonical 62-item WorkFit baseline, creates two hash-pinned cycles, and gives the role accounts a complete respondent journey. Use it only in an isolated disposable database. `DatabaseSeeder` refuses to run when `APP_ENV=production`.
 
 Create a realistic company with departments, team leads, 100+ employees, several survey waves, and analytics-ready answers:
 
@@ -144,7 +148,7 @@ The scheduler runs:
 php artisan survey:waves:schedule
 ```
 
-The command enforces wave state, open/due windows, billing status, audience roles, and per-assignment cadence. It dispatches `ProcessSurveyWave`, which creates assignments and queues invitations.
+The command enforces wave state, open/due windows, billing status, audience roles, and per-assignment cadence. It dispatches `ProcessSurveyWave`, which creates assignments and queues invitations. Dispatch moves a full or one-time manual Pulse wave to `active`; it does not mark collection complete. Completion occurs only after all frozen assignments complete or the due date passes.
 
 A complete runtime needs both:
 
@@ -161,11 +165,11 @@ Invitation/reminder retries reuse one encrypted survey URL and one provider idem
 
 ## Billing
 
-The company is Cashier's billable customer. Billing admins browse `/plans` and `/account/billing`; owner transfer is acceptance-gated. Stripe webhooks reconcile the canonical organization entitlement, and legacy return routes cannot grant access. The plan/feature/limit contract lives in [`config/billing.php`](config/billing.php). Public prices and a trial remain disabled/unconfirmed until the product owner approves them.
+The company is Cashier's billable customer. Only users with an active `organization_billing_admins` appointment can browse and operate `/plans` and `/account/billing`; a manager or chief role alone does not grant billing access. The active owner can appoint or revoke additional billing administrators, while owner transfer is acceptance-gated and preserves continuity. Stripe webhooks reconcile the canonical organization entitlement, and legacy return routes cannot grant access. The plan/feature/limit contract lives in [`config/billing.php`](config/billing.php). Public prices and a trial remain disabled/unconfirmed until the product owner approves them.
 
 After approved Stripe price IDs and integer prices are configured, materialize the checkout projection with `php artisan billing:sync-catalog`. The command fails closed on incomplete plans. Active-respondent limits are reserved atomically with dispatch.
 
-WorkFit advisors do not have global customer action access. A company administrator grants and revokes named, purpose-bound access from the leadership action workspace.
+WorkFit advisors do not have global customer action access. A company administrator grants and revokes named, purpose-bound access from the leadership action workspace. The advisor queue shows only organizations with a currently active grant. Customer-shared workspace notes are visible to authorized customer users and the approved advisor; WorkFit-internal notes are visible only to an approved advisor. Both note types are append-only, and their creation is audited without copying note bodies into the audit log.
 
 ## Quality gates
 
@@ -195,6 +199,7 @@ No production environment is currently selected or deployed. Repository-level pr
 - migrations run as a one-time release action, never in the image build or web startup;
 - web, worker, and scheduler are distinct processes;
 - `/api/healthz` is liveness and `/api/readyz` checks database/runtime-table readiness;
+- `AVATAR_DISK` points to persistent/shared storage (or avatar upload is disabled); an ephemeral release filesystem is not durable customer storage;
 - `php artisan app:production-check` fails closed on unsafe configuration.
 
 The checked-in Docker and Procfile definitions express the same process contract. Replit configuration is development-only and intentionally has no production deployment block.
@@ -203,6 +208,7 @@ The checked-in Docker and Procfile definitions express the same process contract
 
 - [`docs/PRODUCT_VISION_AND_BUSINESS_MODEL.md`](docs/PRODUCT_VISION_AND_BUSINESS_MODEL.md) — authoritative working north star
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — authoritative current-source map
+- [`docs/AUDIT_BACKLOG_TRACEABILITY_2026-07-27.md`](docs/AUDIT_BACKLOG_TRACEABILITY_2026-07-27.md) — disposition and evidence for every owner-supplied audit ticket
 - [`docs/EMPULSE_PRODUCTION_READINESS_CHECKLIST.md`](docs/EMPULSE_PRODUCTION_READINESS_CHECKLIST.md) — current release gates, evidence, and accountable residual risks
 - [`docs/ONBOARDING_FLUENCY_AUDIT_2026-03-06.md`](docs/ONBOARDING_FLUENCY_AUDIT_2026-03-06.md) — activation-path reasoning
 - [`docs/ANALYTICS_EXPLAIN_CHECKLIST.md`](docs/ANALYTICS_EXPLAIN_CHECKLIST.md) — production query-plan review

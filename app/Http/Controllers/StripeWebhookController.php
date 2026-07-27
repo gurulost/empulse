@@ -75,7 +75,7 @@ class StripeWebhookController extends CashierWebhookController
         } catch (\Throwable $exception) {
             $event->update([
                 'status' => 'failed',
-                'error' => mb_substr($exception->getMessage(), 0, 2000),
+                'error' => 'Webhook processing failed ('.$exception::class.').',
             ]);
             throw $exception;
         }

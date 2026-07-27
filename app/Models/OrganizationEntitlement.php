@@ -22,6 +22,7 @@ class OrganizationEntitlement extends Model
         'last_stripe_event_at',
         'last_reconciled_at',
         'version',
+        'billing_catalog_version_id',
     ];
 
     protected $casts = [

@@ -16,4 +16,10 @@ class ActionOutcome extends Model
         'evaluation_snapshot' => 'array',
         'evaluated_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::updating(fn () => throw new \LogicException('Action outcomes are immutable.'));
+        static::deleting(fn () => throw new \LogicException('Action outcomes are append-only.'));
+    }
 }

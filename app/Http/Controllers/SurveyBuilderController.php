@@ -77,7 +77,46 @@ class SurveyBuilderController extends Controller
         return response()->json(['draft_id' => $draft->id]);
     }
 
-    public function publishVersion($versionId)
+    public function submitForReview(Request $request, $versionId)
+    {
+        $version = SurveyVersion::findOrFail($versionId);
+        $data = $request->validate([
+            'change_summary' => 'required|string|min:10|max:4000',
+        ]);
+
+        try {
+            $review = $this->surveyService->submitVersionForReview(
+                $version,
+                $request->user(),
+                $data['change_summary']
+            );
+        } catch (\DomainException $exception) {
+            return response()->json([
+                'message' => 'Survey version failed review checks.',
+                'errors' => [$exception->getMessage()],
+            ], 422);
+        }
+
+        return response()->json(['status' => 'in_review', 'data' => $review]);
+    }
+
+    public function approveVersion(Request $request, $versionId)
+    {
+        $version = SurveyVersion::findOrFail($versionId);
+
+        try {
+            $approved = $this->surveyService->approveVersion($version, $request->user());
+        } catch (\DomainException $exception) {
+            return response()->json([
+                'message' => 'Survey version failed approval checks.',
+                'errors' => [$exception->getMessage()],
+            ], 422);
+        }
+
+        return response()->json(['status' => 'approved', 'data' => $approved]);
+    }
+
+    public function publishVersion(Request $request, $versionId)
     {
         $version = SurveyVersion::findOrFail($versionId);
 
@@ -86,7 +125,7 @@ class SurveyBuilderController extends Controller
         }
 
         try {
-            $this->surveyService->publishVersion($version);
+            $this->surveyService->publishVersion($version, $request->user());
         } catch (\DomainException $exception) {
             return response()->json([
                 'message' => 'Survey version failed publication checks.',
@@ -102,8 +141,8 @@ class SurveyBuilderController extends Controller
         $item = SurveyItem::findOrFail($itemId);
         $optionTypes = ['dropdown', 'single_select', 'single_select_text', 'multi_select'];
 
-        if ($item->version->is_active) {
-            return response()->json(['message' => 'Cannot edit active version'], 403);
+        if ($item->version->is_active || $item->version->publication_status !== 'draft') {
+            return response()->json(['message' => 'Only a draft version can be edited'], 403);
         }
 
         $validated = $request->validate([
@@ -155,8 +194,8 @@ class SurveyBuilderController extends Controller
     {
         $page = SurveyPage::with('version')->findOrFail($pageId);
 
-        if ($page->version?->is_active) {
-            return response()->json(['message' => 'Cannot edit active version'], 403);
+        if ($page->version?->is_active || $page->version?->publication_status !== 'draft') {
+            return response()->json(['message' => 'Only a draft version can be edited'], 403);
         }
 
         $validated = $request->validate([
@@ -172,8 +211,8 @@ class SurveyBuilderController extends Controller
     {
         $section = SurveySection::with('page.version')->findOrFail($sectionId);
 
-        if ($section->page?->version?->is_active) {
-            return response()->json(['message' => 'Cannot edit active version'], 403);
+        if ($section->page?->version?->is_active || $section->page?->version?->publication_status !== 'draft') {
+            return response()->json(['message' => 'Only a draft version can be edited'], 403);
         }
 
         $validated = $request->validate([
@@ -194,14 +233,22 @@ class SurveyBuilderController extends Controller
         ]);
 
         $items = collect($validated['items']);
+        $versions = SurveyItem::query()
+            ->with('version')
+            ->whereIn('id', $items->pluck('id'))
+            ->get();
+        if ($versions->count() !== $items->count()
+            || $versions->contains(fn (SurveyItem $item) => $item->version->is_active
+                || $item->version->publication_status !== 'draft')) {
+            return response()->json(['message' => 'Only items in one editable draft can be reordered'], 403);
+        }
+        if ($versions->pluck('survey_version_id')->unique()->count() !== 1) {
+            return response()->json(['message' => 'Items from different versions cannot be reordered together'], 422);
+        }
 
         DB::transaction(function () use ($items) {
             foreach ($items as $itemData) {
-                $item = SurveyItem::with('version')->find($itemData['id']);
-                if (! $item || $item->version?->is_active) {
-                    continue;
-                }
-
+                $item = SurveyItem::findOrFail($itemData['id']);
                 $item->update(['sort_order' => $itemData['sort_order']]);
             }
         });

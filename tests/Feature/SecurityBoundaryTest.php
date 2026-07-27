@@ -4,9 +4,13 @@ namespace Tests\Feature;
 
 use App\Models\Companies;
 use App\Models\User;
+use App\Services\EmailService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class SecurityBoundaryTest extends TestCase
@@ -181,6 +185,34 @@ class SecurityBoundaryTest extends TestCase
         $this->assertSame('victim.png', $victim->fresh()->image);
     }
 
+    public function test_avatar_upload_is_image_validated_normalized_and_self_scoped(): void
+    {
+        Storage::fake('public');
+        $actor = User::factory()->create(['role' => 4]);
+
+        $this->actingAs($actor)
+            ->post(route('store.avatar'), [
+                'image' => UploadedFile::fake()->image('avatar.png', 600, 400),
+            ])
+            ->assertRedirect(route('profile'));
+
+        $path = $actor->fresh()->image;
+        $this->assertNotNull($path);
+        $this->assertStringStartsWith('avatars/', $path);
+        $this->assertStringEndsWith('.jpg', $path);
+        Storage::disk('public')->assertExists($path);
+
+        $this->actingAs($actor)
+            ->post(route('store.avatar'), [
+                'image' => UploadedFile::fake()->create(
+                    'not-an-image.jpg',
+                    10,
+                    'text/plain'
+                ),
+            ])
+            ->assertSessionHasErrors('image');
+    }
+
     public function test_routes_require_named_capabilities_instead_of_non_employee_status(): void
     {
         $manager = User::factory()->create(['role' => 1, 'is_admin' => 0]);
@@ -193,11 +225,42 @@ class SecurityBoundaryTest extends TestCase
         $this->actingAs($unknownRole)->get('/reports')->assertForbidden();
         $this->actingAs($workfitAdmin)->get('/team/manage')->assertForbidden();
 
-        $this->assertTrue($manager->hasCapability('billing.manage'));
+        $this->assertFalse($manager->hasCapability('billing.manage'));
         $this->assertFalse($manager->hasCapability('workfit.admin'));
         $this->assertTrue($workfitAdmin->hasCapability('workfit.admin'));
         $this->assertTrue($workfitAdmin->hasCapability('analytics.view'));
         $this->assertFalse($workfitAdmin->hasCapability('team.manage'));
         $this->assertFalse($unknownRole->hasCapability('analytics.view'));
+    }
+
+    public function test_authentication_and_email_failures_do_not_expose_debug_or_provider_payloads(): void
+    {
+        $loginSource = file_get_contents(app_path('Http/Controllers/Auth/LoginController.php'));
+        $this->assertIsString($loginSource);
+        $this->assertStringNotContainsString('login_debug_error', $loginSource);
+        $this->assertStringNotContainsString('getTraceAsString', $loginSource);
+        $this->assertStringNotContainsString('return false', $loginSource);
+
+        config(['services.brevo.key' => 'test-key']);
+        Http::fake([
+            'api.brevo.com/*' => Http::response(
+                'provider-secret-body with SQLSTATE and token=do-not-expose',
+                500,
+                ['x-request-id' => 'safe-request-id']
+            ),
+        ]);
+        $result = app(EmailService::class)->sendLetter(
+            'respondent@example.test',
+            'Respondent',
+            'Test',
+            '<p>Message</p>'
+        );
+        $encoded = json_encode($result, JSON_THROW_ON_ERROR);
+
+        $this->assertSame(500, $result['status']);
+        $this->assertSame('safe-request-id', $result['provider_request_id']);
+        $this->assertStringNotContainsString('provider-secret-body', $encoded);
+        $this->assertStringNotContainsString('SQLSTATE', $encoded);
+        $this->assertStringNotContainsString('do-not-expose', $encoded);
     }
 }

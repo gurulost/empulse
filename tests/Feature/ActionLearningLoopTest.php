@@ -60,9 +60,17 @@ class ActionLearningLoopTest extends TestCase
             'role' => 4,
             'status' => 'active',
         ]);
+        $admin = User::factory()->create([
+            'company_id' => null,
+            'role' => 0,
+            'is_admin' => 1,
+            'status' => 'active',
+        ]);
         $this->artisan('survey:import', [
             'path' => base_path('survey_instrument.json'),
             '--activate' => true,
+            '--approved-by' => $admin->id,
+            '--change-summary' => 'Publish canonical instrument for action-loop integration verification.',
         ])->assertSuccessful();
         $survey = Survey::where('is_default', true)->firstOrFail();
         $version = SurveyVersion::where('is_active', true)
@@ -102,6 +110,13 @@ class ActionLearningLoopTest extends TestCase
         $this->assertSame('proposed', $finding->status);
         $this->assertSame(1, $finding->evidence_snapshot['sample']['valid_n']);
         $this->assertEquals(4.0, $finding->evidence_snapshot['metric']['gap']);
+        try {
+            $finding->update(['interpretation' => 'Tampered interpretation']);
+            $this->fail('Captured finding evidence should be immutable.');
+        } catch (\LogicException $exception) {
+            $this->assertStringContainsString('immutable', $exception->getMessage());
+        }
+        $finding->refresh();
 
         $finding = $service->decideFinding(
             $finding,
@@ -109,12 +124,31 @@ class ActionLearningLoopTest extends TestCase
             'Leadership will test a structured relationship-building practice.',
             $leader
         );
+        try {
+            $service->createAction($finding, $leader, $leader, [
+                'title' => 'Undated action',
+                'hypothesis' => 'An action without timing should not be governable.',
+                'planned_change' => 'Attempt to omit the action dates.',
+                'success_criteria' => ['statement' => 'This should be rejected.'],
+            ]);
+            $this->fail('Every leadership action should require explicit dates.');
+        } catch (\DomainException $exception) {
+            $this->assertStringContainsString('start date and target date', $exception->getMessage());
+        }
         $action = $service->createAction($finding, $leader, $leader, [
             'title' => 'Weekly peer connection time',
             'hypothesis' => 'Protected peer time may reduce the reported relationship gap.',
             'planned_change' => 'Run a 30-minute facilitated peer session each week for six weeks.',
             'success_criteria' => ['statement' => 'Gap decreases by at least 0.5 without a culture decline.'],
+            'starts_on' => now()->toDateString(),
+            'target_date' => now()->addWeeks(6)->toDateString(),
         ]);
+        try {
+            $action->update(['title' => 'Rewrite the plan after evidence is known']);
+            $this->fail('The leadership action plan should be immutable.');
+        } catch (\LogicException $exception) {
+            $this->assertStringContainsString('immutable', $exception->getMessage());
+        }
 
         try {
             $service->transitionAction($action, 'committed', $leader);
@@ -127,6 +161,13 @@ class ActionLearningLoopTest extends TestCase
             'target_direction' => 'decrease',
             'minimum_meaningful_change' => 0.5,
         ]);
+        try {
+            $plan->update(['metric_id' => 'opportunity.WCA_AUT']);
+            $this->fail('The predeclared measurement definition should be immutable.');
+        } catch (\LogicException $exception) {
+            $this->assertStringContainsString('immutable', $exception->getMessage());
+        }
+        $plan->refresh();
         app(OrganizationEntitlementService::class)
             ->grantManual($company, 'pulse', now()->addMonth(), $leader);
         $followupWave = $service->createFollowupWave(
@@ -148,6 +189,12 @@ class ActionLearningLoopTest extends TestCase
             'We heard a need for stronger peer connection. We will test protected weekly peer time and report what we learn after the next eligible wave.'
         );
         $this->assertSame('published', $communication->status);
+        try {
+            $communication->update(['message' => 'Rewrite employee communication.']);
+            $this->fail('Published employee communication should be immutable.');
+        } catch (\LogicException $exception) {
+            $this->assertStringContainsString('immutable', $exception->getMessage());
+        }
 
         $followupCycle = SurveyWaveCycle::create([
             'survey_wave_id' => $followupWave->id,
@@ -180,8 +227,18 @@ class ActionLearningLoopTest extends TestCase
         $this->assertSame('movement_observed', $outcome->result);
         $this->assertSame($publicId, $sameOutcome->public_id);
         $this->assertDatabaseCount('action_outcomes', 1);
+        $this->assertSame(
+            1,
+            \DB::table('action_loop_events')->where('name', 'action_outcome_evaluated')->count()
+        );
         $this->assertEquals(-2.0, $outcome->evaluation_snapshot['change']);
         $this->assertStringContainsString('does not establish', $outcome->causality_limit);
+        try {
+            $outcome->update(['result' => 'declined']);
+            $this->fail('A recorded outcome should be immutable.');
+        } catch (\LogicException $exception) {
+            $this->assertStringContainsString('immutable', $exception->getMessage());
+        }
         $this->assertDatabaseHas('action_loop_events', [
             'company_id' => $company->id,
             'name' => 'action_outcome_evaluated',
@@ -191,6 +248,45 @@ class ActionLearningLoopTest extends TestCase
             ->value('properties');
         $this->assertStringNotContainsString('WCA_REL_A', (string) $properties);
         $this->assertStringNotContainsString('responses', (string) $properties);
+
+        $this->actingAs($leader)
+            ->get(route('actions.index'))
+            ->assertOk()
+            ->assertSee('Recorded outcome')
+            ->assertSee('movement observed')
+            ->assertSee('Comparable definition')
+            ->assertSee('does not establish');
+
+        $valueReport = $this->actingAs($admin)
+            ->getJson('/admin/api/action-loop-value?company_id='.$company->id)
+            ->assertOk()
+            ->assertJsonPath('schema_version', 1)
+            ->assertJsonPath('scope.type', 'organization')
+            ->assertJsonPath('counts.reliable_findings', 1)
+            ->assertJsonPath('counts.findings_with_action', 1)
+            ->assertJsonPath('counts.findings_with_measured_outcome', 1)
+            ->assertJsonPath('rates.finding_to_action_pct', 100)
+            ->assertJsonPath('rates.finding_to_measured_outcome_pct', 100)
+            ->assertJsonPath('privacy.contains_survey_answers', false)
+            ->assertJsonPath('privacy.contains_employee_identity', false);
+        $this->assertStringNotContainsString('WCA_REL_A', $valueReport->getContent());
+        $this->assertDatabaseHas('audit_events', [
+            'company_id' => $company->id,
+            'action' => 'action.value_report_viewed',
+        ]);
+        foreach ([
+            'action.finding.decision_recorded',
+            'action.measurement_plan.created',
+            'action.plan.status_changed',
+            'action.communication.published',
+            'action.followup_wave.created',
+            'action.outcome.recorded',
+        ] as $auditAction) {
+            $this->assertDatabaseHas('audit_events', [
+                'company_id' => $company->id,
+                'action' => $auditAction,
+            ]);
+        }
     }
 
     public function test_incompatible_followup_is_never_presented_as_success(): void
@@ -228,6 +324,8 @@ class ActionLearningLoopTest extends TestCase
             'hypothesis' => 'A transparent hypothesis.',
             'planned_change' => 'A bounded change.',
             'success_criteria' => ['statement' => 'A predeclared criterion.'],
+            'starts_on' => now()->toDateString(),
+            'target_date' => now()->addMonth()->toDateString(),
         ]);
         $plan = $service->createMeasurementPlan($action, $leader, [
             'target_direction' => 'decrease',

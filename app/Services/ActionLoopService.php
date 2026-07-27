@@ -175,6 +175,14 @@ class ActionLoopService
                 'decided_at' => now(),
             ]);
             $this->event($finding->company_id, $actor, "finding_{$decision}", $finding);
+            $this->audit->record(
+                'action.finding.decision_recorded',
+                $actor,
+                $finding->company_id,
+                DiagnosticFinding::class,
+                $finding->id,
+                ['decision' => $decision, 'rationale_length' => mb_strlen($rationale)]
+            );
 
             return $finding->fresh();
         });
@@ -192,6 +200,14 @@ class ActionLoopService
         }
         if ((int) $owner->company_id !== (int) $finding->company_id || $owner->status !== 'active') {
             throw new \DomainException('The action owner must be an active member of the organization.');
+        }
+        if (empty($input['starts_on']) || empty($input['target_date'])) {
+            throw new \DomainException('Every leadership action requires an explicit start date and target date.');
+        }
+        $startsOn = new \DateTimeImmutable((string) $input['starts_on']);
+        $targetDate = new \DateTimeImmutable((string) $input['target_date']);
+        if ($targetDate < $startsOn) {
+            throw new \DomainException('The action target date cannot precede its start date.');
         }
         $playbook = ! empty($input['intervention_playbook_version_id'])
             ? $this->playbooks->resolveApplicable(
@@ -216,8 +232,8 @@ class ActionLoopService
             'owner_user_id' => $owner->id,
             'created_by_user_id' => $actor->id,
             'status' => 'draft',
-            'starts_on' => $input['starts_on'] ?? null,
-            'target_date' => $input['target_date'] ?? null,
+            'starts_on' => $startsOn,
+            'target_date' => $targetDate,
         ]);
         $this->event($finding->company_id, $actor, 'leadership_action_created', $action);
         $this->audit->record(
@@ -274,6 +290,14 @@ class ActionLoopService
             }
             $action->update($updates);
             $this->event($action->company_id, $actor, "leadership_action_{$toStatus}", $action);
+            $this->audit->record(
+                'action.plan.status_changed',
+                $actor,
+                $action->company_id,
+                LeadershipAction::class,
+                $action->id,
+                ['from_status' => $from, 'to_status' => $toStatus, 'note_recorded' => filled($note)]
+            );
 
             return $action->fresh();
         });
@@ -304,6 +328,19 @@ class ActionLoopService
             'created_by_user_id' => $actor->id,
         ]);
         $this->event($action->company_id, $actor, 'followup_measurement_planned', $plan);
+        $this->audit->record(
+            'action.measurement_plan.created',
+            $actor,
+            $action->company_id,
+            ActionMeasurementPlan::class,
+            $plan->id,
+            [
+                'action_id' => $action->id,
+                'metric_id' => $plan->metric_id,
+                'target_direction' => $plan->target_direction,
+                'minimum_meaningful_change' => $plan->minimum_meaningful_change,
+            ]
+        );
 
         return $plan;
     }
@@ -407,6 +444,13 @@ class ActionLoopService
         if ((int) $followupWave->company_id !== (int) $plan->company_id) {
             throw new \DomainException('Follow-up wave belongs to another organization.');
         }
+        $existing = ActionOutcome::query()
+            ->where('action_measurement_plan_id', $plan->id)
+            ->where('followup_wave_id', $followupWave->id)
+            ->first();
+        if ($existing) {
+            return $existing;
+        }
         $action = LeadershipAction::findOrFail($plan->leadership_action_id);
         $finding = DiagnosticFinding::findOrFail($action->diagnostic_finding_id);
         $followupCycle = $followupWave->cycles()->orderByDesc('sequence')->first();
@@ -457,14 +501,10 @@ class ActionLoopService
             'baseline_metric_hash' => $plan->baseline_metric_hash,
             'followup_metric_hash' => $followupCycle?->metric_definition_hash,
         ];
-        $outcome = ActionOutcome::firstOrNew([
+        $outcome = ActionOutcome::create([
+            'public_id' => (string) Str::uuid(),
             'action_measurement_plan_id' => $plan->id,
             'followup_wave_id' => $followupWave->id,
-        ]);
-        if (! $outcome->exists) {
-            $outcome->public_id = (string) Str::uuid();
-        }
-        $outcome->fill([
             'company_id' => $plan->company_id,
             'result' => $result,
             'evaluation_snapshot' => $snapshot,
@@ -474,7 +514,6 @@ class ActionLoopService
             'evaluated_by_user_id' => $actor->id,
             'evaluated_at' => now(),
         ]);
-        $outcome->save();
         $plan->update([
             'followup_wave_id' => $followupWave->id,
             'status' => $compatible ? 'evaluated' : 'incompatible',
@@ -482,6 +521,18 @@ class ActionLoopService
         $this->event($plan->company_id, $actor, 'action_outcome_evaluated', $outcome, [
             'result' => $result,
         ]);
+        $this->audit->record(
+            'action.outcome.recorded',
+            $actor,
+            $plan->company_id,
+            ActionOutcome::class,
+            $outcome->id,
+            [
+                'measurement_plan_id' => $plan->id,
+                'result' => $result,
+                'evaluation_hash' => $outcome->evaluation_hash,
+            ]
+        );
 
         return $outcome;
     }

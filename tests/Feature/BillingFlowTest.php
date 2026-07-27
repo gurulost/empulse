@@ -2,7 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\BillingCatalogVersion;
 use App\Models\Companies;
+use App\Models\OrganizationBillingAdmin;
+use App\Models\OrganizationEntitlementVersion;
 use App\Models\Plan;
 use App\Models\User;
 use App\Services\OrganizationEntitlementService;
@@ -294,6 +297,11 @@ class BillingFlowTest extends TestCase
             'role' => 3,
             'status' => 'active',
         ]);
+        $unauthorizedManager = User::factory()->create([
+            'company_id' => $company->id,
+            'role' => 1,
+            'status' => 'active',
+        ]);
         $service = app(OrganizationEntitlementService::class);
         $service->ensureBillingOwner($company, $owner);
 
@@ -318,9 +326,44 @@ class BillingFlowTest extends TestCase
         $this->assertTrue($service->isBillingOwner($target, $company));
         $this->assertFalse($service->isBillingOwner($owner, $company));
         $this->assertTrue($service->isBillingAdmin($owner, $company));
+        $this->actingAs($target)
+            ->get(route('billing.index'))
+            ->assertOk()
+            ->assertSee('Approved billing administrators');
+        $this->actingAs($unauthorizedManager)
+            ->get(route('billing.index'))
+            ->assertForbidden();
+
+        $this->actingAs($target)
+            ->post(route('billing.admins.store'), ['user_id' => $outsider->id])
+            ->assertRedirect();
+        $approvedAdmin = OrganizationBillingAdmin::query()
+            ->where('company_id', $company->id)
+            ->where('user_id', $outsider->id)
+            ->firstOrFail();
+        $this->actingAs($outsider)
+            ->get(route('billing.index'))
+            ->assertOk();
+        $this->actingAs($owner)
+            ->post(route('billing.admins.store'), ['user_id' => $unauthorizedManager->id])
+            ->assertForbidden();
+        $this->actingAs($target)
+            ->delete(route('billing.admins.destroy', $approvedAdmin))
+            ->assertRedirect();
+        $this->actingAs($outsider)
+            ->get(route('billing.index'))
+            ->assertForbidden();
         $this->assertDatabaseHas('audit_events', [
             'company_id' => $company->id,
             'action' => 'billing.owner_transfer.accepted',
+        ]);
+        $this->assertDatabaseHas('audit_events', [
+            'company_id' => $company->id,
+            'action' => 'billing.admin.approved',
+        ]);
+        $this->assertDatabaseHas('audit_events', [
+            'company_id' => $company->id,
+            'action' => 'billing.admin.revoked',
         ]);
     }
 
@@ -355,6 +398,59 @@ class BillingFlowTest extends TestCase
         $summary = $service->usageSummary($company);
         $this->assertSame(2.0, $summary['metrics']['active_respondents']);
         $this->assertSame(2, $summary['limits']['active_respondents']);
+        $this->assertSame('active_respondents', $summary['derivation'][0]['metric']);
+        $this->assertSame(2, $summary['derivation'][0]['event_count']);
+        $this->assertSame(2.0, $summary['derivation'][0]['quantity']);
+        $this->assertArrayHasKey('active_respondents', $summary['definitions']);
+        $this->assertStringNotContainsString('userId', json_encode($summary['derivation'], JSON_THROW_ON_ERROR));
         $this->assertDatabaseCount('organization_usage_events', 2);
+    }
+
+    public function test_catalog_and_entitlement_history_preserve_original_commercial_terms(): void
+    {
+        config([
+            'billing.catalog.starter.name' => 'Starter Original',
+            'billing.catalog.starter.limits.active_respondents' => 25,
+        ]);
+        $company = Companies::create([
+            'title' => 'Historical Terms Co',
+            'manager' => 'Owner',
+            'manager_email' => 'owner@history.test',
+        ]);
+        $owner = User::factory()->create([
+            'company_id' => $company->id,
+            'role' => 1,
+            'status' => 'active',
+        ]);
+        $service = app(OrganizationEntitlementService::class);
+        $first = $service->grantManual($company, 'starter', now()->addMonth(), $owner);
+
+        config([
+            'billing.catalog.starter.name' => 'Starter Revised',
+            'billing.catalog.starter.limits.active_respondents' => 40,
+        ]);
+        $second = $service->grantManual($company, 'starter', now()->addMonths(2), $owner);
+
+        $this->assertNotSame(
+            $first->billing_catalog_version_id,
+            $second->billing_catalog_version_id
+        );
+        $this->assertDatabaseCount('billing_catalog_versions', 2);
+        $this->assertDatabaseCount('organization_entitlement_versions', 2);
+        $history = OrganizationEntitlementVersion::where('company_id', $company->id)
+            ->orderBy('version')
+            ->get();
+        $this->assertSame(25, $history[0]->limits['active_respondents']);
+        $this->assertSame(40, $history[1]->limits['active_respondents']);
+        $this->assertSame('Starter Original', BillingCatalogVersion::findOrFail(
+            $history[0]->billing_catalog_version_id
+        )->definition['catalog']['starter']['name']);
+        $this->assertSame('Starter Revised', BillingCatalogVersion::findOrFail(
+            $history[1]->billing_catalog_version_id
+        )->definition['catalog']['starter']['name']);
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('immutable');
+        $history[0]->update(['plan_key' => 'rewritten']);
     }
 }

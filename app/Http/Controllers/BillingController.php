@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\BillingAdminTransferRequest;
 use App\Models\Companies;
+use App\Models\OrganizationBillingAdmin;
 use App\Models\User;
 use App\Services\OrganizationEntitlementService;
 use Illuminate\Http\Request;
@@ -14,7 +15,6 @@ class BillingController extends Controller
     public function __construct(protected OrganizationEntitlementService $entitlements)
     {
         $this->middleware('auth');
-        $this->middleware('capability:billing.manage')->except(['showTransfer', 'decideTransfer']);
     }
 
     public function index(Request $request)
@@ -35,7 +35,7 @@ class BillingController extends Controller
                 $intent = $company->createSetupIntent();
             }
         } catch (\Exception $e) {
-            Log::warning('Stripe billing setup failed', ['error' => $e->getMessage()]);
+            Log::warning('Stripe billing setup failed', ['exception_class' => $e::class]);
         }
 
         return view('billing.index', [
@@ -48,6 +48,23 @@ class BillingController extends Controller
             'portalAvailable' => $portalAvailable,
             'usage' => $this->entitlements->usageSummary($company),
             'billingOwner' => $this->entitlements->isBillingOwner($user, $company),
+            'billingAdmins' => OrganizationBillingAdmin::with('user')
+                ->where('company_id', $company->id)
+                ->where('status', 'active')
+                ->whereNull('revoked_at')
+                ->orderByRaw("CASE role WHEN 'owner' THEN 0 ELSE 1 END")
+                ->get(),
+            'billingAdminCandidates' => User::where('company_id', $company->id)
+                ->where('status', 'active')
+                ->whereNotIn(
+                    'id',
+                    OrganizationBillingAdmin::where('company_id', $company->id)
+                        ->where('status', 'active')
+                        ->whereNull('revoked_at')
+                        ->pluck('user_id')
+                )
+                ->orderBy('name')
+                ->get(['id', 'name', 'email']),
             'transferCandidates' => User::where('company_id', $company->id)
                 ->where('status', 'active')
                 ->whereKeyNot($user->id)
@@ -75,7 +92,7 @@ class BillingController extends Controller
         } catch (\Throwable $exception) {
             Log::warning('Stripe payment method update failed', [
                 'user_id' => $request->user()->id,
-                'error' => $exception->getMessage(),
+                'exception_class' => $exception::class,
             ]);
 
             return back()->withErrors('Payment method could not be updated right now. Please try again or use the billing portal.');
@@ -120,7 +137,7 @@ class BillingController extends Controller
         } catch (\Throwable $exception) {
             Log::warning('Stripe billing portal redirect failed', [
                 'user_id' => $request->user()->id,
-                'error' => $exception->getMessage(),
+                'exception_class' => $exception::class,
             ]);
 
             return back()->withErrors('Billing portal could not be opened right now. Please try again in a moment.');
@@ -134,17 +151,58 @@ class BillingController extends Controller
             'to_user_id' => 'required|integer|exists:users,id',
             'reason' => 'required|string|max:2000',
         ]);
-        $transfer = $this->entitlements->initiateBillingOwnerTransfer(
-            $company,
-            $request->user(),
-            User::findOrFail($data['to_user_id']),
-            $data['reason']
-        );
+        try {
+            $transfer = $this->entitlements->initiateBillingOwnerTransfer(
+                $company,
+                $request->user(),
+                User::findOrFail($data['to_user_id']),
+                $data['reason']
+            );
+        } catch (\DomainException) {
+            abort(403, 'Billing owner authorization is required.');
+        }
 
         return back()->with(
             'status',
             "Transfer requested. The proposed owner must accept by {$transfer->expires_at->toDayDateTimeString()}."
         );
+    }
+
+    public function addBillingAdmin(Request $request)
+    {
+        $company = $this->billingCompany($request->user());
+        $data = $request->validate([
+            'user_id' => ['required', 'integer', 'exists:users,id'],
+        ]);
+        try {
+            $this->entitlements->grantBillingAdmin(
+                $company,
+                $request->user(),
+                User::findOrFail($data['user_id'])
+            );
+        } catch (\DomainException) {
+            abort(403, 'Billing owner authorization is required.');
+        }
+
+        return back()->with('status', 'Billing administrator approved.');
+    }
+
+    public function removeBillingAdmin(
+        Request $request,
+        OrganizationBillingAdmin $billingAdmin
+    ) {
+        $company = $this->billingCompany($request->user());
+        try {
+            $this->entitlements->revokeBillingAdmin(
+                $company,
+                $request->user(),
+                $billingAdmin
+            );
+        } catch (\DomainException) {
+            abort(403, 'Billing owner authorization is required.');
+        }
+
+        return back()->with('status', 'Billing administrator access revoked.');
     }
 
     public function showTransfer(Request $request, BillingAdminTransferRequest $transfer)
@@ -158,11 +216,15 @@ class BillingController extends Controller
     {
         abort_unless($transfer->to_user_id === $request->user()->id, 403);
         $data = $request->validate(['decision' => 'required|in:accept,reject']);
-        $transfer = $this->entitlements->decideBillingOwnerTransfer(
-            $transfer,
-            $request->user(),
-            $data['decision'] === 'accept'
-        );
+        try {
+            $transfer = $this->entitlements->decideBillingOwnerTransfer(
+                $transfer,
+                $request->user(),
+                $data['decision'] === 'accept'
+            );
+        } catch (\DomainException) {
+            abort(403, 'This billing ownership transfer is not available.');
+        }
 
         return redirect()->route('billing.transfer.show', $transfer)
             ->with('status', "Billing ownership transfer {$transfer->status}.");
@@ -180,6 +242,7 @@ class BillingController extends Controller
 
     protected function billingCompany($user): Companies
     {
+        abort_unless($user && $user->company_id !== null, 403);
         $company = Companies::findOrFail($user->company_id);
         abort_unless($this->entitlements->isBillingAdmin($user, $company), 403);
 

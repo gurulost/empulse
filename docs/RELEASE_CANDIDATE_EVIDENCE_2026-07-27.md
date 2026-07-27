@@ -18,8 +18,8 @@ The branch is a direct pre-deployment reset across:
 - survey publication, version pinning, expiring assignment access, mandatory validation, autosave concurrency, and atomic submission;
 - delivery state, wave lifecycle, recurring Pulse governance, frozen audiences, reminders, and fatigue exclusions;
 - respondent promise, privacy operations, retention/legal hold, sample and suppression policy, metric registry, reliability, and comparability;
-- reliable findings, governed intervention guidance, leadership actions, communication, follow-up measurement, and non-causal outcome evaluation;
-- company-owned billing, entitlements, Stripe reconciliation, usage, and billing-owner continuity;
+- reliable findings, evidence-labeled intervention guidance, immutable leadership actions, communication, follow-up measurement, non-causal outcome evaluation, and privacy-safe value-loop reporting;
+- company-owned billing, explicit administrator appointment/revocation, immutable catalog/entitlement history, Stripe reconciliation, usage, and billing-owner continuity;
 - PostgreSQL/process topology, health checks, worker/scheduler heartbeats, CI, static analysis, dependency security, browser tests, accessibility automation, and operational runbooks.
 
 The unsafe legacy roster importer remains removed. Its replacement uses encrypted CSV staging, stable company-scoped external identities, strict header/row/unit/supervisor validation, cross-tenant conflict detection, row-level reconciliation, an expiring confirmation token, stale-preview detection, atomic commit, tamper-evident audit, queued account invitations, scheduled delivery recovery with stable idempotency, and downloadable sanitized results. Missing rows never imply deactivation. Detailed rows expire after 30 days through the hash-confirmed, legal-hold-aware retention workflow while summary and audit evidence remain.
@@ -28,10 +28,10 @@ The unsafe legacy roster importer remains removed. Its replacement uses encrypte
 
 ### Application and database
 
-- `composer test` on SQLite: 184 tests, 928 assertions passed.
+- `composer test` on SQLite: 200 tests, 1,121 assertions passed.
 - Clean PostgreSQL 14 migration and canonical 62-item demo seed: passed.
-- `composer test` on PostgreSQL 14: 184 tests, 928 assertions passed.
-- Browser gate: all 14 role, roster-import authorization, route-failure, privacy-acknowledgment, required-answer, submission, completed-state, and automated accessibility journeys passed together against a fresh seeded application. The respondent journey answered all 62 canonical items and persisted exactly 62 answers. The earlier 13-journey set also passed with real web and worker processes on PostgreSQL locally and in GitHub CI.
+- `composer test` on PostgreSQL 14: 200 tests, 1,121 assertions passed.
+- Browser gate: all 17 role, roster-import authorization, route-failure, privacy-acknowledgment, required-answer, submission, completed-state, automated accessibility, admin-governance, and north-star action-loop journeys passed together against a fresh seeded PostgreSQL application with real web and queue processes. The baseline respondent journey answered all 62 canonical items and persisted exactly 62 answers. The north-star journey captured evidence, created an owned dated action and measurement plan, dispatched a governed three-item Pulse, collected five completions, evaluated a comparable non-causal outcome, and verified the WorkFit-admin value report through the UI.
 - CI is configured to repeat the database and process journey on PostgreSQL 16 with real web and worker processes.
 
 ### Code and dependencies
@@ -42,8 +42,8 @@ The unsafe legacy roster importer remains removed. Its replacement uses encrypte
 - `npm audit --audit-level=high`: zero vulnerabilities.
 - Dependency-license inventory: all PHP packages are permissive or usable under an available permissive license; the unused direct PHPMailer dependency was removed. Direct JavaScript dependencies are MIT/Apache-2.0, except the development-only axe Playwright adapter under MPL-2.0. No direct dependency has an unknown license.
 - `npm run lint`: passed.
-- `npm run test:unit`: 2 component tests passed.
-- `npm run build`: passed with 179 modules transformed.
+- `npm run test:unit`: 2 files / 6 tests passed, including untouched slider, exclusive multiselect, and analytics state coverage.
+- `npm run build`: passed with 182 modules transformed.
 - Laravel configuration, route, and Blade view caches build and clear successfully.
 - Gitleaks current-source scan: no findings after removal of the legacy attachment directory.
 - Gitleaks full-history scan: three pre-existing findings remain—two generic-key matches in the removed attachment history and one old Sendinblue/Brevo token in a historical controller commit. The mail key must be revoked/rotated; shared-history rewriting requires explicit owner approval and is not represented as complete.
@@ -78,7 +78,22 @@ A second independent fresh-context review found five additional analytics and go
 - hierarchy-scoped trends preserve the subgroup context through sample and invited/completion assessment, so five or six scoped respondents cannot clear the subgroup N≥7 contract;
 - the pre-validation weighted ratio is labeled `WorkFit Indicator (pre-validation)` throughout customer-facing reports and is not represented as engagement.
 
-The independent reviewer confirmed no P0/P1 remains in this late review scope. After the final roster-import hardening, SQLite and PostgreSQL each pass 184 tests/928 assertions; static analysis, formatting, lint, frontend unit/build gates, and all 14 browser/accessibility journeys pass.
+The independent reviewer confirmed no P0/P1 remains in this late review scope. The final local candidate passes 200 tests/1,121 assertions on SQLite and PostgreSQL, static analysis, formatting, lint, six frontend tests, the production build, and all 17 browser/accessibility/product journeys.
+
+### Final governance and product-loop closure
+
+The last pre-deployment pass additionally proves:
+
+- survey content follows draft → review → approval → publication with reviewer/approver/publisher identity, semantic content hashing, change summary, one-live-version enforcement, and edit locks;
+- diagnostic findings, action plans, measurement definitions, published communications, and evaluated outcomes are immutable or append-only at their evidence boundaries, while lifecycle changes remain audited;
+- action follow-up exposes owner, dates, hypothesis, change, success criteria, guardrails, open/due state, sample, comparability, movement, result, and causality limits;
+- the WorkFit-admin value-loop report has a stable schema and returns aggregate chain completion only—never survey answers or employee identity;
+- customer-approved advisor access governs both a scoped work queue and append-only customer-shared versus WorkFit-internal notes;
+- billing access comes only from active company billing-admin appointments, not a static customer role; owner-controlled appointment/revocation and acceptance-gated transfer are audited;
+- login throttling fails closed, provider response bodies and stack traces are not retained, contact input is validated/escaped/throttled, and avatar uploads are decoded and normalized onto a configured filesystem disk before the profile record changes;
+- deterministic database seeding refuses to run in production.
+
+The process-backed north-star journey found three defects that narrower tests had missed: labels not associated with action fields, a post-dispatch wave page that attempted forbidden lazy loading, and one-time Pulse dispatch incorrectly closing the collection before respondents could enter. Each was fixed at the product boundary and has regression coverage.
 
 ### Accessibility
 
@@ -106,7 +121,7 @@ Source and restored counts matched:
 
 `php artisan audit:verify` passed for the restored platform stream (6 events) and company stream (11 events).
 
-The newest governed-roster migration was rolled back and reapplied successfully against an isolated disposable database. Provider-native backup/PITR and full application rollback still require the selected staging environment.
+The governed-roster migration and the final four evidence/advisor/publication/billing-history migrations were rolled back and reapplied successfully against isolated disposable PostgreSQL databases. Provider-native backup/PITR and full application rollback still require the selected staging environment.
 
 ### Local capacity smoke
 

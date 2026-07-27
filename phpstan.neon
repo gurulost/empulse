@@ -11,6 +11,24 @@ parameters:
         - app/Services/RosterImportService.php
         - app/Services/RetentionService.php
         - app/Http/Controllers/RosterImportController.php
+        - app/Http/Controllers/WorkfitAdminController.php
+        - app/Http/Controllers/ActionLoopController.php
+        - app/Http/Controllers/AdvisorWorkspaceNoteController.php
+        - app/Services/AdvisorAccessService.php
+        - app/Services/AdvisorWorkspaceNoteService.php
+        - app/Services/AdvisorWorkQueueService.php
+        - app/Services/ActionLoopValueReportService.php
+        - app/Services/OrganizationEntitlementService.php
+        - app/Models/AdvisorWorkspaceNote.php
+        - app/Models/AdvisorWorkItem.php
+        - app/Models/InterventionPlaybookVersion.php
+        - app/Models/BillingCatalogVersion.php
+        - app/Models/OrganizationEntitlementVersion.php
+        - app/Models/OrganizationBillingAdmin.php
+        - app/Models/LeadershipAction.php
+        - app/Models/ActionMeasurementPlan.php
+        - app/Models/ActionOutcome.php
+        - app/Models/ActionCommunication.php
         - app/Jobs/ParseRosterImport.php
         - app/Jobs/SendAccountInvitation.php
         - app/Console/Commands/RecoverAccountInvitations.php

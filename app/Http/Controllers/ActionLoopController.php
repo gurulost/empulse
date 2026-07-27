@@ -10,6 +10,7 @@ use App\Models\SurveyWave;
 use App\Models\User;
 use App\Services\ActionLoopService;
 use App\Services\AdvisorAccessService;
+use App\Services\AdvisorWorkspaceNoteService;
 use App\Services\InterventionPlaybookService;
 use App\Services\OrganizationScopeService;
 use Illuminate\Http\Request;
@@ -18,7 +19,9 @@ class ActionLoopController extends Controller
 {
     public function __construct(
         protected ActionLoopService $actions,
-        protected InterventionPlaybookService $playbooks
+        protected InterventionPlaybookService $playbooks,
+        protected AdvisorAccessService $advisorAccess,
+        protected AdvisorWorkspaceNoteService $advisorNotes
     ) {}
 
     public function index(Request $request)
@@ -37,16 +40,25 @@ class ActionLoopController extends Controller
                 $finding->cohort_snapshot
             ))
             ->values();
-        $actions = LeadershipAction::with(['finding', 'measurementPlans'])
+        $actions = LeadershipAction::with([
+            'finding',
+            'owner',
+            'measurementPlans.followupWave',
+            'measurementPlans.outcomes',
+        ])
             ->where('company_id', $companyId)
             ->orderByRaw("CASE status WHEN 'in_progress' THEN 0 WHEN 'committed' THEN 1 WHEN 'draft' THEN 2 ELSE 3 END")
             ->orderBy('target_date')
             ->get()
             ->filter(fn (LeadershipAction $action) => $scope->canViewCohort(
                 $actor,
-                $action->finding?->cohort_snapshot
+                $action->finding->cohort_snapshot
             ))
             ->values();
+        $eligibleFinding = $findings
+            ->where('status', 'accepted')
+            ->filter(fn (DiagnosticFinding $finding) => $finding->actions->isEmpty())
+            ->first();
 
         return view('actions.index', [
             'findings' => $findings,
@@ -62,10 +74,9 @@ class ActionLoopController extends Controller
                 : collect(),
             'playbooks' => $canManage
                 ? $this->playbooks->publishedForMetric(
-                    (string) ($findings
-                        ->where('status', 'accepted')
-                        ->filter(fn (DiagnosticFinding $finding) => $finding->actions->isEmpty())
-                        ->first()?->metric_id ?? '')
+                    $eligibleFinding instanceof DiagnosticFinding
+                        ? (string) $eligibleFinding->metric_id
+                        : ''
                 )
                 : collect(),
             'advisorGrants' => $canManage
@@ -81,6 +92,8 @@ class ActionLoopController extends Controller
                     ->orderBy('name')
                     ->get()
                 : collect(),
+            'workspaceNotes' => $this->advisorNotes->visibleTo($actor, $companyId),
+            'isCustomerApprovedAdvisor' => $this->advisorAccess->canAdvise($actor, $companyId),
             'companyId' => $companyId,
         ]);
     }
@@ -137,8 +150,8 @@ class ActionLoopController extends Controller
             'hypothesis' => 'required|string|max:4000',
             'planned_change' => 'required|string|max:8000',
             'success_criteria' => 'required|string|max:4000',
-            'starts_on' => 'nullable|date',
-            'target_date' => 'nullable|date|after_or_equal:starts_on',
+            'starts_on' => 'required|date',
+            'target_date' => 'required|date|after_or_equal:starts_on',
         ]);
         $finding = DiagnosticFinding::findOrFail($data['diagnostic_finding_id']);
         $this->assertScoped($request, $finding->company_id);
@@ -252,28 +265,20 @@ class ActionLoopController extends Controller
 
     protected function companyId(Request $request): int
     {
-        $user = $request->user();
-        $companyId = (int) $user->company_id;
-        if ($user->hasCapability('actions.advisor')) {
-            $companyId = $request->integer('company_id')
-                ?: (int) app(AdvisorAccessService::class)
-                    ->activeForAdvisor($user)
-                    ->first()?->company_id;
-        }
-        abort_unless($companyId > 0, 422, 'Company context is required.');
         try {
-            app(AdvisorAccessService::class)->assertActorCanAccess($user, $companyId);
+            return $this->advisorAccess->companyIdForActor(
+                $request->user(),
+                $request->integer('company_id') ?: null
+            );
         } catch (\DomainException $exception) {
             abort(403, $exception->getMessage());
         }
-
-        return $companyId;
     }
 
     protected function assertScoped(Request $request, int $companyId): void
     {
         try {
-            app(AdvisorAccessService::class)->assertActorCanAccess($request->user(), $companyId);
+            $this->advisorAccess->assertActorCanAccess($request->user(), $companyId);
         } catch (\DomainException $exception) {
             abort(403, $exception->getMessage());
         }
@@ -285,6 +290,13 @@ class ActionLoopController extends Controller
             return response()->json(['data' => $resource, 'message' => $message]);
         }
 
-        return redirect()->route('actions.index')->with('status', $message);
+        return redirect()
+            ->route(
+                'actions.index',
+                $request->user()->hasCapability('actions.advisor')
+                    ? ['company_id' => $request->integer('company_id')]
+                    : []
+            )
+            ->with('status', $message);
     }
 }

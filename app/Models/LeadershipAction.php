@@ -3,6 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use LogicException;
 
 class LeadershipAction extends Model
 {
@@ -22,13 +25,41 @@ class LeadershipAction extends Model
         'completed_at' => 'datetime',
     ];
 
-    public function finding()
+    /**
+     * @return BelongsTo<DiagnosticFinding, $this>
+     */
+    public function finding(): BelongsTo
     {
         return $this->belongsTo(DiagnosticFinding::class, 'diagnostic_finding_id');
     }
 
-    public function measurementPlans()
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function owner(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'owner_user_id');
+    }
+
+    /**
+     * @return HasMany<ActionMeasurementPlan, $this>
+     */
+    public function measurementPlans(): HasMany
     {
         return $this->hasMany(ActionMeasurementPlan::class);
+    }
+
+    protected static function booted(): void
+    {
+        static::updating(function (LeadershipAction $action): void {
+            $allowed = ['status', 'committed_at', 'completed_at', 'updated_at'];
+            $changed = array_keys($action->getDirty());
+            if (array_diff($changed, $allowed) !== []) {
+                throw new LogicException(
+                    'Leadership action plans are immutable after creation; record lifecycle changes through status events.'
+                );
+            }
+        });
+        static::deleting(fn () => throw new LogicException('Leadership actions are append-only.'));
     }
 }

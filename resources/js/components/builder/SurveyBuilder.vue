@@ -58,7 +58,7 @@
                                     >
                                         <span class="badge bg-light text-secondary border me-2 rounded-pill">{{ item.qid }}</span>
                                         <span class="text-truncate flex-grow-1">{{ item.question }}</span>
-                                        <div class="btn-group btn-group-sm ms-2 opacity-0 group-item-actions-show" v-if="!structure.is_active">
+                                        <div class="btn-group btn-group-sm ms-2 opacity-0 group-item-actions-show" v-if="isEditable">
                                             <button
                                                 class="btn btn-xs btn-light py-0 px-1"
                                                 @click.stop="moveItem(page.items, idx, -1)"
@@ -99,7 +99,7 @@
                                             >
                                                 <span class="badge bg-light text-secondary border me-2 rounded-pill">{{ item.qid }}</span>
                                                 <span class="text-truncate flex-grow-1">{{ item.question }}</span>
-                                                <div class="btn-group btn-group-sm ms-2 opacity-0 group-item-actions-show" v-if="!structure.is_active">
+                                                <div class="btn-group btn-group-sm ms-2 opacity-0 group-item-actions-show" v-if="isEditable">
                                                     <button
                                                         class="btn btn-xs btn-light py-0 px-1"
                                                         @click.stop="moveItem(section.items, idx, -1)"
@@ -133,7 +133,7 @@
                         :key="selectedItem.id"
                         :item="selectedItem"
                         :saving="saving"
-                        :read-only="structure.is_active"
+                        :read-only="!isEditable"
                         @save="saveItem"
                         @cancel="clearSelection"
                     />
@@ -146,10 +146,10 @@
                     <div class="card-body p-4">
                         <div class="mb-3">
                             <label class="form-label text-secondary small fw-bold text-uppercase">Page Title</label>
-                            <input type="text" class="form-control form-control-lg" v-model="selectedItem.title" :disabled="structure.is_active">
+                            <input type="text" class="form-control form-control-lg" v-model="selectedItem.title" :disabled="!isEditable">
                         </div>
-                        <div v-if="structure.is_active" class="alert alert-light border-0 bg-light text-secondary">
-                            Create a draft to edit this page title.
+                        <div v-if="!isEditable" class="alert alert-light border-0 bg-light text-secondary">
+                            Only a draft can be edited. Review, approval, and published versions are locked.
                         </div>
                         <div v-else class="d-flex justify-content-end gap-2 pt-3 border-top">
                             <button class="btn btn-light px-4" @click="clearSelection">Cancel</button>
@@ -168,10 +168,10 @@
                     <div class="card-body p-4">
                         <div class="mb-3">
                             <label class="form-label text-secondary small fw-bold text-uppercase">Section Title</label>
-                            <input type="text" class="form-control form-control-lg" v-model="selectedItem.title" :disabled="structure.is_active">
+                            <input type="text" class="form-control form-control-lg" v-model="selectedItem.title" :disabled="!isEditable">
                         </div>
-                        <div v-if="structure.is_active" class="alert alert-light border-0 bg-light text-secondary">
-                            Create a draft to edit this section title.
+                        <div v-if="!isEditable" class="alert alert-light border-0 bg-light text-secondary">
+                            Only a draft can be edited. Review, approval, and published versions are locked.
                         </div>
                         <div v-else class="d-flex justify-content-end gap-2 pt-3 border-top">
                             <button class="btn btn-light px-4" @click="clearSelection">Cancel</button>
@@ -197,9 +197,9 @@
                     <div class="card-body p-4">
                         <h6 class="card-title text-secondary text-uppercase small fw-bold mb-3">Survey Status</h6>
                         <div v-if="structure.id" class="d-flex align-items-center mb-4">
-                            <span class="badge rounded-pill px-3 py-2 me-2" :class="structure.is_active ? 'bg-success' : 'bg-warning text-dark'">
-                                <i class="bi me-1" :class="structure.is_active ? 'bi-check-circle-fill' : 'bi-cone-striped'"></i>
-                                {{ structure.is_active ? 'LIVE' : 'DRAFT' }}
+                            <span class="badge rounded-pill px-3 py-2 me-2" :class="publicationBadgeClass">
+                                <i class="bi me-1" :class="structure.is_active ? 'bi-check-circle-fill' : 'bi-shield-check'"></i>
+                                {{ publicationLabel }}
                             </span>
                             <small class="text-muted font-monospace">v{{ structure.version }}</small>
                         </div>
@@ -208,7 +208,7 @@
                             No survey structure is available yet.
                         </div>
 
-                        <template v-else-if="structure.is_active">
+                        <template v-else-if="structure.is_active || structure.publication_status === 'retired'">
                             <div class="alert alert-warning small mb-3 border-0 bg-warning bg-opacity-10 text-warning-emphasis">
                                 <i class="bi bi-lock-fill me-1"></i>
                                 Live versions are locked from direct editing.
@@ -218,13 +218,37 @@
                             </button>
                         </template>
 
-                        <template v-else-if="structure.id">
-                            <button class="btn btn-success w-100 mb-2 shadow-sm text-white" @click="publishVersion">
-                                <i class="bi bi-rocket-takeoff me-2"></i> Publish Version
+                        <template v-else-if="structure.publication_status === 'draft' || !structure.publication_status">
+                            <label for="change-summary" class="form-label small fw-semibold">Change summary</label>
+                            <textarea
+                                id="change-summary"
+                                v-model="changeSummary"
+                                class="form-control mb-2"
+                                rows="4"
+                                minlength="10"
+                                maxlength="4000"
+                                placeholder="What changed, why, and any interpretation or migration implications."
+                            ></textarea>
+                            <button class="btn btn-primary w-100 mb-2 shadow-sm" @click="submitForReview" :disabled="changeSummary.trim().length < 10">
+                                <i class="bi bi-send-check me-2"></i> Submit for Review
                             </button>
                             <p class="small text-muted text-center mt-2 mb-0">
-                                Make this version live and collect data.
+                                Structural and metric-compatibility checks run before the version can enter review.
                             </p>
+                        </template>
+                        <template v-else-if="structure.publication_status === 'in_review'">
+                            <div class="small text-muted border rounded-3 p-3 mb-3">{{ structure.change_summary }}</div>
+                            <button class="btn btn-primary w-100 shadow-sm" @click="approveVersion">
+                                <i class="bi bi-shield-check me-2"></i> Approve Reviewed Version
+                            </button>
+                            <p class="small text-muted text-center mt-2 mb-0">The reviewed content hash must still match before approval.</p>
+                        </template>
+                        <template v-else-if="structure.publication_status === 'approved'">
+                            <div class="small text-muted border rounded-3 p-3 mb-3">{{ structure.change_summary }}</div>
+                            <button class="btn btn-success w-100 shadow-sm text-white" @click="publishVersion">
+                                <i class="bi bi-rocket-takeoff me-2"></i> Publish Approved Version
+                            </button>
+                            <p class="small text-muted text-center mt-2 mb-0">Publication rechecks the approved content hash and retires the previous live version.</p>
                         </template>
                     </div>
                 </div>
@@ -249,11 +273,22 @@ const structure = ref({ pages: [] });
 const loading = ref(false);
 const saving = ref(false);
 const errorMessage = ref(null);
+const changeSummary = ref('');
 const selectedItem = ref(null);
 const selectedType = ref(null);
 
 const hasStructureSource = computed(() => Boolean(structure.value.id || props.initialVersionId));
 const surveyId = computed(() => props.surveyId);
+const publicationStatus = computed(() => structure.value.publication_status || (structure.value.is_active ? 'published' : 'draft'));
+const isEditable = computed(() => publicationStatus.value === 'draft' && !structure.value.is_active);
+const publicationLabel = computed(() => publicationStatus.value.replace('_', ' ').toUpperCase());
+const publicationBadgeClass = computed(() => ({
+    published: 'bg-success',
+    approved: 'bg-primary',
+    in_review: 'bg-info text-dark',
+    retired: 'bg-secondary',
+    draft: 'bg-warning text-dark',
+}[publicationStatus.value] || 'bg-secondary'));
 
 const clearSelection = () => {
     selectedItem.value = null;
@@ -275,6 +310,7 @@ const refreshStructure = async () => {
     try {
         const { data } = await axios.get(`/admin/builder/structure/${id}`);
         structure.value = data;
+        changeSummary.value = data.change_summary || '';
     } catch (error) {
         console.error(error);
         errorMessage.value = error.response?.data?.message || 'Failed to load survey structure.';
@@ -387,6 +423,42 @@ const publishVersion = async () => {
     } catch (error) {
         console.error(error);
         alert(error.response?.data?.message || 'Failed to publish version.');
+    }
+};
+
+const submitForReview = async () => {
+    if (!structure.value.id || changeSummary.value.trim().length < 10) {
+        return;
+    }
+
+    try {
+        await axios.post(`/admin/builder/review/${structure.value.id}`, {
+            change_summary: changeSummary.value.trim(),
+        });
+        await refreshStructure();
+        clearSelection();
+    } catch (error) {
+        console.error(error);
+        alert(error.response?.data?.message || 'Failed to submit the version for review.');
+    }
+};
+
+const approveVersion = async () => {
+    if (!structure.value.id) {
+        return;
+    }
+
+    if (!confirm('Approve this exact reviewed survey content and change summary?')) {
+        return;
+    }
+
+    try {
+        await axios.post(`/admin/builder/approve/${structure.value.id}`);
+        await refreshStructure();
+        clearSelection();
+    } catch (error) {
+        console.error(error);
+        alert(error.response?.data?.message || 'Failed to approve the version.');
     }
 };
 

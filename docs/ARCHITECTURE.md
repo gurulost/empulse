@@ -55,7 +55,8 @@ Tenant scope is company-based. Non-WorkFit users must not read or mutate another
 flowchart TD
     Instrument["survey_instrument.json"] --> Importer["survey:import"]
     Importer --> VersionedContent["Survey versions, pages, sections, items, options, scales"]
-    VersionedContent --> Publish["WorkFit admin publishes one live version"]
+    VersionedContent --> Review["Draft → review → approval with change summary and content hash"]
+    Review --> Publish["WorkFit admin publishes one live version"]
 
     Company["Company, memberships, and units"] --> Wave["Manager creates full or drip wave"]
     Billing["Cashier subscription and plan entitlement"] --> Wave
@@ -75,8 +76,11 @@ flowchart TD
     Analytics --> Dashboard["Company dashboard"]
     Analytics --> Reports["Trends and comparisons"]
     Dashboard --> Interpretation["Leadership interpretation"]
-    Interpretation --> Action["Leadership action outside current product tracking"]
-    Action --> Wave
+    Interpretation --> Finding["Immutable finding and decision"]
+    Finding --> Action["Owned action and communication"]
+    Action --> Measurement["Predeclared measurement plan"]
+    Measurement --> Wave
+    Wave --> Outcome["Comparable, non-causal outcome"]
 ```
 
 ## Major subsystems
@@ -138,9 +142,9 @@ SurveyVersion
             └── SurveyOptionSource
 ```
 
-`php artisan survey:import {path} [--activate]` imports the JSON instrument transactionally. It preserves stable question IDs, scale presets, response configuration, display logic, option metadata, generated option sources, and analytics hints.
+`php artisan survey:import {path}` imports the JSON instrument transactionally as a draft. It preserves stable question IDs, scale presets, response configuration, display logic, option metadata, generated option sources, and analytics hints. Governed command-line publication additionally requires `--activate`, `--approved-by=<active WorkFit admin ID>`, and a change summary of at least ten characters.
 
-One `SurveyVersion` is active globally. WorkFit admin owns publication through `/admin/builder`. Managers can inspect survey availability and operate waves, but they do not currently publish content.
+One `SurveyVersion` is active globally. WorkFit admin owns publication through `/admin/builder`. A version moves through `draft → in_review → approved → published`; the previous live version becomes `retired`. Submission for review runs structural and metric-compatibility lint, records a human-readable change summary and exact semantic content hash, and locks content editing. Approval and publication recheck that hash. Reviewer, approver, publisher, timestamps, and platform audit events are durable. Direct publication of an unapproved draft fails closed. Managers can inspect survey availability and operate waves, but they do not publish content.
 
 `SurveyDefinitionService` turns the active version into the token-scoped JSON consumed by the survey renderer. It resolves scale presets and generated options and exposes deterministic question-count and time-estimate metadata.
 
@@ -166,7 +170,7 @@ A wave belongs to a company, survey, and survey version. It defines:
 - open and due dates;
 - status and last-dispatch state.
 
-The scheduler finds eligible waves. Before assignment creation, `SurveyCohortService` creates an immutable wave occurrence, freezes its eligible audience, and stores audience, instrument, and metric-definition hashes. Each frozen audience member captures organization membership, unit, reporting relationship, role, and unresolved-state truth. `ProcessSurveyWave` creates assignments against that occurrence, applies cadence rules, queues invitations, records dispatch state, and updates the wave. `survey_wave_logs` provides an operational delivery history.
+The scheduler finds eligible waves. Before assignment creation, `SurveyCohortService` creates an immutable wave occurrence, freezes its eligible audience, and stores audience, instrument, and metric-definition hashes. Each frozen audience member captures organization membership, unit, reporting relationship, role, and unresolved-state truth. `ProcessSurveyWave` creates assignments against that occurrence, applies cadence rules, queues invitations, records dispatch state, and updates the wave. A successful first dispatch moves both full and one-time manual Pulse waves to `active`; queue completion is not collection completion. The wave becomes `completed` only when all frozen assignments complete or its due date passes. Active one-time waves are not redispatched. `survey_wave_logs` provides an eager-loaded operational delivery history that remains renderable after dispatch.
 
 Invitation and reminder attempts use deterministic application keys plus stable UUID provider-idempotency keys. A first attempt rotates the assignment access token once and stores the survey URL encrypted inside the append-only attempt record; automatic retries reuse that exact URL and provider key. Brevo currently retains email idempotency keys for 30 minutes, so Empulse stops automatic retries at 25 minutes and requires provider-activity review before any later resend. `email_delivery_events` distinguishes queued, provider-accepted, delivered, bounced, complained, unsubscribed, and failed states; the manager funnel does not label provider acceptance as delivery. Authenticated Brevo webhooks update the funnel. `delivery_contacts` suppress bounced, complaining, and unsubscribed addresses from future mail, while reminder jobs refuse completed, expired, revoked, or closed-wave assignments.
 
@@ -231,11 +235,17 @@ Analytics calculate respondent-level scales before cohort aggregation, disclose 
 
 ### 6. Findings, action, and governed learning
 
-`ActionLoopService` turns an eligible, server-recomputed metric into an immutable finding snapshot. Leadership must record a rationale, owner, hypothesis, planned change, guardrails, success criterion, and predeclared measurement plan before commitment. Communications are attributable and audited. A follow-up can be created only from the frozen metric definition and a company entitlement that includes recurring waves.
+`ActionLoopService` turns an eligible, server-recomputed metric into an immutable finding snapshot. Only decision fields may change after capture; evidence, cohort, metric, interpretation, and limits are append-only. Leadership must record a rationale, owner, hypothesis, planned change, guardrails, success criterion, and predeclared measurement plan before commitment. Communications are attributable and audited. A follow-up can be created only from the frozen metric definition and a company entitlement that includes recurring waves.
+
+Published `intervention_playbook_versions` are immutable. Every option carries an explicit evidence source, conservative evidence grade, applicability, limitations, guardrails, and claim limit. The catalog includes an “investigate before choosing an intervention” path for reliable findings whose mechanism remains uncertain. No playbook represents causal evidence; independent methodology/advisory approval remains a release gate.
 
 `PulseVariantService` produces a published, immutable action-follow-up variant containing only the governed metric items. The audience is frozen per cycle; fatigue rules enforce a minimum 30-day rest and no more than three pulse invitations in 90 days, and reminders are capped per wave. Outcome evaluation requires matching instrument and metric hashes, exposes sampling limits, and always uses non-causal wording.
 
+`ActionLoopValueReportService` exposes a stable versioned WorkFit-admin report over the immutable chain: eligible finding → accepted decision → owned action → measurement plan → measured outcome. It reports privacy-safe counts, rates, result categories, and organization summaries. It never returns answer content or employee identity, and viewing the report is itself audited.
+
 WorkFit advisory is not a platform-wide customer-data bypass. A customer administrator must grant a named active advisor a purpose-bound, optionally expiring `advisor_company_grants` record. The customer can revoke it at any time; grants and revocations enter the tamper-evident audit stream. Action routes and services re-check the active grant for the selected company.
+
+`AdvisorWorkQueueService` exposes activation risk, finding review, action-plan assistance, and overdue follow-up only for companies covered by the current advisor’s active grants. Queue responses contain sanitized workflow metadata, not answer content or stored context payloads. Claim, complete, and dismiss transitions are customer-scoped and audited. `advisor_workspace_notes` are append-only and explicitly split into `customer_shared` and `workfit_internal`; customer users never receive internal notes, and audit events record visibility/length rather than note bodies.
 
 ### 7. Billing and entitlements
 
@@ -249,11 +259,11 @@ Primary files:
 - [`config/billing.php`](../config/billing.php)
 - [`config/survey.php`](../config/survey.php)
 
-Cashier's customer model is `Companies`; its legacy `subscriptions.user_id` column stores the durable company ID. `organization_billing_admins` controls who may manage the account, so manager departure does not orphan billing. `organization_entitlements` is the only feature-gating authority and stores a versioned snapshot of plan, status, features, limits, source, expiry, and Stripe reconciliation state.
+Cashier's customer model is `Companies`; its legacy `subscriptions.user_id` column stores the durable company ID. `organization_billing_admins` is the sole authorization source for account management: an ordinary manager or chief role does not imply billing access. The active owner can appoint or revoke additional active billing administrators, while owner replacement uses the explicit request/acceptance transfer workflow. Every appointment, revocation, and transfer is tenant-scoped and audited, so manager departure does not orphan billing. `organization_entitlements` is the only current feature-gating authority and stores the active projection of plan, status, features, limits, source, expiry, and Stripe reconciliation state. `billing_catalog_versions` content-hashes each effective catalog/trial/access contract, while append-only `organization_entitlement_versions` preserve every company entitlement’s original catalog, feature, limit, price-reference, lifecycle, and subscription terms. Updating current configuration cannot rewrite historical commercial evidence.
 
 Stripe webhook events are payload-hashed, idempotent, replay-safe, and stale-event guarded in `billing_webhook_events`. Survey scheduling requires an organization entitlement in an allowed state; recurring waves additionally require the `recurring_waves` feature. Expired manual grants and canceled/past-due subscriptions cannot start new dispatches. Existing collected data uses a separate access-state policy.
 
-The canonical feature/limit catalog is `config/billing.php`; production Stripe price IDs come from environment configuration. Legacy user `tariff` remains a display/import compatibility field and is not authorization truth. Usage is appended idempotently to `organization_usage_events` and cannot alter collected evidence.
+The canonical feature/limit catalog is `config/billing.php`; production Stripe price IDs come from environment configuration. Legacy user `tariff` remains a display/import compatibility field and is not authorization truth. Usage is appended idempotently to `organization_usage_events` and cannot alter collected evidence. The billing page exposes a privacy-safe derivation for each period—event count, summed quantity, unit, definition, and first/last event time—without member IDs or survey content.
 
 Trial creation is disabled until the product owner approves a policy. Billing-owner transfer is request/acceptance gated and keeps the old owner as an administrator for continuity. Active-respondent limits are reserved under a company-row lock in the same transaction as assignment dispatch state, preventing concurrent workers from oversubscribing the plan; usage events remain append-only and idempotent. `billing:sync-catalog` materializes only checkout-enabled plans whose Stripe price IDs and approved integer prices are complete. Final public prices remain owner-gated.
 
@@ -266,7 +276,7 @@ Primary files:
 - [`app/Services/OnboardingTelemetryService.php`](../app/Services/OnboardingTelemetryService.php)
 - [`resources/js/components/admin`](../resources/js/components/admin)
 
-WorkFit admin can inspect companies and subscriptions, publish survey content, and review onboarding health. Direct impersonation and hard user deletion are intentionally unavailable; any future support-access feature must be time-bound, reason-coded, scoped, consent-aware, and audited.
+WorkFit admin can inspect companies and subscriptions, operate governed survey publication, review onboarding health, investigate sanitized audit metadata, and work a grant-scoped advisor queue. Direct impersonation and hard user deletion are intentionally unavailable; any future support-access feature must be time-bound, reason-coded, scoped, consent-aware, and audited.
 
 Route and controller access uses named capabilities from `config/capabilities.php`. `RequireCapability` is the enforcement point. The current integer roles are only mapped into this capability vocabulary as a transition toward durable organization memberships; “not an employee” is not an authorization grant.
 
@@ -294,6 +304,12 @@ Empulse is not a single-page application. Blade owns routing, layout, server-pro
 `resources/js/app.js` is the mount coordinator. New Vue work should preserve conditional mounting and should not assume every route provides every root element.
 
 Generated Vite assets belong in `public/build` at deployment time. Source changes belong in `resources`.
+
+## Operational data safety
+
+Application logs and customer-visible errors contain only generic failure language, stable record IDs, provider request IDs when safe, and exception class names. They do not retain provider response bodies, recipient/message content, SQL text, credentials, or stack traces. Login throttling fails closed through Laravel’s rate limiter; no database-backed login-debug cache exists.
+
+Profile avatars are untrusted uploads. The server validates image type, size, and dimensions, decodes and normalizes the image, writes a generated JPEG through the configured `AVATAR_DISK`, then updates the user record and removes the prior object. Production must provide a persistent/shared storage disk; the local public disk is not durable across ephemeral releases.
 
 ## Runtime processes
 
@@ -330,6 +346,7 @@ See [`PRODUCTION_DEPLOYMENT_RUNBOOK.md`](PRODUCTION_DEPLOYMENT_RUNBOOK.md) for e
 | Organization membership, role history, units, and reporting relationships | `organization_memberships`, `organization_units`, `organization_assignments` |
 | Current roster UI compatibility projection | `company_worker` and `company_department` |
 | Survey content | active normalized `survey_versions` hierarchy |
+| Survey publication governance | `survey_versions.publication_status`, review/approval/publisher fields, change summary, semantic hash, and platform `audit_events` |
 | Instrument source file | `survey_instrument.json` |
 | Recurring program definition | `survey_waves` |
 | Immutable wave occurrence and cohort truth | `survey_wave_cycles`, `survey_wave_audience_members` |
@@ -342,9 +359,12 @@ See [`PRODUCTION_DEPLOYMENT_RUNBOOK.md`](PRODUCTION_DEPLOYMENT_RUNBOOK.md) for e
 | Privacy requests, holds, and retention evidence | `data_subject_requests`, `legal_holds`, `retention_runs` |
 | Reliable findings and leadership response | `diagnostic_findings`, `leadership_actions`, `action_measurement_plans`, `action_outcomes` |
 | Customer-approved WorkFit advisory access | `advisor_company_grants` |
+| Advisor operations and note visibility | `advisor_work_items`, `advisor_workspace_notes` |
+| Versioned intervention guidance | immutable `intervention_playbook_versions` |
 | Governed Pulse definitions | `pulse_variant_versions` |
 | Subscription status | Cashier `subscriptions`, synchronized by Stripe webhook |
 | Feature/dispatch entitlement | `organization_entitlements` through `OrganizationEntitlementService` |
+| Historical catalog and subscription terms | immutable `billing_catalog_versions`, `organization_entitlement_versions` |
 | Billing administrators and transfer continuity | `organization_billing_admins`, `billing_admin_transfer_requests` |
 | Billing event/usage evidence | `billing_webhook_events`, `organization_usage_events` |
 | Onboarding operations | `onboarding_events` and `OnboardingReportService` |

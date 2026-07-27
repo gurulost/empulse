@@ -14,6 +14,7 @@ Empulse has not been deployed or sold. This runbook is a release contract, not e
 - Stripe production keys and webhook secret.
 - Brevo API key for invitation delivery.
 - Queue, session, and cache backends configured for production.
+- Persistent/shared avatar storage configured through a Laravel filesystem disk, or avatar upload intentionally disabled until that storage exists.
 
 ## Critical Release Notes
 - `public/build` is generated during deployment and is no longer intended to be committed.
@@ -21,6 +22,7 @@ Empulse has not been deployed or sold. This runbook is a release contract, not e
 - Image builds and web startup must never run migrations or seed data.
 - Replit settings are development-only; there is no Replit production deployment declaration.
 - PostgreSQL 16 is the production database baseline.
+- Deterministic and demo seeders are test/demo tooling only; `DatabaseSeeder` refuses to run in production.
 
 ## Required Environment Configuration
 - App:
@@ -43,6 +45,9 @@ Empulse has not been deployed or sold. This runbook is a release contract, not e
   - `CACHE_STORE=database` or another durable shared store
   - `SESSION_DRIVER=database` or another durable shared store
   - `SESSION_SECURE_COOKIE=true`
+- Storage:
+  - `AVATAR_DISK=<persistent/shared Laravel filesystem disk>`
+  - if using the local `public` disk in a non-ephemeral environment, run `php artisan storage:link`; do not use an ephemeral release filesystem for customer avatars
 - Billing:
   - `STRIPE_KEY`
   - `STRIPE_SECRET`
@@ -73,15 +78,16 @@ php artisan app:production-check
 5. Ensure writable directories exist:
    - `storage/`
    - `bootstrap/cache/`
-6. Run database migrations as a one-time release action:
+6. Verify `AVATAR_DISK` can write, read, serve, and delete a disposable normalized image from every web instance.
+7. Run database migrations as a one-time release action:
    - `php artisan migrate --force`
-7. Reconcile the checkout projection with the approved environment catalog:
+8. Reconcile the checkout projection with the approved environment catalog:
    - `php artisan billing:sync-catalog`
-8. Cache application state:
+9. Cache application state:
    - `php artisan config:cache`
    - `php artisan route:cache`
    - `php artisan view:cache`
-9. Start or restart independently supervised runtime processes:
+10. Start or restart independently supervised runtime processes:
    - web
    - queue worker
    - scheduler
@@ -121,11 +127,14 @@ php artisan app:production-check
 - Verify billing:
   - plans page renders
   - billing center renders
+  - a role-only manager without a billing-admin appointment is denied
+  - the active owner can appoint and revoke an additional billing administrator and both changes appear in the audit stream
   - webhook updates subscription state without errors
 - Verify survey operations:
   - create a wave
   - dispatch a wave
   - confirm assignments are created
+  - confirm queue completion leaves a one-time/full collection `active`, not `completed`, until every assignment completes or the due date passes
   - confirm invitation jobs leave the queue and `invite_status` updates
   - force one transient provider retry and confirm the same encrypted survey URL and Brevo idempotency UUID are reused within the automatic retry window
   - confirm automatic resend stops for manual provider review after 25 minutes
@@ -144,6 +153,7 @@ php artisan app:production-check
 - Verify reports/dashboard:
   - no-data tenant shows onboarding states instead of blank UI
   - seeded/demo tenant shows populated analytics and reports
+  - a complete finding → action → measurement → outcome chain appears in the WorkFit-admin value-loop report without answer content or employee identity
 
 ## Non-production demo environment
 

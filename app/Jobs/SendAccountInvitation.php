@@ -120,7 +120,7 @@ class SendAccountInvitation implements ShouldBeUnique, ShouldQueue
     {
         AccountInvitation::whereKey($this->invitationId)->update([
             'delivery_status' => 'failed',
-            'delivery_error' => mb_substr($exception->getMessage(), 0, 1000),
+            'delivery_error' => 'Account invitation delivery job failed unexpectedly.',
         ]);
     }
 }

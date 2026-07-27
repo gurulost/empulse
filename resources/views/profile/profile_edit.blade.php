@@ -14,7 +14,7 @@
                 <div class="profile-card animate-fade-in-up">
                     <div class="profile-card-img">
                         <img id="showImage" class="rounded-circle"
-                             src="{{ (!empty(Auth::user()->image))?url('upload/'.Auth::user()->image):url('upload/no_image.jpg') }}"
+                             src="{{ (!empty(Auth::user()->image)) ? Storage::disk(config('filesystems.avatar_disk', 'public'))->url(Auth::user()->image) : url('upload/no_image.jpg') }}"
                              alt="Avatar Image">
                     </div>
                     <h5 class="fw-bold mb-1" style="font-family: 'Outfit', sans-serif;">{{ Auth::user()->name }}</h5>

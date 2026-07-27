@@ -100,8 +100,11 @@ class ScheduleSurveyWaves extends Command
                     ProcessSurveyWave::dispatch($wave->id);
                     $this->logWaveEvent($wave, 'processing', 'Wave dispatched to queue.');
                 } catch (\Throwable $e) {
-                    \Log::error("Failed to schedule wave {$wave->id}: ".$e->getMessage());
-                    $this->logWaveEvent($wave, 'error', 'Scheduler error: '.$e->getMessage());
+                    \Log::error('Failed to schedule survey wave', [
+                        'wave_id' => $wave->id,
+                        'exception_class' => $e::class,
+                    ]);
+                    $this->logWaveEvent($wave, 'error', 'Scheduler failed unexpectedly.');
                 }
             }
 

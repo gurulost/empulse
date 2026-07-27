@@ -143,7 +143,7 @@ class TeamController extends Controller
         );
 
         if ($result['status'] === 500) {
-            return response()->json(['message' => $result['message']], 500);
+            return response()->json(['message' => 'Member could not be added.'], 500);
         }
 
         return response()->json(['message' => 'Member added successfully']);
@@ -197,7 +197,7 @@ class TeamController extends Controller
         );
 
         if ($result['status'] === 500) {
-            return response()->json(['message' => $result['message']], 500);
+            return response()->json(['message' => 'Member could not be updated.'], 500);
         }
 
         return response()->json(['message' => 'Member updated successfully']);
@@ -243,7 +243,7 @@ class TeamController extends Controller
         $result = $this->departmentService->add($company->id, $request->title);
 
         if ($result['status'] === 500) {
-            return response()->json(['message' => $result['message']], 500);
+            return response()->json(['message' => 'Department could not be added.'], 500);
         }
 
         return response()->json(['message' => 'Department added successfully']);
@@ -255,7 +255,7 @@ class TeamController extends Controller
         $result = $this->departmentService->update($company->id, $oldTitle, $request->newTitle);
 
         if ($result['status'] === 500) {
-            return response()->json(['message' => $result['message']], 500);
+            return response()->json(['message' => 'Department could not be updated.'], 500);
         }
 
         return response()->json(['message' => 'Department updated successfully']);
@@ -267,7 +267,7 @@ class TeamController extends Controller
         $result = $this->departmentService->delete($company->id, $title);
 
         if ($result['status'] === 500) {
-            return response()->json(['message' => $result['message']], 500);
+            return response()->json(['message' => 'Department could not be removed.'], 500);
         }
 
         return response()->json(['message' => 'Department deleted successfully']);
@@ -305,8 +305,8 @@ class TeamController extends Controller
             }
 
             return response()->json(['status' => 500, 'message' => 'Failed to delete member']);
-        } catch (\Exception $e) {
-            return response()->json(['status' => 500, 'message' => $e->getMessage()]);
+        } catch (\Exception) {
+            return response()->json(['status' => 500, 'message' => 'Member could not be removed.']);
         }
     }
 
@@ -336,8 +336,8 @@ class TeamController extends Controller
             $members = $query->orderBy('name', 'asc')->paginate(25);
 
             return view('team.partials.members-table', ['users' => $members]);
-        } catch (\Exception $e) {
-            return response()->json(['status' => 500, 'message' => $e->getMessage()]);
+        } catch (\Exception) {
+            return response()->json(['status' => 500, 'message' => 'Members could not be loaded.']);
         }
     }
 
@@ -351,8 +351,8 @@ class TeamController extends Controller
                 ->paginate(10);
 
             return view('team.partials.departments-table', ['departments' => $departments]);
-        } catch (\Exception $e) {
-            return response()->json(['status' => 500, 'message' => $e->getMessage()]);
+        } catch (\Exception) {
+            return response()->json(['status' => 500, 'message' => 'Departments could not be loaded.']);
         }
     }
 
@@ -369,12 +369,12 @@ class TeamController extends Controller
             $result = $this->departmentService->add($company->id, $title);
 
             if ($result['status'] === 500) {
-                return response()->json(['status' => 500, 'message' => $result['message']]);
+                return response()->json(['status' => 500, 'message' => 'Department could not be added.']);
             }
 
             return response()->json(['status' => 200, 'message' => 'Department added successfully']);
-        } catch (\Exception $e) {
-            return response()->json(['status' => 500, 'message' => $e->getMessage()]);
+        } catch (\Exception) {
+            return response()->json(['status' => 500, 'message' => 'Department could not be added.']);
         }
     }
 
@@ -385,12 +385,12 @@ class TeamController extends Controller
             $result = $this->departmentService->delete($company->id, $title);
 
             if ($result['status'] === 500) {
-                return redirect()->back()->with('error', $result['message']);
+                return redirect()->back()->with('error', 'Department could not be removed.');
             }
 
             return redirect()->back()->with('success', 'Department deleted successfully');
-        } catch (\Exception $e) {
-            return redirect()->back()->with('error', $e->getMessage());
+        } catch (\Exception) {
+            return redirect()->back()->with('error', 'Department could not be removed.');
         }
     }
 }

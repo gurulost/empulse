@@ -173,10 +173,10 @@ class ProcessSurveyWave implements ShouldBeUnique, ShouldQueue
                 Log::error('Wave scheduling failed', [
                     'wave' => $wave->id,
                     'user' => $user->id,
-                    'error' => $e->getMessage(),
+                    'exception_class' => $e::class,
                 ]);
                 $stats['failed']++;
-                $this->logEvent($wave, $user, 'failed', $e->getMessage());
+                $this->logEvent($wave, $user, 'failed', 'Assignment scheduling failed unexpectedly.');
             }
         }
 
@@ -197,7 +197,7 @@ class ProcessSurveyWave implements ShouldBeUnique, ShouldQueue
             $wave->update(['status' => $recoveredStatus]);
         }
 
-        $message = 'Queue job failed: '.$exception->getMessage();
+        $message = 'Queue job failed unexpectedly.';
         if ($recoveredStatus) {
             $message .= " Wave reset to {$recoveredStatus}.";
         }
@@ -210,7 +210,7 @@ class ProcessSurveyWave implements ShouldBeUnique, ShouldQueue
 
         Log::error('Wave processing job failed', [
             'wave' => $wave->id,
-            'error' => $exception->getMessage(),
+            'exception_class' => $exception::class,
             'recovered_status' => $recoveredStatus,
         ]);
     }
@@ -295,7 +295,7 @@ class ProcessSurveyWave implements ShouldBeUnique, ShouldQueue
             }
 
             if (! $assignmentQuery->whereNull('last_dispatched_at')->exists()) {
-                return 'completed';
+                return 'active';
             }
 
             return 'scheduled';

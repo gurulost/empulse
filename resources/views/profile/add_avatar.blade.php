@@ -39,7 +39,7 @@
                             <label for="example-text-input" class="col-sm-2 col-form-label"></label>
                             <div class="">
                                 <img id="showImage" class="rounded img-thumbnail"
-                                     src="{{ (!empty(Auth::user()->image))?url('upload/'.Auth::user()->image):url('upload/no_image.jpg') }}"
+                                     src="{{ (!empty(Auth::user()->image)) ? Storage::disk(config('filesystems.avatar_disk', 'public'))->url(Auth::user()->image) : url('upload/no_image.jpg') }}"
                                      alt="Avatar Image" width="100px" height="100px">
                             </div>
                         </div>
@@ -79,5 +79,4 @@
 
     <script scr='{{asset('/js/profile_add_avatar.js')}}'></script>
 @endsection
-
 

@@ -3,9 +3,11 @@
 namespace App\Services;
 
 use App\Models\BillingAdminTransferRequest;
+use App\Models\BillingCatalogVersion;
 use App\Models\Companies;
 use App\Models\OrganizationBillingAdmin;
 use App\Models\OrganizationEntitlement;
+use App\Models\OrganizationEntitlementVersion;
 use App\Models\OrganizationUsageEvent;
 use App\Models\User;
 use Illuminate\Support\Carbon;
@@ -68,22 +70,30 @@ class OrganizationEntitlementService
         }
 
         $companyId = $company instanceof Companies ? $company->id : $company;
-        $plan = $this->plan($planKey);
-        $currentVersion = (int) (OrganizationEntitlement::where('company_id', $companyId)->value('version') ?? 0);
-        $entitlement = OrganizationEntitlement::updateOrCreate(
-            ['company_id' => $companyId],
-            [
-                'plan_key' => $planKey,
-                'status' => 'manual_grant',
-                'source' => 'manual',
-                'features' => $plan['features'],
-                'limits' => $plan['limits'],
-                'starts_at' => now(),
-                'ends_at' => $expiresAt,
-                'last_reconciled_at' => now(),
-                'version' => $currentVersion + 1,
-            ]
-        );
+        $entitlement = DB::transaction(function () use ($companyId, $planKey, $expiresAt, $actor) {
+            Companies::query()->whereKey($companyId)->lockForUpdate()->firstOrFail();
+            $plan = $this->plan($planKey);
+            $catalog = $this->catalogVersion($actor);
+            $currentVersion = (int) (OrganizationEntitlement::where('company_id', $companyId)->value('version') ?? 0);
+            $entitlement = OrganizationEntitlement::updateOrCreate(
+                ['company_id' => $companyId],
+                [
+                    'billing_catalog_version_id' => $catalog->id,
+                    'plan_key' => $planKey,
+                    'status' => 'manual_grant',
+                    'source' => 'manual',
+                    'features' => $plan['features'],
+                    'limits' => $plan['limits'],
+                    'starts_at' => now(),
+                    'ends_at' => $expiresAt,
+                    'last_reconciled_at' => now(),
+                    'version' => $currentVersion + 1,
+                ]
+            );
+            $this->snapshotEntitlement($entitlement, $catalog);
+
+            return $entitlement;
+        });
 
         app(AuditTrailService::class)->record(
             'billing.manual_grant',
@@ -130,10 +140,15 @@ class OrganizationEntitlementService
             } elseif (in_array($status, ['active', 'trialing'], true)) {
                 $graceEndsAt = null;
             }
+            $nextVersion = $entitlement instanceof OrganizationEntitlement
+                ? $entitlement->version + 1
+                : 1;
+            $catalog = $this->catalogVersion();
 
-            return OrganizationEntitlement::updateOrCreate(
+            $current = OrganizationEntitlement::updateOrCreate(
                 ['company_id' => $company->id],
                 [
+                    'billing_catalog_version_id' => $catalog->id,
                     'plan_key' => $planKey ?: 'unknown',
                     'status' => $status,
                     'source' => 'stripe',
@@ -147,9 +162,12 @@ class OrganizationEntitlementService
                     'ends_at' => $endsAt,
                     'last_stripe_event_at' => $eventCreatedAt ?: now(),
                     'last_reconciled_at' => now(),
-                    'version' => ((int) ($entitlement?->version ?? 0)) + 1,
+                    'version' => $nextVersion,
                 ]
             );
+            $this->snapshotEntitlement($current, $catalog);
+
+            return $current;
         });
     }
 
@@ -159,15 +177,38 @@ class OrganizationEntitlementService
             throw new \DomainException('Billing owner must belong to the organization.');
         }
 
-        return OrganizationBillingAdmin::firstOrCreate(
-            ['company_id' => $company->id, 'user_id' => $user->id],
-            [
-                'role' => 'owner',
-                'status' => 'active',
-                'approved_by' => $user->id,
-                'approved_at' => now(),
-            ]
-        );
+        return DB::transaction(function () use ($company, $user): OrganizationBillingAdmin {
+            Companies::query()->whereKey($company->id)->lockForUpdate()->firstOrFail();
+            $owner = OrganizationBillingAdmin::query()
+                ->where('company_id', $company->id)
+                ->where('role', 'owner')
+                ->where('status', 'active')
+                ->lockForUpdate()
+                ->first();
+            if ($owner && (int) $owner->user_id !== (int) $user->id) {
+                $ownerUserActive = User::query()
+                    ->whereKey($owner->user_id)
+                    ->where('status', 'active')
+                    ->exists();
+                if ($ownerUserActive) {
+                    throw new \DomainException(
+                        'This organization already has an active billing owner; use the explicit transfer workflow.'
+                    );
+                }
+                $owner->update(['role' => 'admin']);
+            }
+
+            return OrganizationBillingAdmin::updateOrCreate(
+                ['company_id' => $company->id, 'user_id' => $user->id],
+                [
+                    'role' => 'owner',
+                    'status' => 'active',
+                    'approved_by' => $user->id,
+                    'approved_at' => now(),
+                    'revoked_at' => null,
+                ]
+            );
+        });
     }
 
     public function isBillingAdmin(User $user, int|Companies $company): bool
@@ -175,11 +216,79 @@ class OrganizationEntitlementService
         $companyId = $company instanceof Companies ? $company->id : $company;
 
         return OrganizationBillingAdmin::query()
-            ->where('company_id', $companyId)
-            ->where('user_id', $user->id)
-            ->where('status', 'active')
-            ->whereNull('revoked_at')
+            ->join('users as billing_admin_user', 'billing_admin_user.id', '=', 'organization_billing_admins.user_id')
+            ->where('organization_billing_admins.company_id', $companyId)
+            ->where('organization_billing_admins.user_id', $user->id)
+            ->where('organization_billing_admins.status', 'active')
+            ->whereNull('organization_billing_admins.revoked_at')
+            ->where('billing_admin_user.status', 'active')
             ->exists();
+    }
+
+    public function grantBillingAdmin(
+        Companies $company,
+        User $owner,
+        User $target
+    ): OrganizationBillingAdmin {
+        if (! $this->isBillingOwner($owner, $company)) {
+            throw new \DomainException('Only the current billing owner can approve billing administrators.');
+        }
+        if ((int) $target->company_id !== (int) $company->id
+            || $target->status !== 'active'
+            || $target->id === $owner->id) {
+            throw new \DomainException('A billing administrator must be a different active organization member.');
+        }
+
+        $admin = OrganizationBillingAdmin::updateOrCreate(
+            ['company_id' => $company->id, 'user_id' => $target->id],
+            [
+                'role' => 'admin',
+                'status' => 'active',
+                'approved_by' => $owner->id,
+                'approved_at' => now(),
+                'revoked_at' => null,
+            ]
+        );
+        app(AuditTrailService::class)->record(
+            'billing.admin.approved',
+            $owner,
+            $company->id,
+            OrganizationBillingAdmin::class,
+            $admin->id,
+            ['user_id' => $target->id]
+        );
+
+        return $admin;
+    }
+
+    public function revokeBillingAdmin(
+        Companies $company,
+        User $owner,
+        OrganizationBillingAdmin $admin
+    ): OrganizationBillingAdmin {
+        if (! $this->isBillingOwner($owner, $company)) {
+            throw new \DomainException('Only the current billing owner can revoke billing administrators.');
+        }
+        if ((int) $admin->company_id !== (int) $company->id || $admin->role === 'owner') {
+            throw new \DomainException('The billing owner cannot be revoked through the administrator workflow.');
+        }
+        if ($admin->status !== 'active' || $admin->revoked_at !== null) {
+            throw new \DomainException('This billing administrator is not active.');
+        }
+        $admin->update([
+            'status' => 'revoked',
+            'revoked_at' => now(),
+        ]);
+        app(AuditTrailService::class)->record(
+            'billing.admin.revoked',
+            $owner,
+            $company->id,
+            OrganizationBillingAdmin::class,
+            $admin->id,
+            ['user_id' => $admin->user_id]
+        );
+
+        return $admin->fresh();
     }
 
     public function recordUsage(
@@ -216,13 +325,43 @@ class OrganizationEntitlementService
             ->pluck('quantity', 'metric')
             ->map(fn ($quantity) => (float) $quantity)
             ->all();
+        $derivation = OrganizationUsageEvent::query()
+            ->where('company_id', $companyId)
+            ->whereBetween('occurred_at', [$from, $to])
+            ->select(['metric', 'unit'])
+            ->selectRaw('COUNT(*) as event_count')
+            ->selectRaw('SUM(quantity) as quantity')
+            ->selectRaw('MIN(occurred_at) as first_event_at')
+            ->selectRaw('MAX(occurred_at) as last_event_at')
+            ->groupBy(['metric', 'unit'])
+            ->orderBy('metric')
+            ->get()
+            ->map(fn (OrganizationUsageEvent $row): array => [
+                'metric' => $row->metric,
+                'event_count' => (int) $row->event_count,
+                'quantity' => (float) $row->quantity,
+                'unit' => $row->unit,
+                'first_event_at' => $row->first_event_at,
+                'last_event_at' => $row->last_event_at,
+            ])
+            ->values()
+            ->all();
         $entitlement = $this->current($companyId);
+        $limits = $entitlement instanceof OrganizationEntitlement
+            ? $entitlement->limits
+            : [];
 
         return [
             'period_start' => $from->toDateString(),
             'period_end' => $to->toDateString(),
             'metrics' => $rows,
-            'limits' => $entitlement?->limits ?? [],
+            'limits' => $limits,
+            'derivation' => $derivation,
+            'definitions' => [
+                'active_respondents' => 'One event per unique organization member first reserved for a dispatch in the billing month. Retries and duplicate dispatch attempts reuse the same idempotency key.',
+                'dispatched_assignments' => 'Sum of append-only assignment-dispatch usage events accepted for this organization and period.',
+                'completed_responses' => 'Sum of append-only completed-response usage events accepted for this organization and period.',
+            ],
         ];
     }
 
@@ -376,6 +515,7 @@ class OrganizationEntitlementService
         $companyId = $company instanceof Companies ? $company->id : $company;
 
         return OrganizationBillingAdmin::where('company_id', $companyId)
+            ->whereHas('user', fn ($query) => $query->where('status', 'active'))
             ->where('user_id', $user->id)
             ->where('role', 'owner')
             ->where('status', 'active')
@@ -406,5 +546,73 @@ class OrganizationEntitlementService
         }
 
         return null;
+    }
+
+    public function catalogVersion(?User $actor = null): BillingCatalogVersion
+    {
+        $definition = [
+            'catalog' => config('billing.catalog', []),
+            'trial' => config('billing.trial', []),
+            'dispatch_statuses' => config('billing.dispatch_statuses', []),
+            'data_access_statuses' => config('billing.data_access_statuses', []),
+        ];
+        $hash = hash('sha256', $this->canonicalJson($definition));
+
+        return BillingCatalogVersion::firstOrCreate(
+            ['definition_hash' => $hash],
+            [
+                'definition' => $definition,
+                'status' => 'published',
+                'published_by_user_id' => $actor?->id,
+                'effective_at' => now(),
+                'created_at' => now(),
+            ]
+        );
+    }
+
+    protected function snapshotEntitlement(
+        OrganizationEntitlement $entitlement,
+        BillingCatalogVersion $catalog
+    ): OrganizationEntitlementVersion {
+        return OrganizationEntitlementVersion::firstOrCreate(
+            [
+                'company_id' => $entitlement->company_id,
+                'version' => $entitlement->version,
+            ],
+            [
+                'billing_catalog_version_id' => $catalog->id,
+                'plan_key' => $entitlement->plan_key,
+                'status' => $entitlement->status,
+                'source' => $entitlement->source,
+                'stripe_subscription_id' => $entitlement->stripe_subscription_id,
+                'stripe_price_id' => $entitlement->stripe_price_id,
+                'features' => $entitlement->features,
+                'limits' => $entitlement->limits,
+                'starts_at' => $entitlement->starts_at,
+                'trial_ends_at' => $entitlement->trial_ends_at,
+                'grace_ends_at' => $entitlement->grace_ends_at,
+                'ends_at' => $entitlement->ends_at,
+                'recorded_at' => now(),
+            ]
+        );
+    }
+
+    protected function canonicalJson(array $payload): string
+    {
+        $normalize = function ($value) use (&$normalize) {
+            if (! is_array($value)) {
+                return $value;
+            }
+            if (! array_is_list($value)) {
+                ksort($value);
+            }
+
+            return array_map($normalize, $value);
+        };
+
+        return json_encode(
+            $normalize($payload),
+            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR
+        );
     }
 }

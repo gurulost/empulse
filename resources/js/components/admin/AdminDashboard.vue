@@ -24,6 +24,24 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a href="#"
+                           class="nav-link"
+                           :class="{ 'active': activeTab === 'advisor' }"
+                           @click.prevent="activeTab = 'advisor'">
+                            <i class="bi bi-clipboard-check fs-5" :class="{ 'me-3': !isSidebarCollapsed }"></i>
+                            <span v-if="!isSidebarCollapsed">Advisor Queue</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#"
+                           class="nav-link"
+                           :class="{ 'active': activeTab === 'value-loop' }"
+                           @click.prevent="activeTab = 'value-loop'">
+                            <i class="bi bi-arrow-repeat fs-5" :class="{ 'me-3': !isSidebarCollapsed }"></i>
+                            <span v-if="!isSidebarCollapsed">Value Loop</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a href="#" 
                            class="nav-link"
                            :class="{ 'active': activeTab === 'users' }"
@@ -48,6 +66,15 @@
                            @click.prevent="activeTab = 'onboarding'">
                             <i class="bi bi-signpost-split fs-5" :class="{ 'me-3': !isSidebarCollapsed }"></i>
                             <span v-if="!isSidebarCollapsed">Onboarding</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#"
+                           class="nav-link"
+                           :class="{ 'active': activeTab === 'audit' }"
+                           @click.prevent="activeTab = 'audit'">
+                            <i class="bi bi-shield-check fs-5" :class="{ 'me-3': !isSidebarCollapsed }"></i>
+                            <span v-if="!isSidebarCollapsed">Audit</span>
                         </a>
                     </li>
                     <li class="nav-item mt-4">
@@ -146,6 +173,36 @@
                             @stage-change="fetchOnboardingReport(1)"
                             @page-change="fetchOnboardingReport"
                         />
+
+                        <audit-event-explorer
+                            v-else-if="activeTab === 'audit'"
+                            :report="auditReport"
+                            :company-id="auditCompanyId"
+                            :action="auditAction"
+                            :subject-id="auditSubjectId"
+                            @update:company-id="auditCompanyId = $event"
+                            @update:action="auditAction = $event"
+                            @update:subject-id="auditSubjectId = $event"
+                            @search="fetchAuditEvents(1)"
+                            @page-change="fetchAuditEvents"
+                        />
+
+                        <advisor-work-queue
+                            v-else-if="activeTab === 'advisor'"
+                            :report="advisorQueue"
+                            v-model:status="advisorQueueStatus"
+                            v-model:kind="advisorQueueKind"
+                            @search="fetchAdvisorQueue(1)"
+                            @page-change="fetchAdvisorQueue"
+                            @transition="transitionAdvisorWorkItem"
+                        />
+
+                        <action-loop-value-report
+                            v-else-if="activeTab === 'value-loop'"
+                            :report="actionLoopValueReport"
+                            v-model:company-id="actionLoopCompanyId"
+                            @search="fetchActionLoopValueReport"
+                        />
                     </div>
                 </div>
             </main>
@@ -160,6 +217,9 @@ import CompanyList from './CompanyList.vue';
 import UserList from './UserList.vue';
 import SubscriptionList from './SubscriptionList.vue';
 import OnboardingReport from './OnboardingReport.vue';
+import AuditEventExplorer from './AuditEventExplorer.vue';
+import AdvisorWorkQueue from './AdvisorWorkQueue.vue';
+import ActionLoopValueReport from './ActionLoopValueReport.vue';
 
 const props = defineProps({
     user: {
@@ -187,10 +247,32 @@ const onboardingReport = ref({
     alerts: [],
     recent_events: [],
 });
+const auditReport = ref({
+    events: { data: [], current_page: 1, last_page: 1 },
+    integrity: { valid: true, stream: 'platform', events: 0, failed_event_id: null },
+    view_logged: false,
+});
+const advisorQueue = ref({
+    items: { data: [], current_page: 1, last_page: 1 },
+    filters: { status: null, kind: null },
+});
+const actionLoopValueReport = ref({
+    schema_version: 1,
+    counts: {},
+    rates: {},
+    outcome_results: {},
+    organizations: [],
+});
 const loading = ref(false);
 const searchQuery = ref('');
 const onboardingSearchQuery = ref('');
 const onboardingStageFilter = ref('all');
+const auditCompanyId = ref('');
+const auditAction = ref('');
+const auditSubjectId = ref('');
+const advisorQueueStatus = ref('');
+const advisorQueueKind = ref('');
+const actionLoopCompanyId = ref('');
 const companyFilter = ref(null);
 const isSidebarCollapsed = ref(false);
 const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
@@ -205,7 +287,10 @@ const pageTitle = computed(() => {
         companies: 'Company Management',
         users: 'User Management',
         subscriptions: 'Subscription Management',
-        onboarding: 'Onboarding Operations'
+        onboarding: 'Onboarding Operations',
+        audit: 'Audit Operations',
+        advisor: 'Advisor Operations Queue',
+        'value-loop': 'Customer Value Loop',
     };
     return titles[activeTab.value] ?? 'Dashboard';
 });
@@ -273,6 +358,73 @@ const fetchOnboardingReport = async (page = 1) => {
     }
 };
 
+const fetchAuditEvents = async (page = 1) => {
+    loading.value = true;
+    try {
+        const params = {
+            page,
+            company_id: auditCompanyId.value || undefined,
+            action: auditAction.value || undefined,
+            subject_id: auditSubjectId.value || undefined,
+        };
+        const { data } = await axios.get('/admin/api/audit-events', { params });
+        auditReport.value = data;
+    } catch (e) {
+        console.error(e);
+        alert('Failed to load the audit event explorer');
+    } finally {
+        loading.value = false;
+    }
+};
+
+const fetchAdvisorQueue = async (page = 1) => {
+    loading.value = true;
+    try {
+        const { data } = await axios.get('/admin/api/advisor-work-items', {
+            params: {
+                page,
+                status: advisorQueueStatus.value || undefined,
+                kind: advisorQueueKind.value || undefined,
+            },
+        });
+        advisorQueue.value = data;
+    } catch (e) {
+        console.error(e);
+        alert('Failed to load the advisor work queue');
+    } finally {
+        loading.value = false;
+    }
+};
+
+const transitionAdvisorWorkItem = async (item, status) => {
+    loading.value = true;
+    try {
+        await axios.patch(`/admin/api/advisor-work-items/${item.id}`, { status });
+        await fetchAdvisorQueue(advisorQueue.value.items.current_page || 1);
+    } catch (e) {
+        console.error(e);
+        alert(e.response?.data?.message || 'Failed to update the advisor work item');
+        loading.value = false;
+    }
+};
+
+const fetchActionLoopValueReport = async () => {
+    loading.value = true;
+    try {
+        const { data } = await axios.get('/admin/api/action-loop-value', {
+            params: {
+                company_id: actionLoopCompanyId.value || undefined,
+            },
+        });
+        actionLoopValueReport.value = data;
+    } catch (e) {
+        console.error(e);
+        alert('Failed to load the action-loop value report');
+    } finally {
+        loading.value = false;
+    }
+};
+
 const viewCompany = (company) => {
     companyFilter.value = company.id;
     searchQuery.value = ''; // Clear search to see all company users
@@ -290,6 +442,9 @@ const refreshCurrentTab = () => {
     else if (activeTab.value === 'users') fetchUsers(users.value.current_page);
     else if (activeTab.value === 'subscriptions') fetchSubscriptions(subscriptions.value.current_page);
     else if (activeTab.value === 'onboarding') fetchOnboardingReport(onboardingReport.value.companies?.current_page || 1);
+    else if (activeTab.value === 'audit') fetchAuditEvents(auditReport.value.events?.current_page || 1);
+    else if (activeTab.value === 'advisor') fetchAdvisorQueue(advisorQueue.value.items?.current_page || 1);
+    else if (activeTab.value === 'value-loop') fetchActionLoopValueReport();
 };
 
 watch(activeTab, (newTab) => {
@@ -297,6 +452,9 @@ watch(activeTab, (newTab) => {
     if (newTab === 'users' && users.value.data.length === 0) fetchUsers();
     if (newTab === 'subscriptions' && subscriptions.value.data.length === 0) fetchSubscriptions();
     if (newTab === 'onboarding' && onboardingReport.value.companies.data.length === 0) fetchOnboardingReport();
+    if (newTab === 'audit' && auditReport.value.events.data.length === 0) fetchAuditEvents();
+    if (newTab === 'advisor' && advisorQueue.value.items.data.length === 0) fetchAdvisorQueue();
+    if (newTab === 'value-loop' && !actionLoopValueReport.value.generated_at) fetchActionLoopValueReport();
 });
 
 onMounted(() => {

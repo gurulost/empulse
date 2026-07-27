@@ -20,21 +20,25 @@
                     <div class="card-body p-4 p-lg-5">
                         <form method="POST" action="{{ route('contact.send') }}">
                             @csrf
+                            <div class="visually-hidden" aria-hidden="true">
+                                <label for="website">Website</label>
+                                <input id="website" type="text" name="website" tabindex="-1" autocomplete="off">
+                            </div>
                             <div class="mb-3">
                                 <label for="name" class="form-label fw-semibold">Name</label>
-                                <input id="name" type="text" name="name" class="form-control form-control-lg" value="{{ Auth::check() ? Auth::user()->name : '' }}" required placeholder="Your full name">
+                                <input id="name" type="text" name="name" class="form-control form-control-lg" value="{{ old('name', Auth::check() ? Auth::user()->name : '') }}" minlength="2" maxlength="120" required placeholder="Your full name">
                             </div>
                             <div class="mb-3">
                                 <label for="email" class="form-label fw-semibold">Email</label>
-                                <input id="email" type="email" name="email" class="form-control form-control-lg" value="{{ Auth::check() ? Auth::user()->email : '' }}" required placeholder="your@email.com">
+                                <input id="email" type="email" name="email" class="form-control form-control-lg" value="{{ old('email', Auth::check() ? Auth::user()->email : '') }}" maxlength="255" required placeholder="your@email.com">
                             </div>
                             <div class="mb-3">
                                 <label for="phone" class="form-label fw-semibold">Phone <span class="text-muted fw-normal">(optional)</span></label>
-                                <input id="phone" type="tel" name="phone" class="form-control form-control-lg" placeholder="555-555-1234">
+                                <input id="phone" type="tel" name="phone" class="form-control form-control-lg" value="{{ old('phone') }}" maxlength="40" placeholder="555-555-1234">
                             </div>
                             <div class="mb-4">
                                 <label for="message" class="form-label fw-semibold">Message</label>
-                                <textarea id="message" name="message" class="form-control form-control-lg" rows="4" required placeholder="How can we help you?"></textarea>
+                                <textarea id="message" name="message" class="form-control form-control-lg" rows="4" minlength="10" maxlength="5000" required placeholder="How can we help you?">{{ old('message') }}</textarea>
                             </div>
                             <button class="btn btn-primary btn-lg w-100 rounded-pill fw-bold sendMessageButton" type="submit">
                                 <i class="bi bi-send me-2"></i>Send Message

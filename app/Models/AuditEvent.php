@@ -4,6 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property-read string|null $company_title
+ * @property-read string|null $actor_name
+ */
 class AuditEvent extends Model
 {
     public $timestamps = false;

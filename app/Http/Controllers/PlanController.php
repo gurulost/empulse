@@ -43,7 +43,7 @@ class PlanController extends Controller
                 Log::warning('Stripe setup intent could not be created', [
                     'user_id' => $user->id,
                     'plan_id' => $plan->id,
-                    'error' => $exception->getMessage(),
+                    'exception_class' => $exception::class,
                 ]);
                 $billingAvailable = false;
             }
@@ -96,7 +96,7 @@ class PlanController extends Controller
             Log::warning('Stripe subscription checkout failed', [
                 'user_id' => $request->user()->id,
                 'plan_id' => $plan->id,
-                'error' => $exception->getMessage(),
+                'exception_class' => $exception::class,
             ]);
 
             return redirect()

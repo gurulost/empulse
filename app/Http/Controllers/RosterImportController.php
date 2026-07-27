@@ -8,6 +8,7 @@ use App\Http\Requests\StageRosterImportRequest;
 use App\Models\Companies;
 use App\Models\RosterImport;
 use App\Models\User;
+use App\Services\AuditTrailService;
 use App\Services\RosterImportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,8 +16,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class RosterImportController extends Controller
 {
-    public function __construct(protected RosterImportService $imports)
-    {
+    public function __construct(
+        protected RosterImportService $imports,
+        protected AuditTrailService $audit
+    ) {
         $this->middleware('auth');
     }
 
@@ -78,11 +81,23 @@ class RosterImportController extends Controller
 
     public function result(Request $request, RosterImport $rosterImport): StreamedResponse
     {
-        $this->managerContext($request, $rosterImport);
+        [, $actor] = $this->managerContext($request, $rosterImport);
         if ($rosterImport->rows_purged_at) {
             abort(410, 'Detailed roster import rows have expired under the retention policy.');
         }
         $rosterImport->loadMissing('rows');
+        $this->audit->record(
+            'roster.import_result_exported',
+            $actor,
+            $rosterImport->company_id,
+            RosterImport::class,
+            $rosterImport->id,
+            [],
+            [
+                'row_count' => $rosterImport->rows->count(),
+                'status' => $rosterImport->status,
+            ]
+        );
 
         return response()->streamDownload(function () use ($rosterImport): void {
             $stream = fopen('php://output', 'w');

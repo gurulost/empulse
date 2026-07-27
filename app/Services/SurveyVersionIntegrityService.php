@@ -33,6 +33,7 @@ class SurveyVersionIntegrityService
         $version->loadMissing($this->relations());
         $errors = [];
         $items = $this->items($version);
+        $presetKeys = $version->scalePresets->pluck('preset_key')->filter()->all();
         $pageIds = $version->pages->pluck('id')->map(fn ($id) => (int) $id)->all();
         $sectionPageIds = $version->pages
             ->flatMap->sections
@@ -81,7 +82,11 @@ class SurveyVersionIntegrityService
             }
             if ($item->type === 'slider') {
                 $scale = $item->scale_config ?? [];
-                if (! isset($scale['preset'])
+                $presetKey = $scale['preset_key'] ?? $scale['preset'] ?? null;
+                if ($presetKey && ! in_array($presetKey, $presetKeys, true)) {
+                    $errors[] = "{$prefix}: slider references unknown scale preset {$presetKey}.";
+                }
+                if (! $presetKey
                     && (! isset($scale['min'], $scale['max'])
                         || ! is_numeric($scale['min'])
                         || ! is_numeric($scale['max'])

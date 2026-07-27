@@ -90,6 +90,22 @@ class AdvisorAccessService
             ->exists();
     }
 
+    public function activeGrantForAdvisor(User $advisor, int $companyId): ?AdvisorCompanyGrant
+    {
+        if (! $advisor->hasCapability('actions.advisor')) {
+            return null;
+        }
+
+        return AdvisorCompanyGrant::query()
+            ->where('company_id', $companyId)
+            ->where('advisor_user_id', $advisor->id)
+            ->where('status', 'active')
+            ->whereNull('revoked_at')
+            ->where('valid_from', '<=', now())
+            ->where(fn ($query) => $query->whereNull('valid_until')->orWhere('valid_until', '>', now()))
+            ->first();
+    }
+
     public function activeForAdvisor(User $advisor): Collection
     {
         return AdvisorCompanyGrant::query()
@@ -113,6 +129,22 @@ class AdvisorAccessService
         }
 
         throw new \DomainException('Customer-approved advisor access is required for this organization.');
+    }
+
+    public function companyIdForActor(User $actor, ?int $requestedCompanyId = null): int
+    {
+        $companyId = (int) $actor->company_id;
+        if ($actor->hasCapability('actions.advisor')) {
+            $companyId = $requestedCompanyId
+                ?: (int) $this->activeForAdvisor($actor)->first()?->company_id;
+        }
+        if ($companyId <= 0) {
+            throw new \DomainException('Company context is required.');
+        }
+
+        $this->assertActorCanAccess($actor, $companyId);
+
+        return $companyId;
     }
 
     protected function assertCustomerAdministrator(int $companyId, User $actor): void

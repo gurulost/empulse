@@ -9,17 +9,24 @@ use App\Models\SurveyPage;
 use App\Models\SurveyScalePreset;
 use App\Models\SurveySection;
 use App\Models\SurveyVersion;
+use App\Models\User;
+use App\Services\AuditTrailService;
+use App\Services\SurveyVersionIntegrityService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 
 class ImportSurvey extends Command
 {
-    protected $signature = 'survey:import {path : Path to the survey JSON file} {--activate : Mark this version as active after import}';
+    protected $signature = 'survey:import
+        {path : Path to the survey JSON file}
+        {--activate : Publish this version after governed validation}
+        {--approved-by= : Active WorkFit administrator user ID required with --activate}
+        {--change-summary= : Publication change summary required with --activate}';
 
     protected $description = 'Import a survey instrument definition into the database';
 
-    public function handle(): int
+    public function handle(SurveyVersionIntegrityService $integrity): int
     {
         $path = $this->argument('path');
         if (! is_file($path)) {
@@ -35,28 +42,82 @@ class ImportSurvey extends Command
             return Command::FAILURE;
         }
 
-        DB::transaction(function () use ($payload) {
-            $version = SurveyVersion::create([
-                'instrument_id' => Arr::get($payload, 'instrument_id', 'unknown'),
-                'version' => Arr::get($payload, 'version', '1.0.0'),
-                'title' => Arr::get($payload, 'title', 'Survey Instrument'),
-                'created_utc' => Arr::get($payload, 'created_utc'),
-                'source_note' => Arr::get($payload, 'source_note'),
-                'meta' => Arr::except($payload, ['scale_presets', 'pages']),
-            ]);
+        $approver = null;
+        $changeSummary = trim((string) $this->option('change-summary'));
+        if ($this->option('activate')) {
+            $approver = User::find($this->option('approved-by'));
+            if (! $approver
+                || $approver->status !== 'active'
+                || ! $approver->hasCapability('survey-builder.manage')) {
+                $this->error('--activate requires --approved-by with an active WorkFit survey administrator user ID.');
 
-            $this->storeScalePresets($version, Arr::get($payload, 'scale_presets', []));
-            $this->storePages($version, Arr::get($payload, 'pages', []));
-
-            if ($this->option('activate')) {
-                SurveyVersion::where('instrument_id', $version->instrument_id)
-                    ->where('id', '!=', $version->id)
-                    ->update(['is_active' => false]);
-                $version->update(['is_active' => true]);
+                return Command::FAILURE;
             }
+            if (mb_strlen($changeSummary) < 10) {
+                $this->error('--activate requires a change summary of at least 10 characters.');
 
-            $this->info("Imported survey version {$version->version} ({$version->instrument_id})");
-        });
+                return Command::FAILURE;
+            }
+        }
+
+        try {
+            DB::transaction(function () use ($payload, $integrity, $approver, $changeSummary) {
+                $version = SurveyVersion::create([
+                    'instrument_id' => Arr::get($payload, 'instrument_id', 'unknown'),
+                    'version' => Arr::get($payload, 'version', '1.0.0'),
+                    'title' => Arr::get($payload, 'title', 'Survey Instrument'),
+                    'created_utc' => Arr::get($payload, 'created_utc'),
+                    'source_note' => Arr::get($payload, 'source_note'),
+                    'meta' => Arr::except($payload, ['scale_presets', 'pages']),
+                    'publication_status' => 'draft',
+                ]);
+
+                $this->storeScalePresets($version, Arr::get($payload, 'scale_presets', []));
+                $this->storePages($version, Arr::get($payload, 'pages', []));
+
+                if ($approver) {
+                    $contentHash = $integrity->assertPublishable($version);
+                    SurveyVersion::where('instrument_id', $version->instrument_id)
+                        ->where('id', '!=', $version->id)
+                        ->where('is_active', true)
+                        ->update([
+                            'is_active' => false,
+                            'publication_status' => 'retired',
+                        ]);
+                    $now = now();
+                    $version->update([
+                        'is_active' => true,
+                        'publication_status' => 'published',
+                        'change_summary' => $changeSummary,
+                        'content_hash' => $contentHash,
+                        'reviewed_by' => $approver->id,
+                        'reviewed_at' => $now,
+                        'approved_by' => $approver->id,
+                        'approved_at' => $now,
+                        'published_by' => $approver->id,
+                        'published_at' => $now,
+                    ]);
+                    app(AuditTrailService::class)->record(
+                        'survey.version_published',
+                        $approver,
+                        null,
+                        SurveyVersion::class,
+                        $version->id,
+                        [],
+                        [
+                            'content_hash' => $contentHash,
+                            'source' => 'survey:import',
+                        ]
+                    );
+                }
+
+                $this->info("Imported survey version {$version->version} ({$version->instrument_id})");
+            });
+        } catch (\DomainException $exception) {
+            $this->error('Survey import failed governed publication checks: '.$exception->getMessage());
+
+            return Command::FAILURE;
+        }
 
         return Command::SUCCESS;
     }

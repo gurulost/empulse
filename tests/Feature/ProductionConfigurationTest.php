@@ -22,6 +22,8 @@ class ProductionConfigurationTest extends TestCase
             'session.driver' => 'database',
             'session.secure' => true,
             'cache.default' => 'database',
+            'filesystems.avatar_disk' => 'public',
+            'filesystems.disks.public' => ['driver' => 'local'],
             'mail.default' => 'smtp',
             'mail.from.address' => 'hello@example.com',
             'services.brevo.key' => 'brevo-key',
@@ -53,6 +55,8 @@ class ProductionConfigurationTest extends TestCase
             'session.driver' => 'file',
             'session.secure' => false,
             'cache.default' => 'file',
+            'filesystems.avatar_disk' => 'missing-avatar-disk',
+            'filesystems.disks' => [],
             'mail.default' => 'log',
             'mail.from.address' => null,
             'services.brevo.key' => null,
@@ -70,6 +74,7 @@ class ProductionConfigurationTest extends TestCase
             ->expectsOutputToContain('APP_DEBUG')
             ->expectsOutputToContain('DB_CONNECTION')
             ->expectsOutputToContain('AUDIT_HASH_KEY')
+            ->expectsOutputToContain('AVATAR_DISK')
             ->expectsOutputToContain('STRIPE_WEBHOOK_SECRET')
             ->assertFailed();
     }

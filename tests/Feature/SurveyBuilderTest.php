@@ -52,6 +52,21 @@ class SurveyBuilderTest extends TestCase
         ], $overrides));
     }
 
+    protected function reviewAndApprove(User $admin, SurveyVersion $version): void
+    {
+        $this->actingAs($admin)
+            ->postJson("/admin/builder/review/{$version->id}", [
+                'change_summary' => 'Clarify the governed survey wording and preserve the metric contract.',
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'in_review');
+
+        $this->actingAs($admin)
+            ->postJson("/admin/builder/approve/{$version->id}")
+            ->assertOk()
+            ->assertJsonPath('status', 'approved');
+    }
+
     public function test_builder_update_item_preserves_display_logic_combinators_and_values(): void
     {
         $admin = $this->workfitAdmin();
@@ -250,9 +265,11 @@ class SurveyBuilderTest extends TestCase
         $item = $this->draftItem(['type' => 'dropdown']);
 
         $this->actingAs($admin)
-            ->postJson("/admin/builder/publish/{$item->survey_version_id}")
+            ->postJson("/admin/builder/review/{$item->survey_version_id}", [
+                'change_summary' => 'Attempt to publish an incomplete selectable item.',
+            ])
             ->assertStatus(422)
-            ->assertJsonPath('message', 'Survey version failed publication checks.');
+            ->assertJsonPath('message', 'Survey version failed review checks.');
 
         $this->assertFalse($item->version->fresh()->is_active);
         $this->assertNull($item->version->fresh()->content_hash);
@@ -268,6 +285,7 @@ class SurveyBuilderTest extends TestCase
             'is_active' => true,
         ]);
         $item = $this->draftItem();
+        $this->reviewAndApprove($admin, $item->version);
 
         $this->actingAs($admin)
             ->postJson("/admin/builder/publish/{$item->survey_version_id}")
@@ -278,9 +296,57 @@ class SurveyBuilderTest extends TestCase
         $this->assertTrue($published->is_active);
         $this->assertSame(64, strlen($published->content_hash));
         $this->assertSame($admin->id, $published->published_by);
+        $this->assertSame($admin->id, $published->reviewed_by);
+        $this->assertSame($admin->id, $published->approved_by);
+        $this->assertSame('published', $published->publication_status);
+        $this->assertSame(
+            'Clarify the governed survey wording and preserve the metric contract.',
+            $published->change_summary
+        );
         $this->assertNotNull($published->published_at);
         $this->assertFalse($old->fresh()->is_active);
+        $this->assertSame('retired', $old->fresh()->publication_status);
         $this->assertSame(1, SurveyVersion::where('is_active', true)->count());
+        $this->assertDatabaseHas('audit_events', [
+            'stream_key' => 'platform',
+            'action' => 'survey.version_reviewed',
+            'subject_id' => (string) $published->id,
+        ]);
+        $this->assertDatabaseHas('audit_events', [
+            'stream_key' => 'platform',
+            'action' => 'survey.version_approved',
+            'subject_id' => (string) $published->id,
+        ]);
+        $this->assertDatabaseHas('audit_events', [
+            'stream_key' => 'platform',
+            'action' => 'survey.version_published',
+            'subject_id' => (string) $published->id,
+        ]);
+    }
+
+    public function test_reviewed_content_is_locked_and_direct_publication_fails_closed(): void
+    {
+        $admin = $this->workfitAdmin();
+        $item = $this->draftItem();
+
+        $this->actingAs($admin)
+            ->postJson("/admin/builder/publish/{$item->survey_version_id}")
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Survey version failed publication checks.');
+
+        $this->actingAs($admin)
+            ->postJson("/admin/builder/review/{$item->survey_version_id}", [
+                'change_summary' => 'Review this exact question wording before publication.',
+            ])
+            ->assertOk();
+
+        $this->actingAs($admin)
+            ->postJson("/admin/builder/item/{$item->id}", [
+                'question' => 'Changed after review',
+                'type' => 'text_short',
+            ])
+            ->assertForbidden()
+            ->assertJsonPath('message', 'Only a draft version can be edited');
     }
 
     public function test_clone_preserves_full_semantics_including_presets_and_option_sources(): void

@@ -6,10 +6,9 @@ return [
     | Explicit application capabilities
     |--------------------------------------------------------------------------
     |
-    | These mappings are the temporary authorization authority while the
-    | durable organization_memberships model is introduced. Routes name the
-    | capability they require; a generic "non-employee is admin" grant is not
-    | permitted.
+    | Routes name the capability they require; a generic "non-employee is
+    | admin" grant is not permitted. Billing is intentionally excluded here:
+    | organization_billing_admins is its explicit authorization authority.
     |
     */
     'roles' => [
@@ -25,7 +24,6 @@ return [
         1 => [
             'analytics.view',
             'team.manage',
-            'billing.manage',
             'survey.manage',
             'survey-waves.manage',
             'actions.manage',

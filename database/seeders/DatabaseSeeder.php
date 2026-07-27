@@ -24,6 +24,12 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        if (app()->environment('production')) {
+            throw new \LogicException(
+                'DatabaseSeeder contains test-only fixture identities and must never run in production.'
+            );
+        }
+
         $company = Companies::create([
             'title' => 'Acme Corp',
             'manager' => 'Manager User',
@@ -31,7 +37,7 @@ class DatabaseSeeder extends Seeder
         ]);
         $password = Hash::make('password');
 
-        User::create([
+        $admin = User::create([
             'name' => 'Super Admin',
             'email' => 'admin@workfit.com',
             'password' => $password,
@@ -79,10 +85,21 @@ class DatabaseSeeder extends Seeder
             'company_title' => $company->title,
             'status' => 'active',
         ]));
+        collect(range(6, 10))->each(fn (int $number) => User::create([
+            'name' => "Action Journey Employee {$number}",
+            'email' => "employee{$number}@acme.com",
+            'password' => $password,
+            'role' => 4,
+            'company_id' => $company->id,
+            'company_title' => $company->title,
+            'status' => 'active',
+        ]));
 
         $exitCode = Artisan::call('survey:import', [
             'path' => base_path('survey_instrument.json'),
             '--activate' => true,
+            '--approved-by' => $admin->id,
+            '--change-summary' => 'Publish the canonical WorkFit baseline instrument for the seeded demonstration environment.',
         ]);
         if ($exitCode !== 0) {
             throw new \RuntimeException('The canonical WorkFit instrument could not be imported.');
@@ -96,6 +113,13 @@ class DatabaseSeeder extends Seeder
         $version->update([
             'content_hash' => $contentHash,
             'published_at' => now(),
+            'published_by' => $admin->id,
+            'publication_status' => 'published',
+            'change_summary' => 'Publish the canonical WorkFit baseline instrument for the seeded demonstration environment.',
+            'reviewed_by' => $admin->id,
+            'reviewed_at' => now(),
+            'approved_by' => $admin->id,
+            'approved_at' => now(),
         ]);
         $survey = Survey::where('is_default', true)->orderBy('id')->first()
             ?? Survey::create(['title' => 'WorkFit Baseline', 'is_default' => true]);

@@ -48,14 +48,14 @@ The first completed company response is the workflow activation milestone, not a
 The original overhaul began by capturing the full Qualtrics instrument inside the Empulse schema. The following artifacts are now in place:
 
 - Normalized schema covering `survey_versions`, `survey_pages`, `survey_sections`, `survey_items`, `survey_options`, `survey_option_sources`, and `survey_scale_presets`.
-- Import command `php artisan survey:import {path} [--activate]` that ingests the JSON spec and optionally marks the version live. The importer stores scale presets, option metadata (including exclusivity, free-text placeholders), algorithmic/ISO option generators, and coding hints for analytics.
+- Import command `php artisan survey:import {path}` that ingests the JSON spec as a draft. Governed activation additionally requires a named active WorkFit admin and change summary. The importer stores scale presets, option metadata (including exclusivity, free-text placeholders), algorithmic/ISO option generators, and coding hints for analytics.
 - Models for each new table so later phases (renderer, analytics, scheduling) can rely on Eloquent relationships.
 
 ## How to Use the Importer
 
 1. Place the JSON instrument somewhere accessible (e.g., `storage/app/instruments/org_culture.json`).
-2. Run `php artisan survey:import storage/app/instruments/org_culture.json --activate`.
-3. The command wraps everything in a transaction. If `--activate` is passed, it deactivates any prior version and sets the new one live.
+2. Import a draft with `php artisan survey:import storage/app/instruments/org_culture.json`.
+3. Prefer the WorkFit builder’s draft → review → approved → published workflow. Governed CLI publication requires `--activate --approved-by=<active WorkFit admin ID> --change-summary="<what changed and why>"`; it lints the exact content, records review/approval/publication evidence, retires the prior live version, and rolls back on failure.
 
 The importer preserves `instrument_id`, `version`, page/section sort order, attribute labels, coding hints, response metadata, and option source definitions.
 
@@ -135,7 +135,7 @@ Keep logging architectural decisions/phases here so the next agent can pick up i
 
 ## Update – 2025-11-18
 - Replaced `survey_instrument.json` with the complete spec the client provided (see latest chat). Validated parsing locally via `python3 -m json.tool` so the importer can now load the canonical version without `qid` typos or truncated sections.
-- **Action still required:** run `php artisan survey:import survey_instrument.json --activate` the next time you have a PHP CLI to refresh the DB copy of the instrument. (Not possible in this sandbox.)
+- **Historical note, superseded:** the 2025 request to run an ungoverned `--activate` import is no longer current. The canonical seed and builder now use the governed publication contract documented above.
 - Phase 3 next steps (highest priority):
   1. Extend `SurveyAnalyticsService` to cover the remaining dashboards: map team-culture QIDs (TC_*, WEL_*, IMPACT_*) with polarity adjustments, calculate weighted indicator satisfaction + temperature index per company/department/team, and expose aggregate data suitable for the gap chart, indicator list, and team 2×2.
   2. Update `HomeController` / `resources/views/home.blade.php` to stop reading `$qualtrics->data` once the new analytics endpoints exist; progressively replace the inline JS helpers with Blade/Vue components backed by `SurveyAnalyticsService`.
@@ -354,3 +354,13 @@ Document any new mappings (QID → indicator/series_role/polarity) inside this f
   - `tests/Feature/EmployeeDashboardTest.php` for the reassurance block
   - `tests/Feature/OnboardingEventTest.php` for the new handoff/employee event ingestion
   - `tests/e2e/role-smoke.spec.js` for the Workfit admin onboarding tab and employee trust-copy smoke path
+
+### Sub-update – Governed release-candidate closure (2026-07-27)
+- Survey versions now follow an enforced draft → review → approved → published workflow with change summary, named reviewer/approver/publisher, semantic content hash checks, edit locks, and one-live-version enforcement. The command-line importer requires explicit approval metadata before activation.
+- The leadership loop is an immutable evidence chain: finding evidence, action-plan fields, measurement definitions, published communications, and outcomes cannot be retroactively rewritten. The manager workspace shows owner, dates, success criteria, guardrails, follow-up window/state, sample/comparability, movement, result, and causality limit.
+- WorkFit admin now has a privacy-safe action-loop value report with a stable schema. It reports aggregate finding → action → measurement → outcome completion without answer content or employee identity. Advisor work remains customer-grant scoped; workspace notes are append-only with separate customer-shared and WorkFit-internal visibility.
+- Billing access is controlled only by active `organization_billing_admins`, not by static manager/chief roles. The active owner can appoint or revoke additional administrators; ownership transfer remains acceptance-gated. Catalog and entitlement history are immutable.
+- Provider and security failures no longer retain response bodies, recipient/message content, SQL, credentials, or stack traces. Contact input is validated, escaped, throttled, and honeypot protected. Avatar uploads are decoded, normalized, and written through `AVATAR_DISK` before the profile record changes. `DatabaseSeeder` refuses production.
+- Dispatch completion is not response completion. Full and one-time manual Pulse waves become `active` after invitations queue, remain respondent-accessible, are not redispatched, and become `completed` only after every frozen assignment completes or the due date passes. Wave activity logs must be eager-loaded because production-style lazy loading is disabled.
+- Final local evidence: 200 backend tests / 1,121 assertions pass independently on SQLite and PostgreSQL 14; two frontend test files / six tests pass; the 182-module Vite build passes; all 17 PostgreSQL/queue-backed Playwright journeys pass together, including the full finding → owned action → governed Pulse → five completions → comparable non-causal outcome → admin value-report path.
+- Do not call this deployed or launch-approved. Historical credential rotation/history remediation, final committed-SHA CI, provider staging and drills, approved-scale load, independent security/privacy/methodology/legal/accessibility review, and owner commercial decisions remain external gates.

@@ -378,22 +378,42 @@ class SeedDemoData extends Command
             if (! is_file($path)) {
                 $this->warn('survey_instrument.json not found; skipping instrument import.');
             } else {
+                $approver = User::query()
+                    ->where('is_admin', 1)
+                    ->where('status', 'active')
+                    ->orderBy('id')
+                    ->firstOrFail();
                 $this->info('Importing survey instrument (this may take a moment)...');
                 Artisan::call('survey:import', [
                     'path' => $path,
                     '--activate' => true,
+                    '--approved-by' => $approver->id,
+                    '--change-summary' => 'Publish the canonical WorkFit baseline for the local demonstration dataset.',
                 ]);
                 $version = SurveyVersion::where('is_active', true)->orderByDesc('id')->first();
             }
         }
 
         if (! $version) {
+            $approver = User::query()
+                ->where('is_admin', 1)
+                ->where('status', 'active')
+                ->orderBy('id')
+                ->firstOrFail();
             $version = SurveyVersion::create([
                 'instrument_id' => 'demo_v1',
                 'version' => '1.0.0',
                 'title' => 'Demo Survey v1',
                 'is_active' => true,
                 'created_utc' => now(),
+                'publication_status' => 'published',
+                'change_summary' => 'Create the fallback local demonstration survey.',
+                'reviewed_by' => $approver->id,
+                'reviewed_at' => now(),
+                'approved_by' => $approver->id,
+                'approved_at' => now(),
+                'published_by' => $approver->id,
+                'published_at' => now(),
             ]);
         }
 

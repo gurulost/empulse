@@ -34,10 +34,7 @@ class EmailService
         }
 
         if (empty(config('services.brevo.key'))) {
-            Log::warning('Email send skipped: Brevo is not configured', [
-                'recipient' => $email,
-                'subject' => $subject,
-            ]);
+            Log::warning('Email send skipped: Brevo is not configured');
 
             return $this->providerUnavailableResponse();
         }
@@ -81,22 +78,36 @@ class EmailService
                 ];
             }
 
-            Log::warning('Email send failed', ['status' => $response->status(), 'body' => $response->body()]);
+            Log::warning('Email provider rejected a send request', [
+                'status' => $response->status(),
+                'provider_request_id' => $response->header('x-request-id'),
+            ]);
 
-            return ['status' => $response->status(), 'message' => $response->body()];
+            return [
+                'status' => $response->status(),
+                'message' => 'Email delivery was rejected by the provider.',
+                'provider_request_id' => $response->header('x-request-id'),
+            ];
         } catch (\Exception $e) {
-            Log::error('Email send exception', ['error' => $e->getMessage()]);
+            Log::error('Email provider request failed', [
+                'exception_class' => $e::class,
+            ]);
 
-            return ['status' => 500, 'message' => $e->getMessage()];
+            return ['status' => 500, 'message' => 'Email delivery failed unexpectedly.'];
         }
     }
 
-    public function sendContactForm(string $name, string $email, string $phone): array
-    {
+    public function sendContactForm(
+        string $name,
+        string $email,
+        string $phone,
+        string $message
+    ): array {
         $content = view('mail', [
             'name' => $name,
             'email' => $email,
             'phone' => $phone,
+            'customerMessage' => $message,
         ])->render();
 
         return $this->sendToAdmin('From customer', $content);
@@ -163,14 +174,12 @@ class EmailService
 
     public function sendToAdmin(string $subject, string $content): array
     {
-        if (App::environment('testing')) {
+        if (App::environment('testing') && empty(config('services.brevo.key'))) {
             return ['status' => 200];
         }
 
         if (empty(config('services.brevo.key'))) {
-            Log::warning('Admin email send skipped: Brevo is not configured', [
-                'subject' => $subject,
-            ]);
+            Log::warning('Admin email send skipped: Brevo is not configured');
 
             return $this->providerUnavailableResponse();
         }
@@ -198,11 +207,22 @@ class EmailService
                 return ['status' => 200];
             }
 
-            return ['status' => $response->status(), 'message' => $response->body()];
-        } catch (\Exception $e) {
-            Log::error('Admin email send exception', ['error' => $e->getMessage()]);
+            Log::warning('Email provider rejected an admin send request', [
+                'status' => $response->status(),
+                'provider_request_id' => $response->header('x-request-id'),
+            ]);
 
-            return ['status' => 500, 'message' => $e->getMessage()];
+            return [
+                'status' => $response->status(),
+                'message' => 'Email delivery was rejected by the provider.',
+                'provider_request_id' => $response->header('x-request-id'),
+            ];
+        } catch (\Exception $e) {
+            Log::error('Admin email provider request failed', [
+                'exception_class' => $e::class,
+            ]);
+
+            return ['status' => 500, 'message' => 'Email delivery failed unexpectedly.'];
         }
     }
 }

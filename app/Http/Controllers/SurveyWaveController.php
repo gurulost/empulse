@@ -83,7 +83,8 @@ class SurveyWaveController extends Controller
         ];
 
         $waveIds = collect($waves->items())->pluck('id');
-        $logsByWave = SurveyWaveLog::whereIn('survey_wave_id', $waveIds)
+        $logsByWave = SurveyWaveLog::with('user')
+            ->whereIn('survey_wave_id', $waveIds)
             ->latest()
             ->get()
             ->groupBy('survey_wave_id');
@@ -317,6 +318,12 @@ class SurveyWaveController extends Controller
 
         if ($wave->status === 'completed') {
             return back()->withErrors('Completed waves cannot be dispatched again. Create a new wave instead.');
+        }
+        if ($wave->opens_at && $wave->opens_at->isFuture()) {
+            return back()->withErrors('This wave cannot be dispatched before its opening time.');
+        }
+        if ($wave->due_at && $wave->due_at->isPast()) {
+            return back()->withErrors('This wave is past its due time and cannot be dispatched.');
         }
 
         if (! CompanyBilling::allowsScheduling((int) $wave->company_id)) {

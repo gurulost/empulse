@@ -75,6 +75,9 @@ const boot = async () => {
             getPropsFromAttributes(element, {
                 user: ':user',
                 currentRoute: 'current-route',
+                capabilities: ':capabilities',
+                billingAccess: ':billing-access',
+                avatarUrl: 'avatar-url',
             }),
         ),
         () => mountByTagName('toast-container', () => import('./components/common/ToastContainer.vue')),

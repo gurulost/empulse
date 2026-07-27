@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AuditEvent;
 use App\Models\Companies;
 use App\Models\User;
 use App\Services\AuditTrailService;
@@ -83,5 +84,76 @@ class AuditTrailTest extends TestCase
         $result = $audit->verify();
         $this->assertFalse($result['valid']);
         $this->assertNotNull($result['failed_event_id']);
+    }
+
+    public function test_workfit_admin_can_investigate_sanitized_audit_metadata_and_the_view_is_logged(): void
+    {
+        $company = Companies::create([
+            'title' => 'Investigated Company',
+            'manager' => 'Owner',
+            'manager_email' => 'owner@investigated.test',
+        ]);
+        $companyActor = User::factory()->create([
+            'company_id' => $company->id,
+            'role' => 1,
+            'status' => 'active',
+        ]);
+        $workfitAdmin = User::factory()->create([
+            'company_id' => null,
+            'role' => 0,
+            'is_admin' => 1,
+            'status' => 'active',
+        ]);
+        $customerUser = User::factory()->create([
+            'company_id' => $company->id,
+            'role' => 4,
+            'status' => 'active',
+        ]);
+        app(AuditTrailService::class)->record(
+            'member.deactivated',
+            $companyActor,
+            $company->id,
+            User::class,
+            $customerUser->id,
+            ['status' => ['before' => 'active', 'after' => 'inactive']],
+            ['request_ip' => '192.0.2.10']
+        );
+
+        $response = $this->actingAs($workfitAdmin)->getJson(
+            '/admin/api/audit-events?company_id='.$company->id
+            .'&action=member.deactivated&subject_id='.$customerUser->id
+        );
+
+        $response->assertOk()
+            ->assertJsonPath('integrity.valid', true)
+            ->assertJsonPath('integrity.stream', 'company:'.$company->id)
+            ->assertJsonPath('view_logged', true)
+            ->assertJsonPath('events.total', 1)
+            ->assertJsonPath('events.data.0.action', 'member.deactivated')
+            ->assertJsonPath('events.data.0.actor.id', $companyActor->id)
+            ->assertJsonPath('events.data.0.company.id', $company->id)
+            ->assertJsonPath('events.data.0.subject.type', 'User')
+            ->assertJsonPath('events.data.0.subject.id', (string) $customerUser->id);
+        $payload = $response->json('events.data.0');
+        $this->assertArrayNotHasKey('changes', $payload);
+        $this->assertArrayNotHasKey('metadata', $payload);
+        $this->assertArrayNotHasKey('event_hash', $payload);
+        $this->assertDatabaseHas('audit_events', [
+            'stream_key' => 'platform',
+            'actor_user_id' => $workfitAdmin->id,
+            'action' => 'audit.events_viewed',
+            'subject_type' => Companies::class,
+            'subject_id' => (string) $company->id,
+        ]);
+
+        $this->actingAs($customerUser)
+            ->getJson('/admin/api/audit-events?company_id='.$company->id)
+            ->assertForbidden();
+        $this->assertSame(
+            1,
+            AuditEvent::where('action', 'audit.events_viewed')
+                ->where('actor_user_id', $workfitAdmin->id)
+                ->count()
+        );
     }
 }

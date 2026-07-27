@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Plan;
+use App\Services\OrganizationEntitlementService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -29,6 +30,7 @@ class SyncBillingCatalog extends Command
 
             return self::FAILURE;
         }
+        app(OrganizationEntitlementService::class)->catalogVersion();
 
         DB::transaction(function () use ($catalog): void {
             foreach ($catalog as $slug => $plan) {

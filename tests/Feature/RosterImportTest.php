@@ -133,6 +133,15 @@ class RosterImportTest extends TestCase
             'external_id' => 'EMP-3',
         ]);
         $this->assertTrue(AuditEvent::where('action', 'roster.import_committed')->exists());
+        $this->actingAs($this->manager)
+            ->get('/team/api/roster-imports/'.$preview->json('data.id').'/result.csv')
+            ->assertOk()
+            ->assertHeader('content-type', 'text/csv; charset=UTF-8');
+        $this->assertDatabaseHas('audit_events', [
+            'company_id' => $this->company->id,
+            'actor_user_id' => $this->manager->id,
+            'action' => 'roster.import_result_exported',
+        ]);
 
         $duplicate = $this->actingAs($this->manager)
             ->post('/team/api/roster-imports', ['file' => $this->csv($csv)]);

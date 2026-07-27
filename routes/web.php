@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccountInvitationController;
 use App\Http\Controllers\ActionLoopController;
 use App\Http\Controllers\AdvisorAccessController;
+use App\Http\Controllers\AdvisorWorkspaceNoteController;
 use App\Http\Controllers\AnalyticsApiController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\BrevoWebhookController;
@@ -47,7 +48,9 @@ Auth::routes();
 Route::get('/', [WelcomeController::class, 'welcome'])->name('welcome');
 
 Route::get('/contact', [ContactUsController::class, 'index'])->name('contact.form');
-Route::post('/contact', [ContactUsController::class, 'sendForm'])->name('contact.send');
+Route::post('/contact', [ContactUsController::class, 'sendForm'])
+    ->middleware('throttle:5,1')
+    ->name('contact.send');
 Route::get('/contact/response', [ContactUsController::class, 'response'])->name('contact.response');
 
 Route::redirect('/contuctUs', '/contact');
@@ -132,14 +135,14 @@ Route::group(['middleware' => 'auth'], function () {
         Route::post('/', [TeamController::class, 'addDepartmentLegacy'])->name('departments.store');
     });
 
-    Route::group(['prefix' => 'payment', 'middleware' => 'capability:billing.manage'], function () {
+    Route::group(['prefix' => 'payment'], function () {
         Route::get('/', [PaymentController::class, 'payment'])->name('payment')->middleware('payment');
         Route::get('/payment-success', [PaymentController::class, 'payment_success'])->name('payment-success');
         Route::get('/error', [PaymentController::class, 'payment_error'])->name('payment_error');
     });
 
     // Stripe subscription (Laravel Cashier) routes
-    Route::group(['middleware' => 'capability:billing.manage'], function () {
+    Route::group([], function () {
         Route::get('/plans', [PlanController::class, 'stripePay'])->name('plans.index');
         Route::get('/plans/{plan}', [PlanController::class, 'show'])->name('plans.show');
         Route::post('/subscription', [PlanController::class, 'subscription'])->name('subscription.create');
@@ -152,6 +155,8 @@ Route::group(['middleware' => 'auth'], function () {
             Route::post('/billing/resume', [BillingController::class, 'resume'])->name('billing.resume');
             Route::post('/billing/portal', [BillingController::class, 'portal'])->name('billing.portal');
             Route::post('/billing/transfer', [BillingController::class, 'initiateTransfer'])->name('billing.transfer.initiate');
+            Route::post('/billing/admins', [BillingController::class, 'addBillingAdmin'])->name('billing.admins.store');
+            Route::delete('/billing/admins/{billingAdmin}', [BillingController::class, 'removeBillingAdmin'])->name('billing.admins.destroy');
         });
     });
 
@@ -188,12 +193,18 @@ Route::group(['middleware' => 'auth'], function () {
                 Route::get('/companies', [WorkfitAdminController::class, 'getCompanies']);
                 Route::get('/users', [WorkfitAdminController::class, 'getUsers']);
                 Route::get('/onboarding', [WorkfitAdminController::class, 'getOnboardingReport']);
+                Route::get('/audit-events', [WorkfitAdminController::class, 'getAuditEvents']);
+                Route::get('/advisor-work-items', [WorkfitAdminController::class, 'getAdvisorWorkItems']);
+                Route::patch('/advisor-work-items/{advisorWorkItem}', [WorkfitAdminController::class, 'updateAdvisorWorkItem']);
+                Route::get('/action-loop-value', [WorkfitAdminController::class, 'getActionLoopValueReport']);
             });
 
             Route::prefix('/builder')->name('builder.')->group(function () {
                 Route::get('/', [SurveyBuilderController::class, 'index'])->name('index');
                 Route::get('/structure/{versionId}', [SurveyBuilderController::class, 'getStructure']);
                 Route::post('/draft/{surveyId}', [SurveyBuilderController::class, 'createDraft']);
+                Route::post('/review/{versionId}', [SurveyBuilderController::class, 'submitForReview']);
+                Route::post('/approve/{versionId}', [SurveyBuilderController::class, 'approveVersion']);
                 Route::post('/publish/{versionId}', [SurveyBuilderController::class, 'publishVersion']);
                 Route::post('/page/{pageId}', [SurveyBuilderController::class, 'updatePage']);
                 Route::post('/section/{sectionId}', [SurveyBuilderController::class, 'updateSection']);
@@ -245,6 +256,8 @@ Route::group(['middleware' => 'auth'], function () {
         Route::post('/actions/plans/{action}/communications', [ActionLoopController::class, 'publishCommunication'])->name('actions.communications.publish');
         Route::post('/actions/measurement/{plan}/evaluate', [ActionLoopController::class, 'evaluate'])->name('actions.evaluate');
         Route::post('/actions/measurement/{plan}/followup-wave', [ActionLoopController::class, 'createFollowupWave'])->name('actions.followup-wave.create');
+        Route::post('/actions/notes', [AdvisorWorkspaceNoteController::class, 'store'])
+            ->name('actions.notes.store');
     });
     Route::middleware('capability:advisor-access.manage')->group(function () {
         Route::post('/actions/advisors', [AdvisorAccessController::class, 'store'])

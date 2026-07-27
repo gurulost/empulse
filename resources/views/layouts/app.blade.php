@@ -42,10 +42,24 @@
         <!-- Guest Content Area -->
         @yield('content')
     @else
+        @php
+            $sidebarUser = Auth::user();
+            $sidebarCapabilities = $sidebarUser->capabilities();
+            $sidebarBillingAccess = $sidebarUser->company_id
+                ? app(\App\Services\OrganizationEntitlementService::class)
+                    ->isBillingAdmin($sidebarUser, (int) $sidebarUser->company_id)
+                : false;
+            $sidebarAvatarUrl = $sidebarUser->image
+                ? Storage::disk(config('filesystems.avatar_disk', 'public'))->url($sidebarUser->image)
+                : url('upload/no_image.jpg');
+        @endphp
         <div class="d-flex">
             <!-- Sidebar Component -->
             <app-sidebar 
-                :user="{{ Auth::user() }}" 
+                :user="{{ $sidebarUser }}"
+                :capabilities='@json($sidebarCapabilities)'
+                :billing-access='@json($sidebarBillingAccess)'
+                avatar-url="{{ $sidebarAvatarUrl }}"
                 current-route="{{ Route::currentRouteName() }}"
             ></app-sidebar>
             

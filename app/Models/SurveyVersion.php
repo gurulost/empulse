@@ -20,6 +20,12 @@ class SurveyVersion extends Model
         'content_hash',
         'published_at',
         'published_by',
+        'publication_status',
+        'change_summary',
+        'reviewed_by',
+        'reviewed_at',
+        'approved_by',
+        'approved_at',
     ];
 
     protected $casts = [
@@ -27,6 +33,8 @@ class SurveyVersion extends Model
         'is_active' => 'boolean',
         'meta' => 'array',
         'published_at' => 'datetime',
+        'reviewed_at' => 'datetime',
+        'approved_at' => 'datetime',
     ];
 
     public function scalePresets()

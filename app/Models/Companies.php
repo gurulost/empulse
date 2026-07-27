@@ -5,6 +5,7 @@ namespace App\Models;
 use DB;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Laravel\Cashier\Billable;
 use Laravel\Cashier\Cashier;
 
@@ -44,6 +45,14 @@ class Companies extends Model
     public function billingAdmins()
     {
         return $this->hasMany(OrganizationBillingAdmin::class, 'company_id');
+    }
+
+    /**
+     * @return HasMany<DiagnosticFinding, $this>
+     */
+    public function diagnosticFindings(): HasMany
+    {
+        return $this->hasMany(DiagnosticFinding::class, 'company_id');
     }
 
     /**

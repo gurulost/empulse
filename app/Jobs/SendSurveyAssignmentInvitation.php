@@ -150,13 +150,13 @@ class SendSurveyAssignmentInvitation implements ShouldQueue
 
         $assignment->update([
             'invite_status' => 'failed',
-            'invite_error' => $exception->getMessage(),
+            'invite_error' => 'Invitation delivery job failed unexpectedly.',
         ]);
 
         Log::error('Survey invitation job failed', [
             'assignment_id' => $assignment->id,
             'user_id' => $assignment->user_id,
-            'error' => $exception->getMessage(),
+            'exception_class' => $exception::class,
         ]);
     }
 }

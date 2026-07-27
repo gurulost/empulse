@@ -3,13 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileRequest;
-use App\Models\User;
 use App\Services\EmailService;
 use Auth;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Intervention\Image\Facades\Image;
 
@@ -32,49 +32,33 @@ class UserController extends Controller
 
     public function storeAvatar(ProfileRequest $request)
     {
-        $id = Auth::user()->id;
-        if ($request->hasFile('image')) {
-            $file = $request->file('image');
+        $user = $request->user();
+        $disk = Storage::disk((string) config('filesystems.avatar_disk', 'public'));
+        $newPath = 'avatars/'.Str::uuid().'.jpg';
 
-            $maxFileSize = 2 * 1024 * 1024;
-            if ($file->getSize() > $maxFileSize) {
-                $session = \Session::put('error-upload-avatar', 'The image size should not exceed 2MB.');
-
-                return back()->with($session);
+        try {
+            $encoded = Image::make($request->file('image'))
+                ->orientate()
+                ->fit(250, 250)
+                ->encode('jpg', 85);
+            if (! $disk->put($newPath, (string) $encoded)) {
+                throw new \RuntimeException('Avatar storage write failed.');
             }
-
-            $allowedFormats = ['jpg', 'jpeg', 'png', 'gif'];
-            if (! in_array(strtolower($file->getClientOriginalExtension()), $allowedFormats)) {
-                $session = \Session::put('error-upload-avatar', 'The image format should be JPG, JPEG, PNG, or GIF.');
-
-                return back()->with($session);
+            $oldPath = $user->image;
+            $user->forceFill(['image' => $newPath])->save();
+            if ($oldPath) {
+                $disk->delete($oldPath);
             }
+        } catch (\Throwable $exception) {
+            $disk->delete($newPath);
+            report($exception);
 
-            try {
-                $avatarImage = User::findOrFail($id);
-            } catch (ModelNotFoundException $ex) {
-                $session = \Session::put('error-upload-avatar', $ex);
-
-                return back()->with($session);
-            }
-
-            $img = $avatarImage->image;
-            if ($img !== null) {
-                $path = public_path("/upload/$img");
-                if (file_exists($path)) {
-                    @unlink($path);
-                }
-            }
-
-            $image = $request->file('image');
-            $name_gen = hexdec(uniqid()).'.'.$image->getClientOriginalExtension();
-            Image::make($image)->resize(250, 250)->save(public_path('upload/'.$name_gen));
-            User::where('id', $id)->update(
-                ['image' => $name_gen]
+            return back()->withErrors(
+                'Your avatar could not be processed safely. Try a smaller JPG or PNG image.'
             );
-
-            return redirect()->route('profile');
         }
+
+        return redirect()->route('profile');
     }
 
     public function deleteAvatar()
@@ -83,10 +67,8 @@ class UserController extends Controller
         $image = $user->image;
 
         if ($image !== null) {
-            $path = public_path('upload/'.basename($image));
-            if (is_file($path)) {
-                @unlink($path);
-            }
+            Storage::disk((string) config('filesystems.avatar_disk', 'public'))
+                ->delete($image);
         }
 
         $user->forceFill(['image' => null])->save();

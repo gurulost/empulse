@@ -22,6 +22,9 @@ trait CreatesSurveyFixtures
                 'version' => 'v1',
                 'title' => 'Default Survey Version',
                 'is_active' => true,
+                'publication_status' => 'published',
+                'change_summary' => 'Test fixture baseline.',
+                'published_at' => now(),
             ]);
         }
     }

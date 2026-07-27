@@ -31,6 +31,11 @@ class CheckProductionConfiguration extends Command
             $this->mustNotBeOneOf('QUEUE_CONNECTION', config('queue.default'), ['sync', 'null']),
             $this->mustNotBeOneOf('SESSION_DRIVER', config('session.driver'), ['array', 'file', 'cookie']),
             $this->mustNotBeOneOf('CACHE_STORE', config('cache.default'), ['array', 'file', 'null']),
+            $this->mustBeConfiguredFilesystemDisk(
+                'AVATAR_DISK',
+                config('filesystems.avatar_disk'),
+                config('filesystems.disks', [])
+            ),
             $this->mustNotBeOneOf('MAIL_MAILER', config('mail.default'), ['array', 'log']),
             $this->mustBePresent('MAIL_FROM_ADDRESS', config('mail.from.address')),
             $this->mustBePresent('BREVO_KEY', config('services.brevo.key')),
@@ -124,5 +129,12 @@ class CheckProductionConfiguration extends Command
         return filter_var($actual, FILTER_VALIDATE_INT) !== false && (int) $actual > 0
             ? null
             : "{$name}: a positive integer number of cents is required.";
+    }
+
+    protected function mustBeConfiguredFilesystemDisk(string $name, mixed $actual, array $disks): ?string
+    {
+        return is_string($actual) && trim($actual) !== '' && array_key_exists($actual, $disks)
+            ? null
+            : "{$name}: must name a configured Laravel filesystem disk.";
     }
 }

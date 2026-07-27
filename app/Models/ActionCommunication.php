@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use LogicException;
 
 class ActionCommunication extends Model
 {
@@ -13,4 +14,10 @@ class ActionCommunication extends Model
     ];
 
     protected $casts = ['published_at' => 'datetime'];
+
+    protected static function booted(): void
+    {
+        static::updating(fn () => throw new LogicException('Published action communications are immutable.'));
+        static::deleting(fn () => throw new LogicException('Action communications are append-only.'));
+    }
 }

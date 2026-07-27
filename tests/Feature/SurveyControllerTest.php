@@ -58,10 +58,17 @@ class SurveyControllerTest extends TestCase
             512,
             JSON_THROW_ON_ERROR
         );
+        $admin = User::factory()->create([
+            'role' => 0,
+            'is_admin' => 1,
+            'status' => 'active',
+        ]);
 
         $this->assertSame(0, Artisan::call('survey:import', [
             'path' => base_path('survey_instrument.json'),
             '--activate' => true,
+            '--approved-by' => $admin->id,
+            '--change-summary' => 'Publish canonical instrument for definition contract verification.',
         ]));
 
         $version = SurveyVersion::query()

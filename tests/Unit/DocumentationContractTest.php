@@ -16,6 +16,7 @@ class DocumentationContractTest extends TestCase
         $canonicalDocuments = [
             'docs/PRODUCT_VISION_AND_BUSINESS_MODEL.md',
             'docs/ARCHITECTURE.md',
+            'docs/AUDIT_BACKLOG_TRACEABILITY_2026-07-27.md',
             'docs/EMPULSE_PRODUCTION_READINESS_CHECKLIST.md',
             'docs/PRODUCTION_DEPLOYMENT_RUNBOOK.md',
             'docs/RELEASE_CANDIDATE_EVIDENCE_2026-07-27.md',
@@ -75,6 +76,29 @@ class DocumentationContractTest extends TestCase
 
         self::assertSame([], $nonPortableReferences, 'Documentation contains machine-specific file references.');
         self::assertSame([], $brokenRelativeLinks, 'Documentation contains broken relative links.');
+
+        $traceability = $this->read("{$root}/docs/AUDIT_BACKLOG_TRACEABILITY_2026-07-27.md");
+        preg_match_all('/^\| (EMP-\d{3}) \|/m', $traceability, $ticketMatches);
+        $expectedTickets = ['EMP-000'];
+        foreach ([
+            [1, 15],
+            [101, 114],
+            [201, 215],
+            [301, 310],
+            [401, 410],
+            [501, 510],
+        ] as [$first, $last]) {
+            for ($number = $first; $number <= $last; $number++) {
+                $expectedTickets[] = sprintf('EMP-%03d', $number);
+            }
+        }
+
+        self::assertCount(75, $ticketMatches[1], 'Traceability must contain all 75 audit tickets.');
+        self::assertSame(
+            $expectedTickets,
+            $ticketMatches[1],
+            'Traceability tickets must be complete, unique, and in canonical order.'
+        );
     }
 
     /**

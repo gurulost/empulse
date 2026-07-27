@@ -134,6 +134,40 @@ class SurveyWaveTest extends TestCase
             ->assertSee('Drip');
     }
 
+    public function test_wave_page_renders_activity_actor_after_dispatch_without_lazy_loading(): void
+    {
+        [$company, $survey, $version] = $this->createSurveyArtifacts();
+
+        $manager = User::factory()->create([
+            'role' => 1,
+            'company' => 1,
+            'company_id' => $company->id,
+            'tariff' => 1,
+        ]);
+        $wave = SurveyWave::create([
+            'company_id' => $company->id,
+            'survey_id' => $survey->id,
+            'survey_version_id' => $version->id,
+            'kind' => 'full',
+            'label' => 'Completed baseline',
+            'status' => 'completed',
+            'cadence' => 'manual',
+            'target_roles' => [4],
+        ]);
+        SurveyWaveLog::create([
+            'survey_wave_id' => $wave->id,
+            'user_id' => $manager->id,
+            'status' => 'completed',
+            'message' => 'Dispatch summary recorded.',
+        ]);
+
+        $this->actingAs($manager)
+            ->get(route('survey-waves.index'))
+            ->assertOk()
+            ->assertSee('Dispatch summary recorded.')
+            ->assertSee($manager->email);
+    }
+
     public function test_wave_creation_requires_an_active_survey_version(): void
     {
         $company = Companies::create([
@@ -462,6 +496,45 @@ class SurveyWaveTest extends TestCase
             'awaiting responses',
             SurveyWaveLog::latest('id')->value('message')
         );
+    }
+
+    public function test_manual_drip_wave_stays_active_until_its_assignments_are_completed(): void
+    {
+        [$company, $survey, $version] = $this->createSurveyArtifacts();
+
+        User::factory()->create([
+            'role' => 1,
+            'company' => 1,
+            'company_id' => $company->id,
+            'tariff' => 1,
+        ]);
+        User::factory()->create([
+            'role' => 4,
+            'company_id' => $company->id,
+        ]);
+
+        $wave = SurveyWave::create([
+            'company_id' => $company->id,
+            'survey_id' => $survey->id,
+            'survey_version_id' => $version->id,
+            'kind' => 'drip',
+            'label' => 'One-time governed follow-up',
+            'status' => 'scheduled',
+            'cadence' => 'manual',
+            'target_roles' => [4],
+        ]);
+
+        Queue::fake();
+        (new ProcessSurveyWave($wave->id))->handle(app(SurveyService::class));
+
+        $this->assertSame('active', $wave->fresh()->status);
+        $this->assertSame(1, $wave->assignments()->where('status', 'pending')->count());
+
+        Queue::fake();
+        Artisan::call('survey:waves:schedule');
+
+        Queue::assertNothingPushed();
+        $this->assertSame('active', $wave->fresh()->status);
     }
 
     public function test_process_wave_respects_target_roles_and_queues_invitations(): void
@@ -895,6 +968,53 @@ class SurveyWaveTest extends TestCase
 
         $wave->refresh();
         $this->assertSame('completed', $wave->status);
+    }
+
+    public function test_manual_dispatch_respects_open_and_due_windows(): void
+    {
+        Queue::fake();
+        [$company, $survey, $version] = $this->createSurveyArtifacts();
+        $manager = User::factory()->create([
+            'role' => 1,
+            'company' => 1,
+            'company_id' => $company->id,
+            'tariff' => 1,
+        ]);
+        $wave = SurveyWave::create([
+            'company_id' => $company->id,
+            'survey_id' => $survey->id,
+            'survey_version_id' => $version->id,
+            'kind' => 'full',
+            'label' => 'Windowed wave',
+            'target_roles' => [4],
+            'status' => 'scheduled',
+            'cadence' => 'manual',
+            'opens_at' => now()->addDay(),
+            'due_at' => now()->addWeek(),
+        ]);
+
+        $this->actingAs($manager)
+            ->post(route('survey-waves.dispatch', $wave))
+            ->assertSessionHasErrors();
+        Queue::assertNothingPushed();
+
+        $wave->update([
+            'opens_at' => now()->subWeek(),
+            'due_at' => now()->subDay(),
+        ]);
+        $this->actingAs($manager)
+            ->post(route('survey-waves.dispatch', $wave))
+            ->assertSessionHasErrors();
+        Queue::assertNothingPushed();
+
+        $wave->update([
+            'opens_at' => now()->subMinute(),
+            'due_at' => now()->addWeek(),
+        ]);
+        $this->actingAs($manager)
+            ->post(route('survey-waves.dispatch', $wave))
+            ->assertSessionHasNoErrors();
+        Queue::assertPushed(ProcessSurveyWave::class);
     }
 
     public function test_scheduler_recovers_stale_processing_wave_and_requeues_it(): void

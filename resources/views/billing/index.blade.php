@@ -172,6 +172,41 @@
                             <strong>{{ $usage['limits']['active_respondents'] ?? 'Custom' }}</strong>
                         </div>
                         <p class="small text-muted mt-3 mb-0">Usage events are idempotent and append-only. Billing remains governed by the organization entitlement and Stripe reconciliation.</p>
+                        <details class="mt-3">
+                            <summary class="small fw-semibold">How these counts were derived</summary>
+                            <div class="table-responsive mt-3">
+                                <table class="table table-sm align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>Metric</th>
+                                            <th>Events</th>
+                                            <th>Sum</th>
+                                            <th>Unit</th>
+                                            <th>Evidence window</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @forelse($usage['derivation'] ?? [] as $row)
+                                            <tr>
+                                                <td>
+                                                    {{ str_replace('_', ' ', ucfirst($row['metric'])) }}
+                                                    @if(isset($usage['definitions'][$row['metric']]))
+                                                        <div class="small text-muted">{{ $usage['definitions'][$row['metric']] }}</div>
+                                                    @endif
+                                                </td>
+                                                <td>{{ number_format($row['event_count']) }}</td>
+                                                <td>{{ number_format($row['quantity'], 2) }}</td>
+                                                <td>{{ $row['unit'] }}</td>
+                                                <td class="small">{{ $row['first_event_at'] }} → {{ $row['last_event_at'] }}</td>
+                                            </tr>
+                                        @empty
+                                            <tr><td colspan="5" class="text-muted">No usage events were recorded in this period.</td></tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p class="small text-muted mb-0">This derivation omits member identities and survey content. The append-only event ledger remains the reproducible billing evidence.</p>
+                        </details>
                     </div>
                 </div>
             </div>
@@ -179,6 +214,44 @@
                 <div class="card border-0 shadow-sm h-100">
                     <div class="card-header bg-white py-3"><h2 class="h5 mb-0">Billing ownership</h2></div>
                     <div class="card-body">
+                        <h3 class="h6">Approved billing administrators</h3>
+                        <p class="small text-muted">Billing access comes from this explicit company-owned list, not a general manager title.</p>
+                        @foreach($billingAdmins as $billingAdmin)
+                            <div class="d-flex justify-content-between align-items-center gap-3 border-top py-2">
+                                <div class="small">
+                                    <strong>{{ $billingAdmin->user?->name ?: 'Former user' }}</strong>
+                                    <span class="badge {{ $billingAdmin->role === 'owner' ? 'bg-primary' : 'bg-secondary' }}">{{ $billingAdmin->role }}</span>
+                                    <div class="text-muted">{{ $billingAdmin->user?->email }}</div>
+                                </div>
+                                @if($billingOwner && $billingAdmin->role !== 'owner')
+                                    <form method="POST" action="{{ route('billing.admins.destroy', $billingAdmin) }}">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button class="btn btn-sm btn-outline-danger">Revoke</button>
+                                    </form>
+                                @endif
+                            </div>
+                        @endforeach
+
+                        @if($billingOwner && $billingAdminCandidates->isNotEmpty())
+                            <form method="POST" action="{{ route('billing.admins.store') }}" class="row g-2 border-top pt-3 mt-2">
+                                @csrf
+                                <div class="col-md-8">
+                                    <label for="billing-admin-target" class="form-label">Approve another billing administrator</label>
+                                    <select id="billing-admin-target" name="user_id" class="form-select" required>
+                                        <option value="">Choose an active member</option>
+                                        @foreach($billingAdminCandidates as $candidate)
+                                            <option value="{{ $candidate->id }}">{{ $candidate->name }} ({{ $candidate->email }})</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-md-4 d-flex align-items-end">
+                                    <button class="btn btn-outline-primary w-100">Approve admin</button>
+                                </div>
+                            </form>
+                        @endif
+
+                        <hr>
                         @if($pendingTransfer)
                             <div class="alert alert-info small">
                                 A transfer is pending until {{ $pendingTransfer->expires_at->toDayDateTimeString() }}. The current owner remains active until acceptance.

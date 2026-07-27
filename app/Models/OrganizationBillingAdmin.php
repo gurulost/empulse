@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OrganizationBillingAdmin extends Model
 {
@@ -20,4 +21,12 @@ class OrganizationBillingAdmin extends Model
         'approved_at' => 'datetime',
         'revoked_at' => 'datetime',
     ];
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 }
