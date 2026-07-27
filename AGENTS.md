@@ -1,7 +1,51 @@
 # Agent Notes
 
-## Current Phase
-We are executing **Phase 1** of the survey overhaul: capture the full Qualtrics instrument inside our own schema. The following artifacts are now in place:
+## Read First: Product North Star
+
+Before substantial product or implementation work, read these in order:
+
+1. `docs/PRODUCT_VISION_AND_BUSINESS_MODEL.md` — what Empulse is, who it serves, the value loop, monetization direction, product principles, and open owner decisions.
+2. `docs/ARCHITECTURE.md` — how the current application implements that direction, including actors, data flow, formulas, billing, runtime, and invariants.
+3. `README.md` — setup, operating commands, quality gates, and the documentation map.
+
+Do not infer the current product strategy from the oldest screen, route, database field, or phase note. The north-star document owns product intent; the architecture guide owns current-source truth; the dated notes below preserve implementation history.
+
+## Current Product Stage
+
+Empulse now has the operational spine of a company-level WorkFit diagnostic and continuous-listening platform:
+
+- company and roster setup;
+- a normalized, versioned internal survey instrument;
+- WorkFit-admin publication of shared survey content;
+- secure assignments, autosave, validation, and response capture;
+- full and recurring waves with invitation, cadence, billing, and recovery controls;
+- company, department, team, and wave analytics;
+- trend and comparison reports;
+- WorkFit-admin activation telemetry and an onboarding action queue;
+- Stripe/Cashier subscription management.
+
+The product priority is no longer the original Qualtrics replacement phase. The current north star is to turn this operational spine into a clear, trustworthy, action-oriented commercial product:
+
+1. confirm the initial buyer and customer segment;
+2. confirm baseline, Starter, Pulse, Enterprise, trial, and advisory packaging;
+3. make analytics interpretation and leadership action more explicit;
+4. define and enforce the employee privacy/confidentiality promise;
+5. make cohort reliability and sample size visible;
+6. make recurring wave-over-wave learning the center of retention.
+
+The first completed company response is the workflow activation milestone, not a sufficient sample for a company diagnosis. A minimum-sample and cohort-suppression policy still needs to be defined. A credible leadership decision and measurable movement in later waves are the customer-value milestones.
+
+## Documentation Maintenance
+
+- Update `docs/PRODUCT_VISION_AND_BUSINESS_MODEL.md` only when product direction, ownership, packaging, or a consequential commercial assumption changes.
+- Update `docs/ARCHITECTURE.md` when a subsystem, source-of-truth boundary, formula path, runtime dependency, or role/capability changes.
+- Keep `README.md` short and operational; link to canonical documents instead of copying long histories into it.
+- Append dated engineering notes here only when they help the next developer understand current state or a durable decision.
+- Label assumptions and proposals. Do not silently turn a temporary implementation detail into product policy.
+
+## Historical Survey Overhaul Record
+
+The original overhaul began by capturing the full Qualtrics instrument inside the Empulse schema. The following artifacts are now in place:
 
 - Normalized schema covering `survey_versions`, `survey_pages`, `survey_sections`, `survey_items`, `survey_options`, `survey_option_sources`, and `survey_scale_presets`.
 - Import command `php artisan survey:import {path} [--activate]` that ingests the JSON spec and optionally marks the version live. The importer stores scale presets, option metadata (including exclusivity, free-text placeholders), algorithmic/ISO option generators, and coding hints for analytics.
