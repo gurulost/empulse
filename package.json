@@ -5,7 +5,7 @@
     "scripts": {
         "dev": "vite",
         "build": "vite build",
-        "lint": "eslint resources/js tests/e2e tests/unit tests/load --ext .js,.vue",
+        "lint": "eslint resources/js tests/e2e tests/Unit tests/load --ext .js,.vue",
         "test:unit": "vitest run",
         "audit:production": "npm audit --omit=dev --audit-level=high",
         "sass:check-imports": "if rg -n \"@import\\\\s+['\\\"]\" resources/sass --glob '*.scss'; then echo 'Sass @import is deprecated. Use @use/@forward.' && exit 1; else echo 'No Sass @import found in resources/sass.'; fi",
