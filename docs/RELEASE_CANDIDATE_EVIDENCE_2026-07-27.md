@@ -45,6 +45,8 @@ Bulk roster import/export was intentionally removed. A future implementation mus
 - Laravel configuration, route, and Blade view caches build and clear successfully.
 - Gitleaks current-source scan: no findings after removal of the legacy attachment directory.
 - Gitleaks full-history scan: three pre-existing findings remain—two generic-key matches in the removed attachment history and one old Sendinblue/Brevo token in a historical controller commit. The mail key must be revoked/rotated; shared-history rewriting requires explicit owner approval and is not represented as complete.
+- The first committed-SHA GitHub run exposed an npm lock inconsistency before tests began. The lock was regenerated from a clean dependency graph and then passed `npm ci` with the exact npm 10.9.8 version used by that runner.
+- The initial GitHub secret job fetched full history but the action’s push-event command scanned only `-1` commit. The workflow now retains the proposed-change scan and adds an explicit fail-closed `gitleaks git --log-opts="--all"` history scan; a one-commit green result is not accepted as full-history evidence.
 
 ### Fresh-review blocker closure
 
