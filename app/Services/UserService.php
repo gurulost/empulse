@@ -342,10 +342,16 @@ class UserService
 
             $statusLabel = $status ?: $this->roleLabel($roleEnum);
             $issuedInvitation = $this->accountInvitations->issue($createdUser, Auth::user());
+            $invitation = $issuedInvitation['invitation'];
             $setupLink = route('invitations.show', [
                 'token' => $issuedInvitation['token'],
             ]);
 
+            $invitation->increment('delivery_attempts');
+            $invitation->update([
+                'delivery_status' => 'sending',
+                'delivery_last_attempt_at' => now(),
+            ]);
             $sendLetter = $this->emailService->sendLetter($email, $name, $companyTitle, view('admin-msg', [
                 'name' => $name,
                 'link' => $loginLink,
@@ -357,9 +363,18 @@ class UserService
                 'department' => $department,
                 'teamlead' => $teamlead,
                 'surveyLink' => null,
-            ])->render());
+            ])->render(), $invitation->delivery_idempotency_key);
 
             if ((int) ($sendLetter['status'] ?? 500) >= 400) {
+                $invitation->update([
+                    'delivery_status' => 'failed',
+                    'delivery_error' => mb_substr(
+                        (string) ($sendLetter['message'] ?? 'Invitation delivery failed.'),
+                        0,
+                        1000
+                    ),
+                ]);
+
                 return [
                     'message' => $sendLetter['message'] ?? 'Invitation delivery failed.',
                     'status' => (int) $sendLetter['status'],
@@ -367,6 +382,14 @@ class UserService
                     'invitation_pending' => true,
                 ];
             }
+
+            $invitation->update([
+                'delivery_status' => 'accepted',
+                'provider_message_id' => $sendLetter['provider_message_id'] ?? null,
+                'delivery_error' => null,
+                'delivered_at' => now(),
+                'delivery_token' => null,
+            ]);
 
             return ['status' => 200, 'user' => $createdUser];
         } catch (\Exception $e) {

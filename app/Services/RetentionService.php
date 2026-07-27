@@ -6,6 +6,7 @@ use App\Models\AccountInvitation;
 use App\Models\EmailDeliveryEvent;
 use App\Models\LegalHold;
 use App\Models\RetentionRun;
+use App\Models\RosterImport;
 use App\Models\SurveyAssignment;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -21,6 +22,7 @@ class RetentionService
         $invitationCutoff = now()->startOfDay()->subDays((int) config('privacy.retention_days.expired_invitations', 30));
         $deliveryCutoff = now()->startOfDay()->subDays((int) config('privacy.retention_days.delivery_events', 400));
         $onboardingCutoff = now()->startOfDay()->subDays((int) config('privacy.retention_days.onboarding_events', 400));
+        $rosterImportCutoff = now()->startOfDay()->subDays((int) config('privacy.retention_days.roster_import_rows', 30));
 
         $draftIds = SurveyAssignment::query()
             ->from('survey_assignments as sa')
@@ -61,6 +63,15 @@ class RetentionService
             ->pluck('id')
             ->all();
 
+        $rosterImportIds = RosterImport::query()
+            ->whereNotNull('parsed_at')
+            ->where('parsed_at', '<', $rosterImportCutoff)
+            ->whereNull('rows_purged_at')
+            ->when($heldCompanies !== [], fn ($query) => $query->whereNotIn('company_id', $heldCompanies))
+            ->limit(10000)
+            ->pluck('id')
+            ->all();
+
         return [
             'schema_version' => 1,
             'cutoffs' => [
@@ -68,6 +79,7 @@ class RetentionService
                 'invitations' => $invitationCutoff->toIso8601String(),
                 'delivery_events' => $deliveryCutoff->toIso8601String(),
                 'onboarding_events' => $onboardingCutoff->toIso8601String(),
+                'roster_import_rows' => $rosterImportCutoff->toIso8601String(),
             ],
             'held_company_ids' => array_values($heldCompanies),
             'targets' => [
@@ -75,6 +87,7 @@ class RetentionService
                 'account_invitation_ids' => $invitationIds,
                 'email_delivery_event_ids' => $deliveryIds,
                 'onboarding_event_ids' => $onboardingIds,
+                'roster_import_ids' => $rosterImportIds,
             ],
         ];
     }
@@ -123,8 +136,30 @@ class RetentionService
             $onboarding = DB::table('onboarding_events')
                 ->whereIn('id', $targets['onboarding_event_ids'] ?? [])
                 ->delete();
+            $rosterImportIds = $targets['roster_import_ids'] ?? [];
+            $rosterImportRows = DB::table('roster_import_rows')
+                ->whereIn('roster_import_id', $rosterImportIds)
+                ->delete();
+            RosterImport::whereIn('id', $rosterImportIds)
+                ->where('status', '!=', 'committed')
+                ->update(['status' => 'expired']);
+            $rosterImports = RosterImport::whereIn('id', $rosterImportIds)
+                ->update([
+                    'source_csv' => null,
+                    'original_filename' => '[purged]',
+                    'confirmation_token_hash' => null,
+                    'confirmation_expires_at' => null,
+                    'rows_purged_at' => now(),
+                ]);
 
-            return compact('drafts', 'invitations', 'delivery', 'onboarding');
+            return [
+                'drafts' => $drafts,
+                'invitations' => $invitations,
+                'delivery' => $delivery,
+                'onboarding' => $onboarding,
+                'roster_imports' => $rosterImports,
+                'roster_import_rows' => $rosterImportRows,
+            ];
         });
 
         $run->update([

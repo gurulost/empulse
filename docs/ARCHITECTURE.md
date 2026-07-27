@@ -28,7 +28,7 @@ The application has two operating layers:
 | Background work | Laravel queue jobs |
 | Scheduling | Laravel scheduler and `survey:waves:schedule` |
 | Charts | Chart.js / vue-chartjs plus lightweight custom components |
-| Roster provisioning | Manual, invitation-backed provisioning; bulk import/export is intentionally disabled until a governed preview/reconciliation workflow exists |
+| Roster provisioning | Manual or governed CSV preview/reconciliation, followed by invitation-backed account setup |
 | Authentication | Laravel auth, Socialite, explicit capabilities, and row-scoped policies |
 
 See [`composer.json`](../composer.json) and [`package.json`](../package.json) for the exact dependency set.
@@ -91,14 +91,24 @@ Primary files:
 - [`app/Models/OrganizationUnit.php`](../app/Models/OrganizationUnit.php)
 - [`app/Models/OrganizationAssignment.php`](../app/Models/OrganizationAssignment.php)
 - [`app/Http/Controllers/TeamController.php`](../app/Http/Controllers/TeamController.php)
+- [`app/Http/Controllers/RosterImportController.php`](../app/Http/Controllers/RosterImportController.php)
 - [`app/Services/UserService.php`](../app/Services/UserService.php)
+- [`app/Services/RosterImportService.php`](../app/Services/RosterImportService.php)
+- [`app/Models/RosterImport.php`](../app/Models/RosterImport.php)
+- [`app/Models/RosterExternalIdentity.php`](../app/Models/RosterExternalIdentity.php)
 - [`resources/js/components/team`](../resources/js/components/team)
 
 Registration transactionally creates a company, owner identity, roster projection, effective-dated membership, and explicit unresolved unit assignment. Password registration requires at least 12 characters. Social identities are unique; a provider login cannot silently attach itself to an existing email account.
 
 `organization_memberships`, `organization_units`, and `organization_assignments` are canonical organization history. Membership role/status and unit/reporting changes close the previous effective-dated record and append a new one. `company_worker` and `company_department` remain compatibility projections for the existing team-management UI; they do not own historical analytics truth.
 
-Managers can add or import members and maintain departments. Chiefs and team leads model the reporting hierarchy; employees are the primary respondents.
+Managers can add members individually or use the governed CSV importer. Import source is encrypted while queued and discarded after parsing. `roster_external_identities` provides stable company-scoped identity matching. Every row is classified as create, update, reactivate, deactivate, unchanged, or invalid before mutation; unknown departments, unresolved or ineligible supervisors, duplicate identities, and cross-company email reuse fail closed. Deactivation must be explicit—absence from a file has no effect—and manager deactivation stays in the billing/owner-transfer workflow.
+
+An error-free preview receives a short-lived one-time confirmation token. Commit locks the preview, verifies that target fingerprints, departments, supervisors, and emails have not changed, and applies all compatibility and effective-dated organization changes in one transaction. New and reactivated identities receive account-only invitations through the queue using a stable provider idempotency key. Queue submission cannot roll back an already committed roster; the scheduled `account:invitations:recover --execute` command finds eligible pending, failed, or interrupted deliveries and safely requeues them.
+
+Preview and commit events enter the tamper-evident company audit stream; sanitized row results are downloadable as CSV. Detailed import rows and staged source expire after 30 days through the same hash-confirmed, legal-hold-aware retention workflow used for other privacy data. The durable import summary and audit evidence remain, but purged previews cannot be confirmed or downloaded.
+
+Chiefs and team leads model the reporting hierarchy; employees are the primary respondents.
 
 ### 2. Survey content and methodology
 
@@ -293,7 +303,7 @@ A complete production runtime requires:
 2. queue worker;
 3. scheduler.
 
-Without the worker, survey invitations and wave jobs stall. Without the scheduler, recurring waves do not become jobs.
+Without the worker, survey/account invitations and wave jobs stall. Without the scheduler, recurring waves do not become jobs and interrupted account-invitation deliveries are not recovered.
 
 Operational commands:
 
@@ -301,6 +311,7 @@ Operational commands:
 php artisan queue:work --tries=3 --backoff=10 --timeout=120
 php artisan schedule:run
 php artisan survey:waves:schedule
+php artisan account:invitations:recover
 ```
 
 The scheduler should normally invoke the wave command through [`routes/console.php`](../routes/console.php), not through a second external cadence.
@@ -379,7 +390,7 @@ Do not remove a seam merely because it looks old. First identify its current rou
 | Trend or cohort report | `ReportsApiController`, analytics service, reports components |
 | Wave behavior | `SurveyWaveController`, scheduler command, `ProcessSurveyWave`, wave tests |
 | Billing entitlement | Cashier webhook, `CompanyBilling`, `SurveyWaveAutomation`, billing tests |
-| Roster or hierarchy | `TeamController`, `UserService`, team Vue components, tenant tests |
+| Roster or hierarchy | `TeamController`, `RosterImportController`, `UserService`, `RosterImportService`, team Vue components, tenant/import tests |
 | Survey experience | `SurveyDefinitionService`, `SurveyController`, survey Vue components, validation tests |
 | WorkFit operations | `OnboardingReportService`, WorkFit admin components, admin feature tests |
 

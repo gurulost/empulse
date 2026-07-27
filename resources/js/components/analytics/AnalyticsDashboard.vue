@@ -389,7 +389,7 @@ const emptyState = computed(() => {
 
         return {
             title: 'Launch your first survey wave',
-            body: 'Import teammates, confirm billing, and send a wave once the live survey is ready. Analytics will fill in as soon as responses arrive.',
+            body: 'Add teammates, confirm billing, and send a wave once the live survey is ready. Analytics will fill in as soon as responses arrive.',
             primaryHref: '/survey-waves',
             primaryLabel: 'Create Wave',
             secondaryHref: '/team/manage',

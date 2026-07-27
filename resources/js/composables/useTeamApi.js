@@ -43,6 +43,32 @@ export function useTeamApi() {
         return data;
     };
 
+    const stageRosterImport = async (file) => {
+        const payload = new FormData();
+        payload.append('file', file);
+        const { data } = await axios.post('/team/api/roster-imports', payload, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return data;
+    };
+
+    const getRosterImport = async (id) => {
+        const { data } = await axios.get(`/team/api/roster-imports/${id}`);
+        return data;
+    };
+
+    const issueRosterImportConfirmation = async (id) => {
+        const { data } = await axios.post(`/team/api/roster-imports/${id}/confirmation-token`);
+        return data;
+    };
+
+    const commitRosterImport = async (id, confirmationToken) => {
+        const { data } = await axios.post(`/team/api/roster-imports/${id}/commit`, {
+            confirmation_token: confirmationToken,
+        });
+        return data;
+    };
+
     return {
         getTeamMembers,
         addTeamMember,
@@ -51,6 +77,10 @@ export function useTeamApi() {
         getDepartments,
         addDepartment,
         updateDepartment,
-        deleteDepartment
+        deleteDepartment,
+        stageRosterImport,
+        getRosterImport,
+        issueRosterImportConfirmation,
+        commitRosterImport,
     };
 }

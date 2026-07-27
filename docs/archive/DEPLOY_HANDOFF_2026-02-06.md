@@ -1,5 +1,7 @@
 # Deploy Handoff (Commit e73483d)
 
+> Historical deployment note for an obsolete commit and runtime contract. Do not execute these steps. The current provider-neutral contract is `docs/PRODUCTION_DEPLOYMENT_RUNBOOK.md`.
+
 This handoff covers the production rollout steps required after commit `e73483d`.
 
 ## What Changed (Why these steps matter)

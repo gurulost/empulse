@@ -176,7 +176,7 @@ The Team Members screen now:
 
 - distinguishes `no matches for current filters` from `no team yet`
 - explains why the roster matters
-- offers direct actions: import roster, add first member, create/review departments
+- offers direct actions: add the first member and create or review departments
 
 ### 4. Help-path repair
 

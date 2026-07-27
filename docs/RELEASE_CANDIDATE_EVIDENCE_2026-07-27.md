@@ -4,6 +4,8 @@
 
 This handoff records what the production-readiness branch actually proves. It does not claim that Empulse is deployed, sold, or approved for customer use. No deployment provider has been selected and no live environment exists.
 
+Current product, architecture, and release truth are separated from historical implementation records. Obsolete audits, completed checklists, and the February deploy handoff live under `docs/archive/` with an explicit warning that they are not deployment instructions or current sign-off evidence.
+
 ## Scope
 
 Branch: `codex/production-readiness`
@@ -20,16 +22,16 @@ The branch is a direct pre-deployment reset across:
 - company-owned billing, entitlements, Stripe reconciliation, usage, and billing-owner continuity;
 - PostgreSQL/process topology, health checks, worker/scheduler heartbeats, CI, static analysis, dependency security, browser tests, accessibility automation, and operational runbooks.
 
-Bulk roster import/export was intentionally removed. A future implementation must include preview, cross-tenant conflict detection, reconciliation, explicit confirmation, and audit.
+The unsafe legacy roster importer remains removed. Its replacement uses encrypted CSV staging, stable company-scoped external identities, strict header/row/unit/supervisor validation, cross-tenant conflict detection, row-level reconciliation, an expiring confirmation token, stale-preview detection, atomic commit, tamper-evident audit, queued account invitations, scheduled delivery recovery with stable idempotency, and downloadable sanitized results. Missing rows never imply deactivation. Detailed rows expire after 30 days through the hash-confirmed, legal-hold-aware retention workflow while summary and audit evidence remain.
 
 ## Validation Completed
 
 ### Application and database
 
-- `composer test` on SQLite: 170 tests, 782 assertions passed.
+- `composer test` on SQLite: 184 tests, 928 assertions passed.
 - Clean PostgreSQL 14 migration and canonical 62-item demo seed: passed.
-- `composer test` on PostgreSQL 14: 170 tests, 782 assertions passed.
-- PostgreSQL browser gate: all 13 role, route-failure, privacy-acknowledgment, required-answer, submission, completed-state, and automated accessibility journeys passed together against a fresh seeded database with real web and worker processes. The respondent journey answered all 62 canonical items and persisted exactly 62 answers.
+- `composer test` on PostgreSQL 14: 184 tests, 928 assertions passed.
+- Browser gate: all 14 role, roster-import authorization, route-failure, privacy-acknowledgment, required-answer, submission, completed-state, and automated accessibility journeys passed together against a fresh seeded application. The respondent journey answered all 62 canonical items and persisted exactly 62 answers. The earlier 13-journey set also passed with real web and worker processes on PostgreSQL locally and in GitHub CI.
 - CI is configured to repeat the database and process journey on PostgreSQL 16 with real web and worker processes.
 
 ### Code and dependencies
@@ -41,7 +43,7 @@ Bulk roster import/export was intentionally removed. A future implementation mus
 - Dependency-license inventory: all PHP packages are permissive or usable under an available permissive license; the unused direct PHPMailer dependency was removed. Direct JavaScript dependencies are MIT/Apache-2.0, except the development-only axe Playwright adapter under MPL-2.0. No direct dependency has an unknown license.
 - `npm run lint`: passed.
 - `npm run test:unit`: 2 component tests passed.
-- `npm run build`: passed with 177 modules transformed.
+- `npm run build`: passed with 179 modules transformed.
 - Laravel configuration, route, and Blade view caches build and clear successfully.
 - Gitleaks current-source scan: no findings after removal of the legacy attachment directory.
 - Gitleaks full-history scan: three pre-existing findings remain—two generic-key matches in the removed attachment history and one old Sendinblue/Brevo token in a historical controller commit. The mail key must be revoked/rotated; shared-history rewriting requires explicit owner approval and is not represented as complete.
@@ -56,7 +58,7 @@ The first independent fresh-context review found eleven release blockers. The br
 
 - canonical-host generation, explicit proxy trust, and response security headers;
 - metric-valid sample suppression and exact-cycle trend/action provenance;
-- roster updates that never rotate or disclose survey access;
+- manual and governed-import roster updates that never rotate or disclose survey access;
 - companyless social-login rejection;
 - fail-closed billing catalog materialization and a unique plan slug;
 - atomic active-respondent reservation with assignment dispatch;
@@ -76,7 +78,7 @@ A second independent fresh-context review found five additional analytics and go
 - hierarchy-scoped trends preserve the subgroup context through sample and invited/completion assessment, so five or six scoped respondents cannot clear the subgroup N≥7 contract;
 - the pre-validation weighted ratio is labeled `WorkFit Indicator (pre-validation)` throughout customer-facing reports and is not represented as engagement.
 
-The independent reviewer confirmed no P0/P1 remains in this late review scope. After the last code change, SQLite and PostgreSQL each pass 170 tests/782 assertions; static analysis, formatting, lint, frontend unit/build gates, and all 13 real-process PostgreSQL browser/accessibility journeys pass again.
+The independent reviewer confirmed no P0/P1 remains in this late review scope. After the final roster-import hardening, SQLite and PostgreSQL each pass 184 tests/928 assertions; static analysis, formatting, lint, frontend unit/build gates, and all 14 browser/accessibility journeys pass.
 
 ### Accessibility
 
@@ -104,7 +106,7 @@ Source and restored counts matched:
 
 `php artisan audit:verify` passed for the restored platform stream (6 events) and company stream (11 events).
 
-The newest advisor-access migration was also rolled back and reapplied successfully against an isolated disposable database. Provider-native backup/PITR and full application rollback still require the selected staging environment.
+The newest governed-roster migration was rolled back and reapplied successfully against an isolated disposable database. Provider-native backup/PITR and full application rollback still require the selected staging environment.
 
 ### Local capacity smoke
 
@@ -128,7 +130,7 @@ The repository is a strong release candidate, but customer launch is not yet app
 4. Brevo or the selected provider must prove domain authentication, invitation/reminder delivery, bounce/complaint handling, suppression, and recovery.
 5. Load and concurrency testing must run at the approved design-partner cohort and SLO targets.
 6. Independent security/privacy, methodology, legal, and human accessibility reviews must approve the promise, retention, sample/suppression rules, claims, keyboard/screen-reader behavior, and customer-facing language.
-7. The owner must approve the initial buyer, segment, pricing, trial/advisory packaging, contract terms, and whether manual roster entry is sufficient for the first cohort.
+7. The owner must approve the initial buyer, segment, pricing, trial/advisory packaging, contract terms, and whether governed CSV plus manual roster management is sufficient for the first cohort or a contracted integration is required.
 
 No item above should be represented as complete based only on source code or local tests.
 

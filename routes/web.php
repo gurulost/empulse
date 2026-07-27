@@ -17,6 +17,7 @@ use App\Http\Controllers\PlanController;
 use App\Http\Controllers\PrivacyRequestController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ReportsApiController;
+use App\Http\Controllers\RosterImportController;
 use App\Http\Controllers\SocialController;
 use App\Http\Controllers\StripeWebhookController;
 use App\Http\Controllers\SurveyBuilderController;
@@ -107,6 +108,13 @@ Route::group(['middleware' => 'auth'], function () {
         Route::post('/members', [TeamController::class, 'addMember']);
         Route::put('/members/{email}', [TeamController::class, 'updateMember']);
         Route::delete('/members/{email}', [TeamController::class, 'deleteMember']);
+
+        // Governed roster import: stage -> preview -> explicit confirmation -> atomic commit.
+        Route::post('/roster-imports', [RosterImportController::class, 'store']);
+        Route::get('/roster-imports/{rosterImport}', [RosterImportController::class, 'show']);
+        Route::post('/roster-imports/{rosterImport}/confirmation-token', [RosterImportController::class, 'issueConfirmationToken']);
+        Route::post('/roster-imports/{rosterImport}/commit', [RosterImportController::class, 'commit']);
+        Route::get('/roster-imports/{rosterImport}/result.csv', [RosterImportController::class, 'result']);
 
         // Departments
         Route::get('/departments', [TeamController::class, 'getDepartments']);

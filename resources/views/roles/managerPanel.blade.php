@@ -33,7 +33,7 @@
                                 <i class="bi bi-people fs-5 text-success"></i>
                             </div>
                             <h5 class="fw-bold mb-1" style="font-family: 'Outfit', sans-serif; color: #0c1222;">Team</h5>
-                            <p class="text-muted small mb-0">Add team members, manage departments, and import from CSV.</p>
+                            <p class="text-muted small mb-0">Add team members securely and manage departments and reporting structure.</p>
                         </div>
                     </div>
                 </a>

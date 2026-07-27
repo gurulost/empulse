@@ -1,12 +1,14 @@
 # production demo readiness implementation Checklist
 
+> Historical checklist completed against the March 2026 codebase. It is not current release evidence. Use `docs/EMPULSE_PRODUCTION_READINESS_CHECKLIST.md`.
+
 Source of truth checklist for a large/intense task.
 
 ## Metadata
 - Created: 2026-03-05T16:58:32
 - Last Updated: 2026-03-05T16:58:32
-- Workspace: /Users/davedixon/Downloads/empulse code
-- Checklist Doc: /Users/davedixon/Downloads/empulse code/docs/production-demo-readiness-implementation-production-checklist.md
+- Workspace: historical local checkout
+- Checklist Doc: this archived file
 
 ## Scope
 - [x] Q-000 [status:verified] Capture explicit scope, constraints, and success criteria.
@@ -33,7 +35,7 @@ Source of truth checklist for a large/intense task.
 
 ## Findings Log
 - [x] F-001 [status:verified] [P1] [confidence:0.98] Stripe webhook overrides bypassed Cashier’s subscription sync handlers.
-  - Evidence: [app/Http/Controllers/StripeWebhookController.php](/Users/davedixon/Downloads/empulse%20code/app/Http/Controllers/StripeWebhookController.php) returned `successMethod()` directly for subscription events, which skipped Cashier’s parent handlers.
+  - Evidence: [app/Http/Controllers/StripeWebhookController.php](../../app/Http/Controllers/StripeWebhookController.php) returned `successMethod()` directly for subscription events, which skipped Cashier’s parent handlers.
   - Owner: Codex
   - Linked Fix: P-001
 - [x] F-002 [status:verified] [P1] [confidence:0.95] The local `subscriptions` schema was not aligned with Cashier v15 and would break real webhook inserts.
@@ -41,7 +43,7 @@ Source of truth checklist for a large/intense task.
   - Owner: Codex
   - Linked Fix: P-002
 - [x] F-003 [status:verified] [P2] [confidence:0.93] Billing and checkout flows still had brittle failure paths for existing subscriptions, missing plan price ids, and portal/payment-method errors.
-  - Evidence: [app/Http/Controllers/PlanController.php](/Users/davedixon/Downloads/empulse%20code/app/Http/Controllers/PlanController.php), [app/Http/Controllers/BillingController.php](/Users/davedixon/Downloads/empulse%20code/app/Http/Controllers/BillingController.php), and related Blade views lacked graceful guards and error rendering.
+  - Evidence: [app/Http/Controllers/PlanController.php](../../app/Http/Controllers/PlanController.php), [app/Http/Controllers/BillingController.php](../../app/Http/Controllers/BillingController.php), and related Blade views lacked graceful guards and error rendering.
   - Owner: Codex
   - Linked Fix: P-003
 - [x] F-004 [status:verified] [P2] [confidence:0.92] Wave creation and builder editing still allowed invalid or misleading states.
@@ -56,19 +58,19 @@ Source of truth checklist for a large/intense task.
 ## Fix Log
 - [x] P-001 [status:verified] Restore Cashier parent webhook handling before company tariff sync.
   - Addresses: F-001
-  - Evidence: [app/Http/Controllers/StripeWebhookController.php](/Users/davedixon/Downloads/empulse%20code/app/Http/Controllers/StripeWebhookController.php) now delegates `customer.subscription.*` events to `parent::...()` and then performs tariff sync.
+  - Evidence: [app/Http/Controllers/StripeWebhookController.php](../../app/Http/Controllers/StripeWebhookController.php) now delegates `customer.subscription.*` events to `parent::...()` and then performs tariff sync.
 - [x] P-002 [status:verified] Align the app’s subscription persistence with Cashier while preserving legacy schema compatibility.
   - Addresses: F-002
-  - Evidence: [database/migrations/2026_03_05_010000_align_subscriptions_table_with_cashier.php](/Users/davedixon/Downloads/empulse%20code/database/migrations/2026_03_05_010000_align_subscriptions_table_with_cashier.php), [app/Models/Subscription.php](/Users/davedixon/Downloads/empulse%20code/app/Models/Subscription.php), and [app/Providers/AppServiceProvider.php](/Users/davedixon/Downloads/empulse%20code/app/Providers/AppServiceProvider.php).
+  - Evidence: [database/migrations/2026_03_05_010000_align_subscriptions_table_with_cashier.php](../../database/migrations/2026_03_05_010000_align_subscriptions_table_with_cashier.php), [app/Models/Subscription.php](../../app/Models/Subscription.php), and [app/Providers/AppServiceProvider.php](../../app/Providers/AppServiceProvider.php).
 - [x] P-003 [status:verified] Harden billing controllers and pages for portal/payment-method/setup failures and existing subscriptions.
   - Addresses: F-003
-  - Evidence: [app/Http/Controllers/BillingController.php](/Users/davedixon/Downloads/empulse%20code/app/Http/Controllers/BillingController.php), [app/Http/Controllers/PlanController.php](/Users/davedixon/Downloads/empulse%20code/app/Http/Controllers/PlanController.php), [resources/views/billing/index.blade.php](/Users/davedixon/Downloads/empulse%20code/resources/views/billing/index.blade.php), [resources/views/stripe/plans.blade.php](/Users/davedixon/Downloads/empulse%20code/resources/views/stripe/plans.blade.php), [resources/views/subscription/subscription.blade.php](/Users/davedixon/Downloads/empulse%20code/resources/views/subscription/subscription.blade.php).
+  - Evidence: [app/Http/Controllers/BillingController.php](../../app/Http/Controllers/BillingController.php), [app/Http/Controllers/PlanController.php](../../app/Http/Controllers/PlanController.php), [resources/views/billing/index.blade.php](../../resources/views/billing/index.blade.php), [resources/views/stripe/plans.blade.php](../../resources/views/stripe/plans.blade.php), [resources/views/subscription/subscription.blade.php](../../resources/views/subscription/subscription.blade.php).
 - [x] P-004 [status:verified] Tighten survey wave and builder guards, queue-time checks, and read-only behavior.
   - Addresses: F-004
-  - Evidence: [app/Http/Controllers/SurveyWaveController.php](/Users/davedixon/Downloads/empulse%20code/app/Http/Controllers/SurveyWaveController.php), [app/Jobs/ProcessSurveyWave.php](/Users/davedixon/Downloads/empulse%20code/app/Jobs/ProcessSurveyWave.php), [app/Jobs/SendSurveyAssignmentInvitation.php](/Users/davedixon/Downloads/empulse%20code/app/Jobs/SendSurveyAssignmentInvitation.php), [app/Http/Controllers/SurveyBuilderController.php](/Users/davedixon/Downloads/empulse%20code/app/Http/Controllers/SurveyBuilderController.php), [resources/js/components/builder/QuestionEditor.vue](/Users/davedixon/Downloads/empulse%20code/resources/js/components/builder/QuestionEditor.vue), [resources/js/components/builder/LogicEditor.vue](/Users/davedixon/Downloads/empulse%20code/resources/js/components/builder/LogicEditor.vue).
+  - Evidence: [app/Http/Controllers/SurveyWaveController.php](../../app/Http/Controllers/SurveyWaveController.php), [app/Jobs/ProcessSurveyWave.php](../../app/Jobs/ProcessSurveyWave.php), [app/Jobs/SendSurveyAssignmentInvitation.php](../../app/Jobs/SendSurveyAssignmentInvitation.php), [app/Http/Controllers/SurveyBuilderController.php](../../app/Http/Controllers/SurveyBuilderController.php), [resources/js/components/builder/QuestionEditor.vue](../../resources/js/components/builder/QuestionEditor.vue), [resources/js/components/builder/LogicEditor.vue](../../resources/js/components/builder/LogicEditor.vue).
 - [x] P-005 [status:verified] Reduce Vue lint noise to an actionable essential rule set.
   - Addresses: F-005
-  - Evidence: [eslint.config.js](/Users/davedixon/Downloads/empulse%20code/eslint.config.js) now uses `flat/essential`; `npm run lint` exits cleanly.
+  - Evidence: [eslint.config.js](../../eslint.config.js) now uses `flat/essential`; `npm run lint` exits cleanly.
 
 ## Validation Log
 - [x] V-001 [status:verified] `npm run lint`

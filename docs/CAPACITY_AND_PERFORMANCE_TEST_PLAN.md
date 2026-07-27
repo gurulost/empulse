@@ -13,12 +13,13 @@ Each profile needs frozen cohorts, realistic completion/missingness, delivery ev
 ## Workloads
 
 1. Run `tests/load/public-readiness.js` with k6 for web/readiness stability.
-2. Dispatch one full 500-person wave and record assignment creation time, queue peak/age, provider-sandbox acceptance, retries, duplicates, and database load.
-3. Submit concurrent autosaves against the same assignment revision and prove stale writes fail without loss.
-4. Submit each assignment twice concurrently and prove exactly one response/answer set.
-5. Exercise manager analytics, trends, comparisons, action capture, and governed follow-up creation at each data profile.
-6. Run `php artisan analytics:explain` and preserve plans for the slowest representative queries.
-7. Fail and restart a worker during dispatch; confirm deterministic idempotency and recovery.
+2. Upload and parse a 500-person governed roster CSV; record parse time, queue age, encrypted-staging cleanup, preview response size, commit time, invitation queue burst, and repeated-file idempotency.
+3. Dispatch one full 500-person wave and record assignment creation time, queue peak/age, provider-sandbox acceptance, retries, duplicates, and database load.
+4. Submit concurrent autosaves against the same assignment revision and prove stale writes fail without loss.
+5. Submit each assignment twice concurrently and prove exactly one response/answer set.
+6. Exercise manager analytics, trends, comparisons, action capture, and governed follow-up creation at each data profile.
+7. Run `php artisan analytics:explain` and preserve plans for the slowest representative queries.
+8. Fail and restart a worker during roster parsing and wave dispatch; confirm deterministic idempotency and recovery.
 
 ## Release budgets
 

@@ -8,6 +8,16 @@ parameters:
         - app/Services/SurveyResponseValidationService.php
         - app/Services/SurveyAssignmentAccessService.php
         - app/Services/AuditTrailService.php
+        - app/Services/RosterImportService.php
+        - app/Services/RetentionService.php
+        - app/Http/Controllers/RosterImportController.php
+        - app/Jobs/ParseRosterImport.php
+        - app/Jobs/SendAccountInvitation.php
+        - app/Console/Commands/RecoverAccountInvitations.php
+        - app/Models/RosterImport.php
+        - app/Models/RosterImportRow.php
+        - app/Models/RosterExternalIdentity.php
+        - app/Models/AccountInvitation.php
         - app/Support/CompanyBilling.php
     level: 5
     reportUnmatchedIgnoredErrors: true

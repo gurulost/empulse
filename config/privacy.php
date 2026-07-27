@@ -37,6 +37,7 @@ return [
         'expired_invitations' => 30,
         'delivery_events' => 400,
         'onboarding_events' => 400,
+        'roster_import_rows' => 30,
         'submitted_evidence' => 2555,
         'audit_events' => null,
         'billing_records' => null,

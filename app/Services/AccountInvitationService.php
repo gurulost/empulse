@@ -22,6 +22,8 @@ class AccountInvitationService
                 ->update([
                     'status' => 'revoked',
                     'revoked_at' => now(),
+                    'delivery_token' => null,
+                    'delivery_status' => 'revoked',
                 ]);
 
             $plainTextToken = Str::random(64);
@@ -34,6 +36,9 @@ class AccountInvitationService
                 'token_hash' => AccountInvitation::hashToken($plainTextToken),
                 'status' => 'pending',
                 'expires_at' => now()->addDays(7),
+                'delivery_token' => $plainTextToken,
+                'delivery_idempotency_key' => (string) Str::uuid(),
+                'delivery_status' => 'pending',
             ]);
 
             return [
@@ -117,6 +122,7 @@ class AccountInvitationService
             $invitation->update([
                 'status' => 'accepted',
                 'accepted_at' => now(),
+                'delivery_token' => null,
             ]);
 
             return $user;

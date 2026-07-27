@@ -1,4 +1,6 @@
-Empulse (Workfitdx) — Code Audit and Upgrade Plan
+# Legacy Code Audit and Upgrade Plan
+
+> Historical record from the Laravel 9-era application. This is not current product, architecture, or release truth. Use `docs/PRODUCT_VISION_AND_BUSINESS_MODEL.md`, `docs/ARCHITECTURE.md`, and `docs/EMPULSE_PRODUCTION_READINESS_CHECKLIST.md` instead.
 
 Summary
 - Purpose: Multi-tenant platform to onboard companies, manage staff (manager/chief/teamlead/employee), import/export users, run the in-app pulse survey, and handle paid subscriptions via Stripe. Includes a super-admin (Workfit Admin) area to view companies and subscriptions.

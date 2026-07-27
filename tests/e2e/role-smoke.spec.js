@@ -73,6 +73,23 @@ test('manager routes render', async ({ page }) => {
     await expectHealthyPage(page, '/account/billing', 'Account & Billing');
 });
 
+test('manager sees governed roster import while non-managers do not', async ({ page }) => {
+    await login(page, 'manager@acme.com');
+    await page.goto('/team/manage');
+    await page.waitForLoadState('networkidle');
+    await page.getByRole('button', { name: 'Import CSV' }).click();
+    await expect(page.getByRole('heading', { name: 'Governed roster import' })).toBeVisible();
+    await expect(page.locator('body')).toContainText('No roster data changes during preview');
+    await expect(page.getByLabel('Roster CSV')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Commit Reviewed Changes' })).toHaveCount(0);
+
+    await page.context().clearCookies();
+    await login(page, 'chief@acme.com');
+    await page.goto('/team/manage');
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('button', { name: 'Import CSV' })).toHaveCount(0);
+});
+
 test('authorization and survey-token failures fail closed', async ({ page }) => {
     const invalidSurvey = await page.goto('/survey/not-a-valid-assignment-token');
     expect(invalidSurvey.status()).toBe(404);

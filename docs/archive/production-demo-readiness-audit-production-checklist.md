@@ -1,12 +1,14 @@
 # production demo readiness audit Checklist
 
+> Historical checklist completed against the March 2026 codebase. It is not current release evidence. Use `docs/EMPULSE_PRODUCTION_READINESS_CHECKLIST.md`.
+
 Source of truth checklist for a large/intense task.
 
 ## Metadata
 - Created: 2026-03-05T15:27:16
 - Last Updated: 2026-03-05T15:27:16
-- Workspace: /Users/davedixon/Downloads/empulse code
-- Checklist Doc: /Users/davedixon/Downloads/empulse code/docs/production-demo-readiness-audit-production-checklist.md
+- Workspace: historical local checkout
+- Checklist Doc: this archived file
 
 ## Scope
 - [x] Q-000 [status:verified] Capture explicit scope, constraints, and success criteria.

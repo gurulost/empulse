@@ -27,7 +27,7 @@ The first completed response is the workflow activation milestone: it proves the
 
 - multi-tenant companies and organization rosters;
 - Manager, Chief, Team Lead, Employee, and WorkFit Admin experiences;
-- roster management with expiring account invitations (bulk import/export is intentionally unavailable until a preview-and-reconciliation workflow is built);
+- manual roster management plus governed CSV import with encrypted staging, stable external IDs, row-level reconciliation, cross-tenant conflict detection, explicit confirmation, atomic commit, and expiring account invitations;
 - versioned internal survey engine with pages, sections, item types, scale presets, options, and display logic;
 - token-scoped survey assignments, autosave, validation, and normalized responses;
 - full and recurring survey waves with role-based audiences;
@@ -93,6 +93,25 @@ The import is transactional. Activation deactivates the prior version and makes 
 
 Do not rename question IDs or change analytics mappings without reviewing [`config/survey.php`](config/survey.php), the product methodology, and analytics tests.
 
+## Governed roster import
+
+Company managers can open Team Management and choose **Import CSV**. Required headers are:
+
+```text
+external_id,name,email,role
+```
+
+Optional headers are `department`, `supervisor_external_id`, and `status`. Departments must exist before upload; status is explicitly `active` or `inactive`. Omitting a person from a file never deactivates them.
+
+The workflow is deliberately two-phase:
+
+1. upload into encrypted staging and generate a row-level create/update/reactivate/deactivate/unchanged preview;
+2. review all rows, acknowledge the preview, and commit once with a short-lived confirmation token.
+
+Invalid headers, duplicate identities, cross-company email conflicts, unresolved supervisors, unknown departments, self-deactivation, and manager deactivation fail closed before any roster mutation. A changed roster invalidates the preview. Successful commits update the compatibility roster and effective-dated organization history in one transaction, audit the import, and queue account-only invitations. Large files are parsed by the worker; the maximum is 1 MB and 1,000 rows.
+
+Detailed preview/result rows expire after 30 days through the hash-confirmed retention workflow; the import summary and audit evidence remain. Failed or interrupted account-invitation deliveries are found by the scheduled `account:invitations:recover --execute` command and requeued with the original idempotency key.
+
 ## Demo data
 
 `php artisan migrate:fresh --seed` is the deterministic browser/CI fixture: it imports the canonical 62-item WorkFit baseline, creates two hash-pinned cycles, and gives the role accounts a complete respondent journey. Use it only in an isolated disposable database.
@@ -134,7 +153,7 @@ php artisan queue:work --tries=3 --backoff=10 --timeout=120
 php artisan schedule:run
 ```
 
-The production scheduler should invoke `php artisan schedule:run` every minute. Without a worker and scheduler, recurring measurement stalls.
+The production scheduler should invoke `php artisan schedule:run` every minute. It runs wave scheduling, account-invitation recovery, and other declared maintenance tasks. Without a worker and scheduler, recurring measurement and queued account setup stall.
 
 Full waves use manual cadence. Recurring and action-linked follow-up waves require the company-level `recurring_waves` entitlement. Governed Pulse variants limit questions to the predeclared metric, freeze their audience, cap reminders, and enforce respondent rest/rolling-frequency rules.
 
@@ -184,7 +203,7 @@ The checked-in Docker and Procfile definitions express the same process contract
 
 - [`docs/PRODUCT_VISION_AND_BUSINESS_MODEL.md`](docs/PRODUCT_VISION_AND_BUSINESS_MODEL.md) — authoritative working north star
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — authoritative current-source map
-- [`docs/AUDIT.md`](docs/AUDIT.md) — historical code audit and hardening roadmap
+- [`docs/EMPULSE_PRODUCTION_READINESS_CHECKLIST.md`](docs/EMPULSE_PRODUCTION_READINESS_CHECKLIST.md) — current release gates, evidence, and accountable residual risks
 - [`docs/ONBOARDING_FLUENCY_AUDIT_2026-03-06.md`](docs/ONBOARDING_FLUENCY_AUDIT_2026-03-06.md) — activation-path reasoning
 - [`docs/ANALYTICS_EXPLAIN_CHECKLIST.md`](docs/ANALYTICS_EXPLAIN_CHECKLIST.md) — production query-plan review
 - [`docs/PRODUCTION_DEPLOYMENT_RUNBOOK.md`](docs/PRODUCTION_DEPLOYMENT_RUNBOOK.md) — deployment and operations
@@ -196,3 +215,4 @@ The checked-in Docker and Procfile definitions express the same process contract
 - [`docs/METHODOLOGY_AND_CLAIMS_DOSSIER.md`](docs/METHODOLOGY_AND_CLAIMS_DOSSIER.md) — metric intent, interpretation, and claim limits
 - [`docs/RESPONDENT_DATA_PROMISE.md`](docs/RESPONDENT_DATA_PROMISE.md) — working privacy promise and owner decisions
 - [`docs/RELEASE_CANDIDATE_EVIDENCE_2026-07-27.md`](docs/RELEASE_CANDIDATE_EVIDENCE_2026-07-27.md) — current proven checks and external launch gates
+- [`docs/archive/README.md`](docs/archive/README.md) — explicitly non-authoritative historical audits and handoffs

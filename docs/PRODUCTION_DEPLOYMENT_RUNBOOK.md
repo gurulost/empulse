@@ -129,6 +129,14 @@ php artisan app:production-check
   - confirm invitation jobs leave the queue and `invite_status` updates
   - force one transient provider retry and confirm the same encrypted survey URL and Brevo idempotency UUID are reused within the automatic retry window
   - confirm automatic resend stops for manual provider review after 25 minutes
+- Verify roster account invitations:
+  - commit a staged roster preview and confirm account-invitation jobs leave the queue
+  - run `php artisan account:invitations:recover` and confirm it is report-only
+  - simulate an eligible failed or interrupted delivery, run `php artisan account:invitations:recover --execute`, and confirm one idempotent recovery job is queued
+- Verify roster-import retention in a disposable staging fixture:
+  - run the retention command in dry-run mode and review the target list and hash
+  - execute only with the exact reviewed hash
+  - confirm expired detailed rows and confirmation tokens are removed while summary and audit evidence remain
 - Verify customer-scoped advisory:
   - a customer administrator grants a named advisor access with a purpose and expiry
   - that advisor can open only the granted customer workspace

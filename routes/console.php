@@ -9,6 +9,10 @@ Schedule::command('survey:waves:schedule')
     ->everyMinute()
     ->withoutOverlapping(10);
 
+Schedule::command('account:invitations:recover --execute')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping(10);
+
 Schedule::call(function (): void {
     OperationalHeartbeat::updateOrCreate(
         ['process' => 'scheduler'],

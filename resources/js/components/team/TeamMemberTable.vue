@@ -3,6 +3,14 @@
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0">Team Members</h5>
             <div class="d-flex gap-2">
+                <button
+                    v-if="userRole === 1"
+                    class="btn btn-sm btn-outline-primary"
+                    type="button"
+                    @click="showImportPanel = !showImportPanel"
+                >
+                    <i class="bi bi-file-earmark-arrow-up me-1"></i>{{ showImportPanel ? 'Close Import' : 'Import CSV' }}
+                </button>
                 <button class="btn btn-sm btn-primary" @click="showAddModal = true">
                     <i class="bi bi-person-plus me-1"></i>Add Member
                 </button>
@@ -10,6 +18,12 @@
         </div>
         
         <div class="card-body">
+            <RosterImportPanel
+                v-if="showImportPanel"
+                @close="showImportPanel = false"
+                @committed="handleImportCommitted"
+            />
+
             <!-- Filters -->
             <div class="row g-3 mb-3">
                 <div class="col-md-4">
@@ -171,6 +185,7 @@ import { useTeamApi } from '../../composables/useTeamApi';
 import { useToast } from '../../composables/useToast';
 import SkeletonLoader from '../common/SkeletonLoader.vue';
 import AddMemberModal from './AddMemberModal.vue';
+import RosterImportPanel from './RosterImportPanel.vue';
 
 const props = defineProps({
     userRole: { type: Number, required: true },
@@ -191,8 +206,15 @@ const sortKey = ref('name');
 const sortDir = ref('asc');
 const showAddModal = ref(false);
 const editingMember = ref(null);
+const showImportPanel = ref(false);
 
 let searchTimeout = null;
+
+const handleImportCommitted = async () => {
+    await loadMembers();
+    emit('refresh-departments');
+    toast.success('Roster import committed. Account invitations are being delivered.');
+};
 
 const canFilterRole = computed(() => props.userRole === 1 || props.userRole === 2);
 const isFiltered = computed(() => Boolean(filters.value.search || filters.value.role || filters.value.department));
