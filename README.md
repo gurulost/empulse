@@ -152,6 +152,7 @@ WorkFit advisors do not have global customer action access. A company administra
 
 ```bash
 composer test
+php artisan readiness:checklist
 vendor/bin/pint --test
 composer analyse
 composer audit --no-interaction
@@ -162,7 +163,7 @@ npm audit --audit-level=high
 npm run test:e2e
 ```
 
-CI runs migrations and the backend suite against PostgreSQL 16, formatting, scoped critical-path static analysis, dependency audits, a full-history secret scan, frontend lint/unit/build gates, readiness, and Playwright role/failure/respondent/accessibility journeys with real web and worker processes.
+CI runs migrations and the backend suite against PostgreSQL 16, checklist-structure validation, formatting, scoped critical-path static analysis, dependency audits, a full-history secret scan, frontend lint/unit/build gates, readiness, and Playwright role/failure/respondent/accessibility journeys with real web and worker processes. Immediately before an accountable release sign-off, run `php artisan readiness:checklist --require-signoff`; it fails unless every checklist item is either verified or explicitly accepted with an owner and rationale.
 
 Analytics query changes also require the EXPLAIN workflow in [`docs/ANALYTICS_EXPLAIN_CHECKLIST.md`](docs/ANALYTICS_EXPLAIN_CHECKLIST.md).
 

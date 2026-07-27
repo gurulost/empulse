@@ -4,7 +4,7 @@ Source of truth for the full pre-deployment production-readiness program. Update
 
 ## Metadata
 - Created: 2026-07-27T12:30:02
-- Last Updated: 2026-07-27T16:18:30-04:00
+- Last Updated: 2026-07-27T16:58:59-04:00
 - Branch: `codex/production-readiness`
 - Checklist Doc: `docs/EMPULSE_PRODUCTION_READINESS_CHECKLIST.md`
 
@@ -192,8 +192,8 @@ Source of truth for the full pre-deployment production-readiness program. Update
   - Evidence: final-state PostgreSQL custom backup restored into a new database; six critical row counts match (1 company, 9 users, 10 assignments, 8 responses, 496 answers, 17 audit events) and restored platform/company audit chains verify. The newest advisor-access migration rolls back and reapplies cleanly. Provider backup/PITR, full application rollback, and alert drills remain.
 - [x] V-011 [status:verified] Fresh-context adversarial review against product, privacy, methodology, security, accessibility, and commercial invariants.
   - Evidence: two independent fresh-context passes found eleven initial and five late current-source blockers. A verification pass found one remaining subgroup-threshold defect. All reported issues now have focused fixes and regression coverage; the reviewer confirmed no P0/P1 remains in the late review scope. Independent human security/privacy, methodology/legal, and accessibility approvals remain external launch gates.
-- [ ] V-012 [status:open] Checklist validator with `--require-signoff`.
-  - Evidence: pending
+- [x] V-012 [status:verified] Checklist validator with `--require-signoff`.
+  - Evidence: `php artisan readiness:checklist` validates item syntax, unique identifiers, supported states, checkbox/state consistency, and accountable accepted-risk records; CI runs this structural gate. Six focused tests/16 assertions and the full 176-test/798-assertion suite pass. `--require-signoff` correctly refuses this current checklist while genuine production gates remain open.
 
 ## Residual Risks
 - [ ] R-001 [status:open] Independent legal/privacy and methodology review plus exact pricing/contract decisions block customer-facing launch.
@@ -229,3 +229,4 @@ Source of truth for the full pre-deployment production-readiness program. Update
 - 2026-07-27T16:18:30-04:00: Closed the second fresh-review findings: exact recurring-cycle selection, complete-case paired gap N, frozen registry-driven historical calculations with content-derived versions, hierarchy-constrained analytics/report/action visibility, subgroup-threshold preservation, and conservative WorkFit Indicator labeling. Added five focused governance regressions; the reviewer confirmed no P0/P1 remains in that scope. Final SQLite/PostgreSQL suites pass at 170 tests/782 assertions; static/build gates and all 13 process-backed PostgreSQL browser journeys pass again. Historical credential remediation, committed-SHA CI, provider staging, independent human review, and accountable commercial/legal decisions remain open.
 - 2026-07-27T16:29:00-04:00: GitHub CI exposed a stale npm lock entry before test execution. Regenerated the lock from a clean dependency graph, verified `npm ci` with the runner's npm 10.9.8, and corrected the secret job so it explicitly scans `--all` repository history instead of accepting the action's one-commit push default. The honest history gate is expected to remain red until credential rotation and owner-approved history remediation.
 - 2026-07-27T16:49:00-04:00: Committed candidate `d9725de` passed the complete PostgreSQL 16 product CI job, including all 170 backend tests/782 assertions and 13 real-process browser/accessibility journeys. Rehearsed the two-path history purge in a fresh disposable mirror: all 366 commits and four affected refs were rewritten, the candidate tree and recursive tree digest remained exact, old tainted objects became unreachable, `git fsck` passed, and full-history Gitleaks reported no findings. No GitHub ref was changed. Credential rotation and explicit destructive rewrite authorization remain.
+- 2026-07-27T16:58:59-04:00: Added a fail-closed checklist validator and CI structural gate. Final sign-off mode requires every item to be checked with `verified` or accountable `accepted_risk` status and correctly rejects this checklist while real production gates remain unresolved. The expanded full suite passes at 176 tests/798 assertions.
