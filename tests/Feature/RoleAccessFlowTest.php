@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Companies;
 use App\Models\User;
+use App\Services\OrganizationEntitlementService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -31,7 +32,7 @@ class RoleAccessFlowTest extends TestCase
         $this->assertAuthenticatedAs($employee);
     }
 
-    public function test_workfit_admin_impersonating_employee_redirects_to_employee_dashboard(): void
+    public function test_workfit_admin_cannot_impersonate_an_employee(): void
     {
         $company = Companies::create([
             'title' => 'Acme',
@@ -52,9 +53,21 @@ class RoleAccessFlowTest extends TestCase
 
         $response = $this->actingAs($admin)->postJson("/admin/api/users/{$employee->id}/impersonate");
 
-        $response->assertOk();
-        $response->assertJsonFragment(['redirect' => route('employee.dashboard')]);
-        $this->assertAuthenticatedAs($employee);
+        $response->assertNotFound();
+        $this->assertAuthenticatedAs($admin);
+    }
+
+    public function test_workfit_admin_without_company_context_lands_on_operator_dashboard(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 0,
+            'is_admin' => 1,
+            'company_id' => null,
+        ]);
+
+        $this->actingAs($admin)
+            ->get('/home')
+            ->assertRedirect(route('admin.dashboard'));
     }
 
     public function test_billing_page_loads_without_stripe_intent_when_stripe_is_not_configured(): void
@@ -70,6 +83,7 @@ class RoleAccessFlowTest extends TestCase
             'company_title' => $company->title,
             'role' => 1,
         ]);
+        app(OrganizationEntitlementService::class)->ensureBillingOwner($company, $manager);
 
         config([
             'services.stripe.secret' => null,

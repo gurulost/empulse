@@ -2,17 +2,21 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use App\Models\User;
 use App\Models\Companies;
+use App\Models\Survey;
+use App\Models\SurveyAssignment;
+use App\Models\SurveyVersion;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Tests\TestCase;
 
 class TeamApiTest extends TestCase
 {
     use RefreshDatabase;
 
     protected $manager;
+
     protected $companyId;
 
     protected function setUp(): void
@@ -23,7 +27,7 @@ class TeamApiTest extends TestCase
         $company = Companies::create([
             'title' => 'Test Company',
             'manager' => 'Manager Name',
-            'manager_email' => 'manager@test.com'
+            'manager_email' => 'manager@test.com',
         ]);
         $this->companyId = $company->id;
 
@@ -35,7 +39,7 @@ class TeamApiTest extends TestCase
             'role' => 1, // Manager
             'company_id' => $this->companyId,
             'company_title' => 'Test Company',
-            'tariff' => 1
+            'tariff' => 1,
         ]);
     }
 
@@ -50,32 +54,38 @@ class TeamApiTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->manager)
-                         ->getJson('/team/api/members');
+            ->getJson('/team/api/members');
 
         $response->assertStatus(200)
-                 ->assertJsonCount(2, 'data');
+            ->assertJsonCount(2, 'data');
     }
 
     public function test_manager_can_add_member()
     {
         $response = $this->actingAs($this->manager)
-                         ->postJson('/team/api/members', [
-                             'name' => 'New Worker',
-                             'email' => 'new@test.com',
-                             'role' => 4,
-                             'department' => 'IT'
-                         ]);
+            ->postJson('/team/api/members', [
+                'name' => 'New Worker',
+                'email' => 'new@test.com',
+                'role' => 4,
+                'department' => 'IT',
+            ]);
 
         $response->assertStatus(200);
 
         $this->assertDatabaseHas('company_worker', [
             'email' => 'new@test.com',
-            'company_id' => $this->companyId
+            'company_id' => $this->companyId,
         ]);
-        
+
         $this->assertDatabaseHas('users', [
             'email' => 'new@test.com',
-            'company_id' => $this->companyId
+            'company_id' => $this->companyId,
+            'status' => 'pending',
+        ]);
+        $this->assertDatabaseHas('account_invitations', [
+            'email' => 'new@test.com',
+            'company_id' => $this->companyId,
+            'status' => 'pending',
         ]);
     }
 
@@ -88,35 +98,48 @@ class TeamApiTest extends TestCase
             'password' => bcrypt('password'),
             'role' => 4,
             'company_id' => $this->companyId,
-            'company_title' => 'Test Company'
+            'company_title' => 'Test Company',
         ]);
-        
+
         DB::table('company_worker')->insert([
             'company_id' => $this->companyId,
             'name' => 'Old Name',
             'email' => 'old@test.com',
             'role' => 4,
-            'department' => 'IT'
+            'department' => 'IT',
         ]);
+        $assignment = SurveyAssignment::create([
+            'survey_id' => Survey::where('is_default', true)->value('id'),
+            'survey_version_id' => SurveyVersion::where('is_active', true)->value('id'),
+            'user_id' => $worker->id,
+            'token' => 'already-delivered-token',
+            'status' => 'pending',
+            'invite_status' => 'accepted',
+            'last_dispatched_at' => now(),
+        ]);
+        $tokenHash = $assignment->token_hash;
+        $dispatchedAt = $assignment->last_dispatched_at;
 
         $response = $this->actingAs($this->manager)
-                         ->putJson("/team/api/members/{$worker->email}", [
-                             'new_name' => 'New Name',
-                             'new_email' => 'old@test.com', // Keeping email same
-                             'new_role' => 4,
-                             'new_department' => 'HR'
-                         ]);
+            ->putJson("/team/api/members/{$worker->email}", [
+                'new_name' => 'New Name',
+                'new_email' => 'old@test.com', // Keeping email same
+                'new_role' => 4,
+                'new_department' => 'HR',
+            ]);
 
         $response->assertStatus(200);
 
         $this->assertDatabaseHas('company_worker', [
             'email' => 'old@test.com',
             'name' => 'New Name',
-            'department' => 'HR'
+            'department' => 'HR',
         ]);
+        $this->assertSame($tokenHash, $assignment->fresh()->token_hash);
+        $this->assertTrue($dispatchedAt->equalTo($assignment->fresh()->last_dispatched_at));
     }
 
-    public function test_manager_can_delete_member()
+    public function test_manager_deactivates_member_without_deleting_identity()
     {
         // Create a worker
         $worker = User::create([
@@ -125,24 +148,32 @@ class TeamApiTest extends TestCase
             'password' => bcrypt('password'),
             'role' => 4,
             'company_id' => $this->companyId,
-            'company_title' => 'Test Company'
+            'company_title' => 'Test Company',
         ]);
-        
+
         DB::table('company_worker')->insert([
             'company_id' => $this->companyId,
             'name' => 'To Delete',
             'email' => 'delete@test.com',
             'role' => 4,
-            'department' => 'IT'
+            'department' => 'IT',
         ]);
 
         $response = $this->actingAs($this->manager)
-                         ->deleteJson("/team/api/members/{$worker->email}");
+            ->deleteJson("/team/api/members/{$worker->email}");
 
         $response->assertStatus(200);
 
-        $this->assertDatabaseMissing('users', ['email' => 'delete@test.com']);
-        $this->assertDatabaseMissing('company_worker', ['email' => 'delete@test.com']);
+        $this->assertDatabaseHas('users', [
+            'email' => 'delete@test.com',
+            'status' => 'inactive',
+        ]);
+        $this->assertDatabaseHas('company_worker', [
+            'email' => 'delete@test.com',
+            'status' => 'inactive',
+        ]);
+        $this->assertNotNull($worker->fresh()->left_at);
+        $this->assertDatabaseHas('companies', ['id' => $this->companyId]);
     }
 
     // --- Departments API Tests ---
@@ -155,24 +186,24 @@ class TeamApiTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->manager)
-                         ->getJson('/team/api/departments');
+            ->getJson('/team/api/departments');
 
         $response->assertStatus(200)
-                 ->assertJsonCount(2);
+            ->assertJsonCount(2);
     }
 
     public function test_manager_can_add_department()
     {
         $response = $this->actingAs($this->manager)
-                         ->postJson('/team/api/departments', [
-                             'title' => 'Marketing'
-                         ]);
+            ->postJson('/team/api/departments', [
+                'title' => 'Marketing',
+            ]);
 
         $response->assertStatus(200);
 
         $this->assertDatabaseHas('company_department', [
             'company_id' => $this->companyId,
-            'title' => 'Marketing'
+            'title' => 'Marketing',
         ]);
     }
 
@@ -180,24 +211,24 @@ class TeamApiTest extends TestCase
     {
         DB::table('company_department')->insert([
             'company_id' => $this->companyId,
-            'title' => 'Old Dept'
+            'title' => 'Old Dept',
         ]);
 
         $response = $this->actingAs($this->manager)
-                         ->putJson('/team/api/departments/Old Dept', [
-                             'newTitle' => 'New Dept'
-                         ]);
+            ->putJson('/team/api/departments/Old Dept', [
+                'newTitle' => 'New Dept',
+            ]);
 
         $response->assertStatus(200);
 
         $this->assertDatabaseHas('company_department', [
             'company_id' => $this->companyId,
-            'title' => 'New Dept'
+            'title' => 'New Dept',
         ]);
-        
+
         $this->assertDatabaseMissing('company_department', [
             'company_id' => $this->companyId,
-            'title' => 'Old Dept'
+            'title' => 'Old Dept',
         ]);
     }
 
@@ -205,17 +236,17 @@ class TeamApiTest extends TestCase
     {
         DB::table('company_department')->insert([
             'company_id' => $this->companyId,
-            'title' => 'To Delete'
+            'title' => 'To Delete',
         ]);
 
         $response = $this->actingAs($this->manager)
-                         ->deleteJson('/team/api/departments/To Delete');
+            ->deleteJson('/team/api/departments/To Delete');
 
         $response->assertStatus(200);
 
         $this->assertDatabaseMissing('company_department', [
             'company_id' => $this->companyId,
-            'title' => 'To Delete'
+            'title' => 'To Delete',
         ]);
     }
 }

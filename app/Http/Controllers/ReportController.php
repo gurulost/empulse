@@ -3,8 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Services\SurveyAnalyticsService;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class ReportController extends Controller
 {
@@ -20,6 +18,4 @@ class ReportController extends Controller
     {
         return view('reports.dashboard');
     }
-
 }
-

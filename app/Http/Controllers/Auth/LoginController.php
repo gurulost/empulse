@@ -26,8 +26,8 @@ class LoginController extends Controller
 
     use AuthenticatesUsers {
         hasTooManyLoginAttempts as protected traitHasTooManyLoginAttempts;
-        incrementLoginAttempts  as protected traitIncrementLoginAttempts;
-        clearLoginAttempts      as protected traitClearLoginAttempts;
+        incrementLoginAttempts as protected traitIncrementLoginAttempts;
+        clearLoginAttempts as protected traitClearLoginAttempts;
     }
 
     /**
@@ -58,6 +58,7 @@ class LoginController extends Controller
             if (method_exists($this, 'hasTooManyLoginAttempts') &&
                 $this->hasTooManyLoginAttempts($request)) {
                 $this->fireLockoutEvent($request);
+
                 return $this->sendLockoutResponse($request);
             }
 
@@ -65,37 +66,39 @@ class LoginController extends Controller
                 if ($request->hasSession()) {
                     $request->session()->put('auth.password_confirmed_at', time());
                 }
+
                 return $this->sendLoginResponse($request);
             }
 
             $this->incrementLoginAttempts($request);
+
             return $this->sendFailedLoginResponse($request);
         } catch (ValidationException $e) {
             throw $e;
         } catch (\Throwable $e) {
             $errorPayload = json_encode([
                 'message' => $e->getMessage(),
-                'class'   => get_class($e),
-                'file'    => str_replace(base_path(), '', $e->getFile()),
-                'line'    => $e->getLine(),
-                'trace'   => collect(explode("\n", $e->getTraceAsString()))
-                                ->take(20)->implode("\n"),
+                'class' => get_class($e),
+                'file' => str_replace(base_path(), '', $e->getFile()),
+                'line' => $e->getLine(),
+                'trace' => collect(explode("\n", $e->getTraceAsString()))
+                    ->take(20)->implode("\n"),
             ]);
             try {
                 DB::table('cache')->upsert([
-                    'key'        => 'login_debug_error',
-                    'value'      => serialize($errorPayload),
+                    'key' => 'login_debug_error',
+                    'value' => serialize($errorPayload),
                     'expiration' => time() + 86400,
                 ], ['key'], ['value', 'expiration']);
             } catch (\Throwable $dbErr) {
-                Log::emergency('Login 500 AND cache write failed: ' . $e->getMessage()
-                    . ' | db err: ' . $dbErr->getMessage());
+                Log::emergency('Login 500 AND cache write failed: '.$e->getMessage()
+                    .' | db err: '.$dbErr->getMessage());
             }
             Log::error('Production login 500 captured', [
                 'error' => $e->getMessage(),
                 'class' => get_class($e),
-                'file'  => str_replace(base_path(), '', $e->getFile()),
-                'line'  => $e->getLine(),
+                'file' => str_replace(base_path(), '', $e->getFile()),
+                'line' => $e->getLine(),
             ]);
             throw $e;
         }
@@ -107,6 +110,14 @@ class LoginController extends Controller
             $this->username() => ['required', 'string', 'email'],
             'password' => ['required', 'string'],
         ]);
+    }
+
+    protected function credentials(Request $request): array
+    {
+        return array_merge(
+            $request->only($this->username(), 'password'),
+            ['status' => 'active']
+        );
     }
 
     protected function sendFailedLoginResponse(Request $request)
@@ -133,9 +144,10 @@ class LoginController extends Controller
         } catch (\Throwable $exception) {
             Log::warning('Login rate limiter unavailable during lockout check.', [
                 'email' => $request->input($this->username()),
-                'ip'    => $request->ip(),
+                'ip' => $request->ip(),
                 'error' => $exception->getMessage(),
             ]);
+
             return false;
         }
     }
@@ -147,7 +159,7 @@ class LoginController extends Controller
         } catch (\Throwable $exception) {
             Log::warning('Login rate limiter unavailable while recording failed attempt.', [
                 'email' => $request->input($this->username()),
-                'ip'    => $request->ip(),
+                'ip' => $request->ip(),
                 'error' => $exception->getMessage(),
             ]);
         }
@@ -160,7 +172,7 @@ class LoginController extends Controller
         } catch (\Throwable $exception) {
             Log::warning('Login rate limiter unavailable while clearing attempts.', [
                 'email' => $request->input($this->username()),
-                'ip'    => $request->ip(),
+                'ip' => $request->ip(),
                 'error' => $exception->getMessage(),
             ]);
         }

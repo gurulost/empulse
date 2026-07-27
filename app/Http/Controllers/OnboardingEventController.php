@@ -33,11 +33,11 @@ class OnboardingEventController extends Controller
         $companyId = (int) ($validated['company_id'] ?? $user->company_id ?? 0);
         $isWorkfitAdmin = (int) ($user->is_admin ?? 0) === 1 || (int) ($user->role ?? 0) === 0;
 
-        if (!$isWorkfitAdmin && $companyId > 0 && (int) $user->company_id !== $companyId) {
+        if (! $isWorkfitAdmin && $companyId > 0 && (int) $user->company_id !== $companyId) {
             abort(403, 'Forbidden');
         }
 
-        if (!$companyId && !$isWorkfitAdmin) {
+        if (! $companyId && ! $isWorkfitAdmin) {
             abort(422, 'Company context required.');
         }
 

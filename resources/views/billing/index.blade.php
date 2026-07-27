@@ -118,8 +118,8 @@
                                 <i class="bi bi-credit-card fs-5 text-muted"></i>
                             </div>
                             <div>
-                                @if($user->pm_last_four)
-                                    <div class="fw-semibold">{{ strtoupper($user->pm_type ?? 'card') }} &bull;&bull;&bull;&bull; {{ $user->pm_last_four }}</div>
+                                @if($company->pm_last_four)
+                                    <div class="fw-semibold">{{ strtoupper($company->pm_type ?? 'card') }} &bull;&bull;&bull;&bull; {{ $company->pm_last_four }}</div>
                                     <div class="small text-muted">Default payment method</div>
                                 @else
                                     <div class="fw-semibold text-muted">No card on file</div>
@@ -143,6 +143,67 @@
                             <div class="alert alert-warning mb-0 rounded-3 border-0 small">
                                 <i class="bi bi-info-circle me-1"></i>Card updates unavailable until Stripe is configured.
                             </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mt-1">
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white py-3"><h2 class="h5 mb-0">Usage this period</h2></div>
+                    <div class="card-body">
+                        <div class="small text-muted mb-3">{{ $usage['period_start'] }} through {{ $usage['period_end'] }}</div>
+                        <div class="d-flex justify-content-between border-bottom py-2">
+                            <span>Assignments dispatched</span>
+                            <strong>{{ number_format($usage['metrics']['dispatched_assignments'] ?? 0) }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between border-bottom py-2">
+                            <span>Completed responses</span>
+                            <strong>{{ number_format($usage['metrics']['completed_responses'] ?? 0) }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between py-2">
+                            <span>Active respondents</span>
+                            <strong>{{ number_format($usage['metrics']['active_respondents'] ?? 0) }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between py-2">
+                            <span>Active respondent limit</span>
+                            <strong>{{ $usage['limits']['active_respondents'] ?? 'Custom' }}</strong>
+                        </div>
+                        <p class="small text-muted mt-3 mb-0">Usage events are idempotent and append-only. Billing remains governed by the organization entitlement and Stripe reconciliation.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-white py-3"><h2 class="h5 mb-0">Billing ownership</h2></div>
+                    <div class="card-body">
+                        @if($pendingTransfer)
+                            <div class="alert alert-info small">
+                                A transfer is pending until {{ $pendingTransfer->expires_at->toDayDateTimeString() }}. The current owner remains active until acceptance.
+                            </div>
+                        @endif
+                        @if($billingOwner)
+                            <form method="POST" action="{{ route('billing.transfer.initiate') }}">
+                                @csrf
+                                <div class="mb-3">
+                                    <label for="billing-owner-target" class="form-label">New billing owner</label>
+                                    <select id="billing-owner-target" name="to_user_id" class="form-select" required>
+                                        <option value="">Choose an active member</option>
+                                        @foreach($transferCandidates as $candidate)
+                                            <option value="{{ $candidate->id }}">{{ $candidate->name }} ({{ $candidate->email }})</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="billing-owner-reason" class="form-label">Reason for transfer</label>
+                                    <textarea id="billing-owner-reason" name="reason" class="form-control" rows="2" required></textarea>
+                                </div>
+                                <button class="btn btn-outline-primary">Request owner transfer</button>
+                            </form>
+                        @else
+                            <p class="text-muted mb-0">You are an authorized billing administrator. Only the current owner can initiate ownership transfer.</p>
                         @endif
                     </div>
                 </div>

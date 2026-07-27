@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Companies;
-use App\Models\SurveyAnswer;
 use App\Models\Survey;
+use App\Models\SurveyAnswer;
 use App\Models\SurveyAssignment;
 use App\Models\SurveyItem;
 use App\Models\SurveyPage;
@@ -12,6 +12,7 @@ use App\Models\SurveyResponse;
 use App\Models\SurveyVersion;
 use App\Models\SurveyWave;
 use App\Models\User;
+use App\Services\OrganizationEntitlementService;
 use App\Services\SurveyAnalyticsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
@@ -23,6 +24,16 @@ use Tests\TestCase;
 class AnalyticsApiTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config([
+            'privacy.reporting.minimum_company_n' => 1,
+            'privacy.reporting.minimum_subgroup_n' => 1,
+            'privacy.reporting.minimum_completion_rate' => 0,
+        ]);
+    }
 
     protected function tearDown(): void
     {
@@ -139,7 +150,7 @@ class AnalyticsApiTest extends TestCase
             ->once()
             ->with($company->id)
             ->andReturn([
-                'wave:' . $wave->id => 'Wave Alpha',
+                'wave:'.$wave->id => 'Wave Alpha',
             ]);
         $mock->shouldReceive('companySetupSummary')
             ->once()
@@ -227,6 +238,11 @@ class AnalyticsApiTest extends TestCase
             'company_title' => $company->title,
             'tariff' => 1,
         ]);
+        app(OrganizationEntitlementService::class)->grantManual(
+            $company,
+            'pulse',
+            now()->addYear()
+        );
 
         SurveyVersion::create([
             'instrument_id' => 'setup-test',
@@ -251,7 +267,8 @@ class AnalyticsApiTest extends TestCase
         $response = $this->actingAs($manager)->getJson('/analytics/api/dashboard');
 
         $response->assertOk()
-            ->assertJsonPath('data', [])
+            ->assertJsonPath('data.availability', 'collecting')
+            ->assertJsonPath('data.sample.valid_n', 0)
             ->assertJsonPath('setup.recipient_count', 1)
             ->assertJsonPath('setup.department_count', 1)
             ->assertJsonPath('setup.billing_allows_scheduling', true)

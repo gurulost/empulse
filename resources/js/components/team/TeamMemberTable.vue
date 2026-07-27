@@ -3,9 +3,6 @@
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0">Team Members</h5>
             <div class="d-flex gap-2">
-                <button class="btn btn-sm btn-success" @click="showImportModal = true">
-                    <i class="bi bi-upload me-1"></i>Import
-                </button>
                 <button class="btn btn-sm btn-primary" @click="showAddModal = true">
                     <i class="bi bi-person-plus me-1"></i>Add Member
                 </button>
@@ -134,13 +131,9 @@
                     </div>
                     <h5 class="empty-state-title">Start with the people who will receive your first wave</h5>
                     <p class="empty-state-text">
-                        Import a roster if you already have one, or add one teammate manually. Once at least one recipient exists,
-                        you can move on to creating and dispatching a survey wave.
+                        Add one teammate manually. Once at least one recipient exists, you can move on to creating and dispatching a survey wave.
                     </p>
                     <div class="d-flex flex-wrap justify-content-center gap-2 mt-3">
-                        <button class="btn btn-success" @click="showImportModal = true">
-                            <i class="bi bi-upload me-1"></i>Import Roster
-                        </button>
                         <button class="btn btn-primary" @click="showAddModal = true">
                             <i class="bi bi-person-plus me-1"></i>Add First Member
                         </button>
@@ -169,31 +162,6 @@
             @saved="handleSaved"
         />
 
-        <!-- Import Modal -->
-        <Teleport to="body">
-            <div v-if="showImportModal" class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,0.5)">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Import Team Members</h5>
-                            <button type="button" class="btn-close" @click="showImportModal = false"></button>
-                        </div>
-                        <div class="modal-body">
-                            <p class="text-muted mb-3">
-                                <a :href="`/users/export/${userRole}`" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-download me-1"></i>Download Template
-                                </a>
-                            </p>
-                            <input type="file" class="form-control" @change="handleFileUpload" accept=".xlsx,.xls">
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" @click="showImportModal = false">Cancel</button>
-                            <button type="button" class="btn btn-primary" @click="importFile" :disabled="!selectedFile">Import</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </Teleport>
     </div>
 </template>
 
@@ -222,9 +190,7 @@ const filters = ref({ search: '', role: '', department: '' });
 const sortKey = ref('name');
 const sortDir = ref('asc');
 const showAddModal = ref(false);
-const showImportModal = ref(false);
 const editingMember = ref(null);
-const selectedFile = ref(null);
 
 let searchTimeout = null;
 
@@ -378,25 +344,6 @@ const handleSaved = () => {
     closeModal();
     loadMembers(pagination.value.current_page);
     emit('refresh-departments');
-};
-
-const handleFileUpload = (event) => {
-    selectedFile.value = event.target.files[0];
-};
-
-const importFile = async () => {
-    if (!selectedFile.value) return;
-    
-    try {
-        await api.importUsers(selectedFile.value);
-        toast.success('Users imported successfully');
-        showImportModal.value = false;
-        selectedFile.value = null;
-        loadMembers(1);
-        emit('refresh-departments');
-    } catch (error) {
-        toast.error(error.response?.data?.message || 'Import failed');
-    }
 };
 
 onMounted(() => {

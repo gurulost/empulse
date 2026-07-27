@@ -32,12 +32,13 @@ class SeedDemoData extends Command
         if ((bool) $this->option('if-empty')) {
             if (Schema::hasTable('users') && DB::table('users')->count() > 0) {
                 $this->info('Users table already has data — skipping demo seed (--if-empty).');
+
                 return self::SUCCESS;
             }
         }
 
-        if (!(bool) $this->option('force')) {
-            if (!$this->confirm('This will add/update a lot of demo data in your current database. Continue?', true)) {
+        if (! (bool) $this->option('force')) {
+            if (! $this->confirm('This will add/update a lot of demo data in your current database. Continue?', true)) {
                 return self::SUCCESS;
             }
         }
@@ -80,7 +81,7 @@ class SeedDemoData extends Command
     {
         $company = Companies::where('manager_email', 'manager@acme.com')->first();
 
-        if (!$company) {
+        if (! $company) {
             $company = Companies::create([
                 'title' => 'Acme Corp',
                 'manager' => 'Manager User',
@@ -242,7 +243,7 @@ class SeedDemoData extends Command
         DB::table('subscriptions')->insert([
             'user_id' => $manager->id,
             'name' => 'default',
-            'stripe_id' => 'sub_demo_' . Str::random(8),
+            'stripe_id' => 'sub_demo_'.Str::random(8),
             'stripe_status' => 'active',
             'stripe_price' => 'price_pulse_demo',
             'quantity' => 1,
@@ -268,7 +269,7 @@ class SeedDemoData extends Command
                 ->where('title', $department)
                 ->exists();
 
-            if (!$exists) {
+            if (! $exists) {
                 DB::table('company_department')->insert([
                     'company_id' => $company->id,
                     'title' => $department,
@@ -297,7 +298,7 @@ class SeedDemoData extends Command
         ];
 
         foreach (['Sales', 'Marketing', 'Customer Success', 'Operations', 'HR'] as $dept) {
-            $email = Str::slug("lead-{$dept}") . '@acme.com';
+            $email = Str::slug("lead-{$dept}").'@acme.com';
             $lead = User::updateOrCreate(
                 ['email' => $email],
                 [
@@ -360,7 +361,7 @@ class SeedDemoData extends Command
     protected function ensureSurveyArtifacts(bool $importInstrument): array
     {
         $survey = Survey::where('is_default', true)->orderBy('id')->first();
-        if (!$survey) {
+        if (! $survey) {
             $survey = Survey::create([
                 'title' => 'Employee Pulse (Default)',
                 'is_default' => true,
@@ -372,9 +373,9 @@ class SeedDemoData extends Command
 
         $hasWorkContent = DB::table('survey_items')->where('qid', 'WCA_REL_A')->exists();
 
-        if ($importInstrument && !$hasWorkContent) {
+        if ($importInstrument && ! $hasWorkContent) {
             $path = base_path('survey_instrument.json');
-            if (!is_file($path)) {
+            if (! is_file($path)) {
                 $this->warn('survey_instrument.json not found; skipping instrument import.');
             } else {
                 $this->info('Importing survey instrument (this may take a moment)...');
@@ -386,7 +387,7 @@ class SeedDemoData extends Command
             }
         }
 
-        if (!$version) {
+        if (! $version) {
             $version = SurveyVersion::create([
                 'instrument_id' => 'demo_v1',
                 'version' => '1.0.0',
@@ -428,7 +429,7 @@ class SeedDemoData extends Command
 
         for ($i = $months; $i >= 0; $i--) {
             $month = now()->startOfMonth()->subMonths($i);
-            $label = $month->format('M Y') . ' Pulse';
+            $label = $month->format('M Y').' Pulse';
             $opensAt = $month->copy()->addDays(3)->setTime(9, 0);
             $dueAt = $month->copy()->endOfMonth()->setTime(17, 0);
             $status = $dueAt->isPast() ? 'completed' : 'scheduled';
@@ -455,7 +456,7 @@ class SeedDemoData extends Command
                 $dept = $worker->department ?? 'Operations';
                 $profile = $departmentProfiles[$dept] ?? ['current' => 6.5, 'gap' => 1.5, 'culture' => 7.0];
 
-                $shouldComplete = ((crc32($user->email . '|' . $label) % 1000) / 1000) < $completionRate;
+                $shouldComplete = ((crc32($user->email.'|'.$label) % 1000) / 1000) < $completionRate;
 
                 $assignment = SurveyAssignment::firstOrCreate(
                     [
@@ -475,14 +476,14 @@ class SeedDemoData extends Command
                     ]
                 );
 
-                if (!$assignment->survey_version_id || !$assignment->wave_label) {
+                if (! $assignment->survey_version_id || ! $assignment->wave_label) {
                     $assignment->update([
                         'survey_version_id' => $assignment->survey_version_id ?: $versionId,
                         'wave_label' => $assignment->wave_label ?: $label,
                     ]);
                 }
 
-                if (!$shouldComplete) {
+                if (! $shouldComplete) {
                     continue;
                 }
 
@@ -559,6 +560,7 @@ class SeedDemoData extends Command
                 'cadence' => 'manual',
                 'updated_at' => now(),
             ]);
+
             return (int) $wave->id;
         }
 
@@ -583,7 +585,7 @@ class SeedDemoData extends Command
         $rows = [];
         foreach ($answersByQid as $qid => $value) {
             $item = $itemsByQid->get($qid);
-            if (!$item) {
+            if (! $item) {
                 continue;
             }
 
@@ -617,6 +619,7 @@ class SeedDemoData extends Command
         $u1 = max(1e-9, mt_rand() / mt_getrandmax());
         $u2 = max(1e-9, mt_rand() / mt_getrandmax());
         $z0 = sqrt(-2.0 * log($u1)) * cos(2.0 * pi() * $u2);
+
         return $mean + $z0 * $stdDev;
     }
 

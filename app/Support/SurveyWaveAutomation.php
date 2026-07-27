@@ -11,7 +11,7 @@ class SurveyWaveAutomation
         $windows = config('survey.automation.cadence_windows', []);
         $minutes = $windows[$cadence] ?? null;
 
-        if (!$minutes) {
+        if (! $minutes) {
             return null;
         }
 
@@ -25,6 +25,7 @@ class SurveyWaveAutomation
         }
 
         $tariffs = config('survey.automation.drip_tariffs', [1]);
+
         return in_array((int) $tariff, array_map('intval', $tariffs), true);
     }
 
@@ -35,7 +36,7 @@ class SurveyWaveAutomation
 
     public static function billingStatusAllows(?string $status): bool
     {
-        if (!$status) {
+        if (! $status) {
             return false;
         }
 
@@ -72,7 +73,7 @@ class SurveyWaveAutomation
     {
         $labels = config('survey.automation.billing_labels', []);
 
-        if (!$status) {
+        if (! $status) {
             return $labels['none'] ?? 'Not subscribed';
         }
 

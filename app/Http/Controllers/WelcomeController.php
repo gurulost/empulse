@@ -13,7 +13,7 @@ class WelcomeController extends Controller
             return response('OK', 200);
         }
 
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return view('welcome');
         }
 

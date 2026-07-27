@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\ProcessSurveyWave;
+use App\Models\Survey;
 use App\Models\SurveyAssignment;
+use App\Models\SurveyVersion;
 use App\Models\SurveyWave;
 use App\Models\SurveyWaveLog;
-use App\Models\Survey;
-use App\Models\SurveyVersion;
-use App\Jobs\ProcessSurveyWave;
 use App\Services\OnboardingTelemetryService;
 use App\Services\SurveyAnalyticsService;
 use App\Support\CompanyBilling;
@@ -22,9 +22,7 @@ class SurveyWaveController extends Controller
     public function __construct(
         protected SurveyAnalyticsService $analytics,
         protected OnboardingTelemetryService $telemetry
-    )
-    {
-    }
+    ) {}
 
     public function index()
     {
@@ -93,25 +91,26 @@ class SurveyWaveController extends Controller
         $assignmentStats = $waveIds->isNotEmpty()
             ? SurveyAssignment::select('survey_wave_id')
                 ->selectRaw('COUNT(*) as total')
-                ->selectRaw("SUM(CASE WHEN last_dispatched_at IS NOT NULL THEN 1 ELSE 0 END) as dispatched")
+                ->selectRaw('SUM(CASE WHEN last_dispatched_at IS NOT NULL THEN 1 ELSE 0 END) as dispatched')
                 ->selectRaw("SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed")
-                ->selectRaw("SUM(CASE WHEN invite_status = 'sent' THEN 1 ELSE 0 END) as invited")
-                ->selectRaw("SUM(CASE WHEN invite_status = 'failed' THEN 1 ELSE 0 END) as invite_failed")
+                ->selectRaw("SUM(CASE WHEN invite_status IN ('accepted', 'delivered') THEN 1 ELSE 0 END) as accepted")
+                ->selectRaw("SUM(CASE WHEN invite_status = 'delivered' THEN 1 ELSE 0 END) as delivered")
+                ->selectRaw("SUM(CASE WHEN invite_status IN ('failed', 'bounced', 'complained', 'unsubscribed', 'suppressed') THEN 1 ELSE 0 END) as invite_failed")
                 ->whereIn('survey_wave_id', $waveIds)
                 ->groupBy('survey_wave_id')
                 ->get()
                 ->keyBy('survey_wave_id')
             : collect();
 
-        $billingStatus = CompanyBilling::status($user);
+        $billingStatus = CompanyBilling::status((int) $user->company_id);
         $billingLabel = SurveyWaveAutomation::billingStatusLabel($billingStatus);
-        $planLabel = SurveyWaveAutomation::planLabel((int) $user->tariff);
-        $canUseDrip = SurveyWaveAutomation::dripEnabledForTariff((int) $user->tariff);
+        $planLabel = ucfirst(CompanyBilling::planKey((int) $user->company_id));
+        $canUseDrip = CompanyBilling::hasFeature((int) $user->company_id, 'recurring_waves');
         $setupSummary = $hasCompanyContext
             ? $this->analytics->companySetupSummary((int) $user->company_id)
             : [];
 
-        if ($hasCompanyContext && !$activeSurveyVersion) {
+        if ($hasCompanyContext && ! $activeSurveyVersion) {
             $this->telemetry->record([
                 'company_id' => (int) $user->company_id,
                 'name' => 'survey_activation_handoff_viewed',
@@ -151,7 +150,7 @@ class SurveyWaveController extends Controller
     {
         $this->authorizeAccess();
         $companyId = (int) (Auth::user()->company_id ?? 0);
-        if (!$companyId) {
+        if (! $companyId) {
             return back()->withErrors('Assign this manager to a company before creating survey waves.');
         }
 
@@ -181,8 +180,15 @@ class SurveyWaveController extends Controller
             ->where('is_active', true)
             ->first();
 
-        if (!$survey || !$activeVersion) {
+        if (! $survey || ! $activeVersion) {
             return back()->withErrors('Import and publish a survey before creating waves.');
+        }
+
+        if ($survey->instrument_id && $survey->instrument_id !== $activeVersion->instrument_id) {
+            return back()->withErrors('The selected survey is not compatible with the published instrument.');
+        }
+        if (! $survey->instrument_id) {
+            $survey->update(['instrument_id' => $activeVersion->instrument_id]);
         }
 
         if ($data['kind'] === 'full' && $data['cadence'] !== 'manual') {
@@ -293,7 +299,7 @@ class SurveyWaveController extends Controller
         SurveyWaveLog::create([
             'survey_wave_id' => $wave->id,
             'status' => $wave->status,
-            'message' => 'Wave settings updated: ' . implode(', ', $dirtyKeys) . '.',
+            'message' => 'Wave settings updated: '.implode(', ', $dirtyKeys).'.',
         ]);
 
         return redirect()
@@ -313,8 +319,7 @@ class SurveyWaveController extends Controller
             return back()->withErrors('Completed waves cannot be dispatched again. Create a new wave instead.');
         }
 
-        $manager = CompanyBilling::manager($wave->company_id);
-        if (!CompanyBilling::allowsScheduling($manager)) {
+        if (! CompanyBilling::allowsScheduling((int) $wave->company_id)) {
             return back()->withErrors('Billing inactive. Update your subscription to dispatch waves.');
         }
 
@@ -340,7 +345,7 @@ class SurveyWaveController extends Controller
 
     protected function authorizeAccess(): void
     {
-        if (!Auth::check() || (int) Auth::user()->role !== 1) {
+        if (! Auth::check() || (int) Auth::user()->role !== 1) {
             abort(403);
         }
     }
@@ -361,13 +366,13 @@ class SurveyWaveController extends Controller
 
         $user = Auth::user();
 
-        if (!SurveyWaveAutomation::dripEnabledForTariff((int) $user->tariff)) {
+        if (! CompanyBilling::hasFeature((int) $user->company_id, 'recurring_waves')) {
             throw ValidationException::withMessages([
                 'cadence' => 'Upgrade your subscription to enable drip cadences.',
             ]);
         }
 
-        if (!CompanyBilling::allowsScheduling($user)) {
+        if (! CompanyBilling::allowsScheduling((int) $user->company_id)) {
             throw ValidationException::withMessages([
                 'cadence' => 'Drip scheduling requires an active subscription.',
             ]);

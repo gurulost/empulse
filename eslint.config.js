@@ -14,7 +14,7 @@ export default [
     },
     {
         ...js.configs.recommended,
-        files: ['resources/js/**/*.js', 'tests/e2e/**/*.js'],
+        files: ['resources/js/**/*.js', 'tests/e2e/**/*.js', 'tests/unit/**/*.js', 'tests/load/**/*.js'],
         languageOptions: {
             ...js.configs.recommended.languageOptions,
             globals: {

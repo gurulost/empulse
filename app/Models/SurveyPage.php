@@ -34,6 +34,12 @@ class SurveyPage extends Model
 
     public function items()
     {
+        return $this->hasMany(SurveyItem::class)
+            ->whereNull('survey_section_id');
+    }
+
+    public function allItems()
+    {
         return $this->hasMany(SurveyItem::class);
     }
 }

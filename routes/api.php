@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\HealthController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -14,7 +15,8 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/healthz', fn() => response('OK', 200));
+Route::get('/healthz', [HealthController::class, 'liveness']);
+Route::get('/readyz', [HealthController::class, 'readiness']);
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();

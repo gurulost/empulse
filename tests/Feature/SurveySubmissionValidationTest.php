@@ -21,8 +21,6 @@ class SurveySubmissionValidationTest extends TestCase
 
     public function test_submit_rejects_invalid_payload_and_unknown_questions(): void
     {
-        config()->set('survey.validation.strict_server_validation', true);
-
         $assignment = $this->seedSurveyAssignment();
 
         $payload = [
@@ -59,8 +57,6 @@ class SurveySubmissionValidationTest extends TestCase
 
     public function test_submit_requires_visible_conditional_item_but_skips_it_when_hidden(): void
     {
-        config()->set('survey.validation.strict_server_validation', true);
-
         $assignment = $this->seedSurveyAssignment();
 
         $baseResponses = [
@@ -98,8 +94,6 @@ class SurveySubmissionValidationTest extends TestCase
 
     public function test_submit_ignores_hidden_answer_values_when_persisting(): void
     {
-        config()->set('survey.validation.strict_server_validation', true);
-
         $assignment = $this->seedSurveyAssignment();
 
         $response = $this->postJson(route('survey.submit', $assignment->token), [
@@ -141,8 +135,6 @@ class SurveySubmissionValidationTest extends TestCase
 
     public function test_submit_in_strict_mode_trims_email_before_persisting(): void
     {
-        config()->set('survey.validation.strict_server_validation', true);
-
         $assignment = $this->seedSurveyAssignment();
 
         $response = $this->postJson(route('survey.submit', $assignment->token), [
@@ -166,7 +158,7 @@ class SurveySubmissionValidationTest extends TestCase
         $this->assertSame('person@example.com', $emailAnswer);
     }
 
-    public function test_submit_in_non_strict_mode_keeps_legacy_payload_behavior(): void
+    public function test_server_validation_cannot_be_disabled_at_runtime(): void
     {
         config()->set('survey.validation.strict_server_validation', false);
 
@@ -185,17 +177,41 @@ class SurveySubmissionValidationTest extends TestCase
             'duration_ms' => 1234,
         ]);
 
-        $response->assertOk()->assertJson(['status' => 'ok']);
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'responses.Q_SLIDER',
+                'responses.Q_NUM',
+                'responses.Q_EMAIL',
+                'responses.UNKNOWN_QID',
+            ]);
 
-        $answersByQid = SurveyAnswer::query()
-            ->whereHas('response', fn ($query) => $query->where('assignment_id', $assignment->id))
-            ->pluck('value', 'question_key')
-            ->toArray();
+        $this->assertDatabaseCount('survey_responses', 0);
+        $this->assertDatabaseCount('survey_answers', 0);
+    }
 
-        $this->assertArrayHasKey('Q_DEP', $answersByQid);
-        $this->assertArrayNotHasKey('UNKNOWN_QID', $answersByQid);
-        $this->assertSame('11', $answersByQid['Q_SLIDER']);
-        $this->assertSame('invalid-email', $answersByQid['Q_EMAIL']);
+    public function test_completed_assignment_token_cannot_create_a_second_response(): void
+    {
+        $assignment = $this->seedSurveyAssignment();
+        $payload = [
+            'responses' => [
+                'Q_SLIDER' => 4,
+                'Q_SELECT' => 'A',
+                'Q_MULTI' => ['Y'],
+                'Q_NUM' => 3,
+                'Q_EMAIL' => 'person@example.com',
+            ],
+            'duration_ms' => 450,
+        ];
+
+        $this->postJson(route('survey.submit', $assignment->token), $payload)
+            ->assertOk();
+
+        $this->postJson(route('survey.submit', $assignment->token), $payload)
+            ->assertStatus(410);
+
+        $this->assertDatabaseCount('survey_responses', 1);
+        $this->assertDatabaseCount('survey_answers', 5);
+        $this->assertNotNull($assignment->fresh()->token_revoked_at);
     }
 
     protected function seedSurveyAssignment(): SurveyAssignment
@@ -353,6 +369,8 @@ class SurveySubmissionValidationTest extends TestCase
             'user_id' => $user->id,
             'token' => (string) Str::uuid(),
             'status' => 'pending',
+            'privacy_policy_version' => config('privacy.policy.version'),
+            'privacy_acknowledged_at' => now(),
         ]);
     }
 }

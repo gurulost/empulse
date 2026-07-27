@@ -25,6 +25,10 @@ class SurveyWave extends Model
         'opens_at',
         'due_at',
         'last_dispatched_at',
+        'pulse_variant_version_id',
+        'action_measurement_plan_id',
+        'measurement_purpose',
+        'reminder_limit',
     ];
 
     protected $casts = [
@@ -32,6 +36,7 @@ class SurveyWave extends Model
         'opens_at' => 'datetime',
         'due_at' => 'datetime',
         'last_dispatched_at' => 'datetime',
+        'reminder_limit' => 'integer',
     ];
 
     public function survey()
@@ -52,5 +57,15 @@ class SurveyWave extends Model
     public function assignments()
     {
         return $this->hasMany(SurveyAssignment::class);
+    }
+
+    public function cycles()
+    {
+        return $this->hasMany(SurveyWaveCycle::class);
+    }
+
+    public function pulseVariant()
+    {
+        return $this->belongsTo(PulseVariantVersion::class, 'pulse_variant_version_id');
     }
 }

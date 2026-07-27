@@ -2,9 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Illuminate\Database\Seeder;
 use App\Models\Plan;
+use Illuminate\Database\Seeder;
 
 class PlanSeeder extends Seeder
 {
@@ -15,18 +14,18 @@ class PlanSeeder extends Seeder
      */
     public function run()
     {
-        $plans = [
-            [
-                'name' => 'Business Plan',
-                'slug' => 'business-plan',
-                'stripe_plan' => 'price_1LywfEEUQY6PFC8sXveqq2VF',
-                'price' => 100,
-                'description' => 'Business Plan'
-            ]
-        ];
-
-        foreach ($plans as $plan) {
-            Plan::create($plan);
+        foreach (config('billing.catalog', []) as $slug => $plan) {
+            if (! ($plan['checkout_enabled'] ?? false)
+                || blank($plan['stripe_price'] ?? null)
+                || ! is_numeric($plan['price_cents'] ?? null)) {
+                continue;
+            }
+            Plan::updateOrCreate(['slug' => $slug], [
+                'name' => $plan['name'],
+                'stripe_plan' => $plan['stripe_price'],
+                'price' => (int) $plan['price_cents'],
+                'description' => $plan['description'],
+            ]);
         }
     }
 }

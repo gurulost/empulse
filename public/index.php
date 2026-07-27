@@ -16,17 +16,19 @@ define('LARAVEL_START', microtime(true));
 | for DB, cache, session, and queue settings.
 |
 */
-if (function_exists('posix_getppid') && !getenv('DB_HOST')) {
-    $ppidEnvFile = '/proc/' . posix_getppid() . '/environ';
+if (function_exists('posix_getppid') && ! getenv('DB_HOST')) {
+    $ppidEnvFile = '/proc/'.posix_getppid().'/environ';
     if (is_readable($ppidEnvFile)) {
         $parentEnv = @file_get_contents($ppidEnvFile);
         if ($parentEnv) {
             foreach (explode("\0", $parentEnv) as $entry) {
-                if ($entry === '' || strpos($entry, '=') === false) continue;
+                if ($entry === '' || strpos($entry, '=') === false) {
+                    continue;
+                }
                 [$key, $val] = explode('=', $entry, 2);
-                if ($key && !getenv($key)) {
+                if ($key && ! getenv($key)) {
                     putenv($entry);
-                    $_ENV[$key]    = $val;
+                    $_ENV[$key] = $val;
                     $_SERVER[$key] = $val;
                 }
             }

@@ -17,19 +17,19 @@
                                 <i class="bi bi-person-plus-fill"></i>
                             </div>
                             <h3 class="fw-bold text-center mb-3" style="font-family: 'Outfit', sans-serif; letter-spacing: -0.02em;">Join Empulse</h3>
-                            <p class="text-center small opacity-75 mb-4">Start transforming your workplace culture today</p>
+                            <p class="text-center small opacity-75 mb-4">Prepare your company for a WorkFit learning cycle</p>
                             <div class="text-start w-100 px-2">
                                 <div class="d-flex align-items-center gap-2 mb-2 small opacity-90">
                                     <i class="bi bi-check-circle-fill"></i>
-                                    <span>14-day free trial</span>
+                                    <span>Create the company workspace</span>
                                 </div>
                                 <div class="d-flex align-items-center gap-2 mb-2 small opacity-90">
                                     <i class="bi bi-check-circle-fill"></i>
-                                    <span>No credit card required</span>
+                                    <span>Add the roster before measurement</span>
                                 </div>
                                 <div class="d-flex align-items-center gap-2 small opacity-90">
                                     <i class="bi bi-check-circle-fill"></i>
-                                    <span>Cancel anytime</span>
+                                    <span>Billing is confirmed before dispatch</span>
                                 </div>
                             </div>
                         </div>
@@ -38,7 +38,7 @@
                         <div class="col-md-7">
                             <div class="card-body p-4 p-lg-5">
                                 <h2 class="fw-bold mb-2" style="font-family: 'Outfit', sans-serif; letter-spacing: -0.02em;">Create Account</h2>
-                                <p class="text-muted mb-4">Get started with your free trial</p>
+                                <p class="text-muted mb-4">Create the accountable owner and company workspace</p>
 
                                 @if($errors->any())
                                     <div class="alert alert-danger alert-dismissible fade show rounded-3" role="alert">

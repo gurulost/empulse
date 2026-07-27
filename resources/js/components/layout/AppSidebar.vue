@@ -39,6 +39,12 @@
                             <span class="nav-label">Analytics & Reports</span>
                         </a>
                     </li>
+                    <li v-if="canAccessActions" class="nav-item">
+                        <a href="/actions" class="nav-link" :class="{ active: routeStartsWith('actions.') }">
+                            <span class="nav-icon"><i class="bi bi-arrow-repeat"></i></span>
+                            <span class="nav-label">Leadership Actions</span>
+                        </a>
+                    </li>
                     <li v-if="canManageSurveys" class="nav-item">
                         <a href="/surveys/manage" class="nav-link" :class="{ active: currentRouteName === 'surveys.manage' }">
                             <span class="nav-icon"><i class="bi bi-ui-checks-grid"></i></span>
@@ -125,6 +131,7 @@ const roleName = computed(() => {
     return 'Member';
 });
 const canAccessCompanyReports = computed(() => !isEmployee.value && hasCompanyContext.value);
+const canAccessActions = computed(() => !isEmployee.value && hasCompanyContext.value);
 const canManageTeam = computed(() => !isEmployee.value && hasCompanyContext.value);
 const canManageSurveys = computed(() => isManager.value);
 const canManageWaves = computed(() => isManager.value);

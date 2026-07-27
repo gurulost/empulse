@@ -1,4 +1,4 @@
-release: sh -lc 'php artisan migrate --force && if [ "${SEED_DEMO_ON_RELEASE:-false}" = "true" ]; then php artisan demo:seed --import-instrument --employees=${DEMO_SEED_EMPLOYEES:-120} --months=${DEMO_SEED_MONTHS:-6} --force --if-empty; fi'
+release: sh -lc 'php artisan app:production-check && php artisan migrate --force'
 web: heroku-php-apache2 public/
-worker: php artisan queue:work --tries=1 --sleep=1 --timeout=120
-scheduler: php artisan schedule:work
+worker: sh -lc 'php artisan app:production-check && php artisan queue:work --tries=3 --backoff=10 --sleep=1 --timeout=120 --max-time=3600'
+scheduler: sh -lc 'php artisan app:production-check && php artisan schedule:work'

@@ -29,7 +29,7 @@ class OnboardingTelemetryService
 
     public function recordFirstWaveDispatched(SurveyWave $wave, ?User $actor = null): ?OnboardingEvent
     {
-        if (!$wave->company_id) {
+        if (! $wave->company_id) {
             return null;
         }
 

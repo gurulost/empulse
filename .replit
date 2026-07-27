@@ -33,17 +33,10 @@ waitForPort = 5000
 localPort = 5000
 externalPort = 80
 
-[deployment]
-deploymentTarget = "vm"
-healthCheckPath = "/up"
-run = ["bash", "-lc", "php artisan serve --host=0.0.0.0 --port=5000"]
-build = ["bash", "-lc", "composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist && npm ci && npm run build && php artisan migrate --force"]
-
 [userenv]
 
 [userenv.shared]
 DB_CONNECTION = "pgsql"
-SURVEY_STRICT_VALIDATION_ENABLED = "false"
 SESSION_DRIVER = "database"
 QUEUE_CONNECTION = "database"
 CACHE_STORE = "database"
@@ -51,7 +44,7 @@ CACHE_STORE = "database"
 [userenv.production]
 APP_ENV = "production"
 REPLIT_DEPLOYMENT = "1"
-APP_DEBUG = "true"
+APP_DEBUG = "false"
 
 [userenv.development]
 healthCheckPath = "/up"

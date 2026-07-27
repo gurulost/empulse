@@ -11,6 +11,6 @@ class DashboardAnalyticsController extends Controller
 
     public function __invoke()
     {
-        return response()->view('dashboard.analytics');
+        return view('dashboard.analytics');
     }
 }

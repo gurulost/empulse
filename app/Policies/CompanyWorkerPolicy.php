@@ -2,48 +2,43 @@
 
 namespace App\Policies;
 
-use App\Models\User;
 use App\Models\CompanyWorker;
+use App\Models\User;
+use App\Models\User as UserModel;
+use App\Services\OrganizationScopeService;
 
 class CompanyWorkerPolicy
 {
-    public function before(User $authUser, $ability)
-    {
-        if ((int)($authUser->is_admin ?? 0) === 1) {
-            return true;
-        }
-    }
+    public function __construct(protected OrganizationScopeService $scope) {}
 
     public function viewAny(User $authUser): bool
     {
-        return true;
+        return $authUser->hasCapability('team.manage');
     }
 
     public function view(User $authUser, CompanyWorker $target): bool
     {
-        return (int)$authUser->company_id === (int)$target->company_id;
+        $targetUser = UserModel::query()
+            ->where('company_id', $target->company_id)
+            ->where('email', $target->email)
+            ->first();
+
+        return $targetUser ? $this->scope->canView($authUser, $targetUser) : false;
     }
 
     public function create(User $authUser): bool
     {
-        return (int)$authUser->role !== 4; // not employee
+        return $authUser->hasCapability('team.manage');
     }
 
     public function update(User $authUser, CompanyWorker $target): bool
     {
-        if ((int)$authUser->company_id !== (int)$target->company_id) {
-            return false;
-        }
-        if ((int)$authUser->role === 1) {
-            return true;
-        }
-        if ((int)$authUser->role === 2) {
-            return in_array((int)$target->role, [3,4], true) && $target->department === optional(CompanyWorker::where(['company_id' => $authUser->company_id, 'email' => $authUser->email])->first())->department;
-        }
-        if ((int)$authUser->role === 3) {
-            return (int)$target->role === 4 && $target->supervisor === $authUser->name;
-        }
-        return false;
+        $targetUser = UserModel::query()
+            ->where('company_id', $target->company_id)
+            ->where('email', $target->email)
+            ->first();
+
+        return $targetUser ? $this->scope->canManage($authUser, $targetUser) : false;
     }
 
     public function delete(User $authUser, CompanyWorker $target): bool
@@ -51,4 +46,3 @@ class CompanyWorkerPolicy
         return $this->update($authUser, $target);
     }
 }
-

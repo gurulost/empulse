@@ -26,9 +26,13 @@
                             </a>
                         </div>
                         <div>
-                            <a class="prof-btn-delete" type="button" href="{{ route('delete.avatar',Auth::user()->id) }}">
-                                <i class="bi bi-trash3 me-2"></i>Remove Avatar
-                            </a>
+                            <form method="POST" action="{{ route('delete.avatar') }}">
+                                @csrf
+                                @method('DELETE')
+                                <button class="prof-btn-delete" type="submit">
+                                    <i class="bi bi-trash3 me-2"></i>Remove Avatar
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -59,13 +63,18 @@
                             <h6 class="fw-bold mb-3" style="font-family: 'Outfit', sans-serif; color: #0c1222;">Change Password</h6>
 
                             <div class="form-label-group">
+                                <label for="current_password">Current password</label>
+                                <input type="password" id="current_password" class="form-control current_password" placeholder="Required to change your password" name="current_password" autocomplete="current-password">
+                            </div>
+
+                            <div class="form-label-group">
                                 <label for="new_pass">New password</label>
-                                <input type="password" id="new_pass" class="form-control new_pass" placeholder="Min. 8 characters" name="new_pass">
+                                <input type="password" id="new_pass" class="form-control new_pass" placeholder="Min. 12 characters" name="new_pass" autocomplete="new-password">
                             </div>
 
                             <div class="form-label-group">
                                 <label for="conf_new_pass">Confirm new password</label>
-                                <input type="password" id="conf_new_pass" class="form-control conf_new_pass" placeholder="Repeat new password" name="conf_new_pass">
+                                <input type="password" id="conf_new_pass" class="form-control conf_new_pass" placeholder="Repeat new password" name="conf_new_pass" autocomplete="new-password">
                             </div>
 
                             <button class="form-confirm-pass-btn" name="editPassword" type="submit">

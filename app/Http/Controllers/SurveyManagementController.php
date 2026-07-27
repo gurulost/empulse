@@ -2,27 +2,28 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\SurveyVersion;
+use App\Models\SurveyWave;
 use App\Services\OnboardingTelemetryService;
 use App\Services\SurveyAnalyticsService;
 use App\Services\SurveyService;
-use App\Models\SurveyVersion;
-use App\Models\SurveyWave;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class SurveyManagementController extends Controller
 {
     protected SurveyService $surveyService;
+
     protected SurveyAnalyticsService $analyticsService;
+
     protected OnboardingTelemetryService $telemetry;
 
     public function __construct(
         SurveyService $surveyService,
         SurveyAnalyticsService $analyticsService,
         OnboardingTelemetryService $telemetry
-    )
-    {
-        $this->middleware(['auth', 'admin']);
+    ) {
+        $this->middleware(['auth', 'capability:survey.manage']);
         $this->surveyService = $surveyService;
         $this->analyticsService = $analyticsService;
         $this->telemetry = $telemetry;
@@ -83,7 +84,7 @@ class SurveyManagementController extends Controller
                 : 0;
         }
 
-        if ($hasCompanyContext && !$activeVersion) {
+        if ($hasCompanyContext && ! $activeVersion) {
             $this->telemetry->record([
                 'company_id' => $companyId,
                 'name' => 'survey_activation_handoff_viewed',

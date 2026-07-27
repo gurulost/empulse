@@ -112,13 +112,13 @@
         .app-footer {
             text-align: center;
             padding: 1.5rem 1rem;
-            color: #94a3b8;
+            color: #475569;
             font-size: 0.8125rem;
             margin-top: auto;
             border-top: 1px solid #e2e8f0;
         }
         .app-footer a {
-            color: #94a3b8;
+            color: #475569;
             text-decoration: none;
             transition: color 0.15s ease;
         }

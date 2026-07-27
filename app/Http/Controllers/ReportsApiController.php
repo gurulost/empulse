@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\SurveyResponse;
 use App\Models\SurveyWave;
+use App\Services\OrganizationScopeService;
 use App\Services\SurveyAnalyticsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -25,8 +26,15 @@ class ReportsApiController extends Controller
             return $errorResponse;
         }
 
-        $metric = $request->input('metric', 'engagement');
-        $data = $this->analytics->getTrendData($companyId, $metric);
+        $metric = $request->input('metric', 'workfit_indicator');
+        if (! in_array($metric, ['workfit_indicator', 'culture'], true)) {
+            return response()->json(['message' => 'Unsupported metric.'], 422);
+        }
+        $data = $this->analytics->getTrendData(
+            $companyId,
+            $metric,
+            app(OrganizationScopeService::class)->analyticsFilters($request->user())
+        );
 
         return response()->json($data);
     }
@@ -46,7 +54,7 @@ class ReportsApiController extends Controller
                 ->whereKey($requestedWaveId)
                 ->value('id');
 
-            if (!$waveId) {
+            if (! $waveId) {
                 return response()->json(['message' => 'Wave not found'], 404);
             }
         } else {
@@ -55,7 +63,7 @@ class ReportsApiController extends Controller
                 ->orderByDesc('due_at')
                 ->orderByDesc('id')
                 ->first();
-            
+
             if ($latestWave) {
                 $waveId = $latestWave->id;
             } else {
@@ -67,17 +75,22 @@ class ReportsApiController extends Controller
                     ->value('survey_wave_id');
             }
 
-            if (!$waveId) {
+            if (! $waveId) {
                 return response()->json(['message' => 'No waves found'], 404);
             }
         }
 
         $dimension = $request->input('dimension', 'department');
-        if (!in_array($dimension, ['department', 'team'], true)) {
+        if (! in_array($dimension, ['department', 'team'], true)) {
             $dimension = 'department';
         }
 
-        $data = $this->analytics->getComparisonData($companyId, $waveId, $dimension);
+        $data = $this->analytics->getComparisonData(
+            $companyId,
+            $waveId,
+            $dimension,
+            app(OrganizationScopeService::class)->analyticsFilters($request->user())
+        );
 
         return response()->json($data);
     }
@@ -97,7 +110,7 @@ class ReportsApiController extends Controller
     protected function resolveCompanyContext(Request $request): array
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return [null, response()->json(['message' => 'Unauthenticated.'], 401)];
         }
 
@@ -105,11 +118,11 @@ class ReportsApiController extends Controller
         $requestedCompanyId = $request->integer('company_id');
         $companyId = $requestedCompanyId ?: (int) ($user->company_id ?? 0);
 
-        if (!$companyId) {
+        if (! $companyId) {
             return [null, response()->json(['message' => 'Company is required.'], 422)];
         }
 
-        if (!$isSuperAdmin && (int) $user->company_id !== $companyId) {
+        if (! $isSuperAdmin && (int) $user->company_id !== $companyId) {
             return [null, response()->json(['message' => 'Forbidden'], 403)];
         }
 

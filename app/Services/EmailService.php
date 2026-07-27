@@ -9,7 +9,9 @@ use Illuminate\Support\Facades\Log;
 class EmailService
 {
     protected string $senderName = 'Workfitdx';
+
     protected string $senderEmail = 'billing@workfitdx.com';
+
     protected string $adminEmail = 'empulse@wercinstitute.org';
 
     protected function providerUnavailableResponse(): array
@@ -20,10 +22,15 @@ class EmailService
         ];
     }
 
-    public function sendLetter(string $email, string $name, string $subject, string $content): array
-    {
-        if (App::environment('testing')) {
-            return ['status' => 200];
+    public function sendLetter(
+        string $email,
+        string $name,
+        string $subject,
+        string $content,
+        ?string $providerIdempotencyKey = null
+    ): array {
+        if (App::environment('testing') && empty(config('services.brevo.key'))) {
+            return ['status' => 202, 'provider_message_id' => 'testing-message'];
         }
 
         if (empty(config('services.brevo.key'))) {
@@ -38,30 +45,48 @@ class EmailService
         try {
             $response = Http::withHeaders([
                 'api-key' => config('services.brevo.key'),
-                'Content-Type' => 'application/json'
-            ])->post('https://api.brevo.com/v3/smtp/email', [
+                'Content-Type' => 'application/json',
+            ])->post('https://api.brevo.com/v3/smtp/email', array_filter([
                 'sender' => [
                     'name' => $this->senderName,
-                    'email' => $this->senderEmail
+                    'email' => $this->senderEmail,
                 ],
                 'to' => [
                     [
                         'email' => $email,
-                        'name' => $name
-                    ]
+                        'name' => $name,
+                    ],
                 ],
                 'subject' => $subject,
-                'htmlContent' => $content
-            ]);
+                'htmlContent' => $content,
+                'headers' => $providerIdempotencyKey
+                    ? ['idempotencyKey' => $providerIdempotencyKey]
+                    : null,
+            ], fn ($value) => $value !== null));
 
             if ($response->successful()) {
-                return ['status' => 200];
+                return [
+                    'status' => $response->status(),
+                    'provider_message_id' => $response->json('messageId'),
+                ];
+            }
+
+            if ($providerIdempotencyKey
+                && $response->status() === 400
+                && $response->json('code') === 'duplicate_parameter') {
+                return [
+                    'status' => 202,
+                    'provider_message_id' => null,
+                    'idempotent_replay' => true,
+                ];
             }
 
             Log::warning('Email send failed', ['status' => $response->status(), 'body' => $response->body()]);
+
             return ['status' => $response->status(), 'message' => $response->body()];
         } catch (\Exception $e) {
             Log::error('Email send exception', ['error' => $e->getMessage()]);
+
             return ['status' => 500, 'message' => $e->getMessage()];
         }
     }
@@ -71,7 +96,7 @@ class EmailService
         $content = view('mail', [
             'name' => $name,
             'email' => $email,
-            'phone' => $phone
+            'phone' => $phone,
         ])->render();
 
         return $this->sendToAdmin('From customer', $content);
@@ -82,14 +107,20 @@ class EmailService
         $content = view('auth.passwords.letter', [
             'name' => $name,
             'email' => $email,
-            'token' => $token
+            'token' => $token,
         ])->render();
 
         return $this->sendLetter($email, $name, 'Reset password', $content);
     }
 
-    public function sendSurveyInvitation(string $email, string $name, string $surveyUrl, string $companyName, ?string $waveLabel = null): array
-    {
+    public function sendSurveyInvitation(
+        string $email,
+        string $name,
+        string $surveyUrl,
+        string $companyName,
+        ?string $waveLabel = null,
+        ?string $providerIdempotencyKey = null
+    ): array {
         $content = view('emails.survey-invitation', [
             'name' => $name,
             'surveyUrl' => $surveyUrl,
@@ -97,7 +128,37 @@ class EmailService
             'waveLabel' => $waveLabel,
         ])->render();
 
-        return $this->sendLetter($email, $name, "{$companyName} survey invitation", $content);
+        return $this->sendLetter(
+            $email,
+            $name,
+            "{$companyName} survey invitation",
+            $content,
+            $providerIdempotencyKey
+        );
+    }
+
+    public function sendSurveyReminder(
+        string $email,
+        string $name,
+        string $surveyUrl,
+        string $companyName,
+        ?string $waveLabel = null,
+        ?string $providerIdempotencyKey = null
+    ): array {
+        $content = view('emails.survey-invitation', [
+            'name' => $name,
+            'surveyUrl' => $surveyUrl,
+            'companyName' => $companyName,
+            'waveLabel' => $waveLabel,
+        ])->render();
+
+        return $this->sendLetter(
+            $email,
+            $name,
+            "Reminder: {$companyName} survey",
+            $content,
+            $providerIdempotencyKey
+        );
     }
 
     public function sendToAdmin(string $subject, string $content): array
@@ -117,20 +178,20 @@ class EmailService
         try {
             $response = Http::withHeaders([
                 'api-key' => config('services.brevo.key'),
-                'Content-Type' => 'application/json'
+                'Content-Type' => 'application/json',
             ])->post('https://api.brevo.com/v3/smtp/email', [
                 'sender' => [
                     'name' => $this->senderName,
-                    'email' => $this->senderEmail
+                    'email' => $this->senderEmail,
                 ],
                 'to' => [
                     [
                         'email' => $this->adminEmail,
-                        'name' => $this->senderName
-                    ]
+                        'name' => $this->senderName,
+                    ],
                 ],
                 'subject' => $subject,
-                'htmlContent' => $content
+                'htmlContent' => $content,
             ]);
 
             if ($response->successful()) {
@@ -140,6 +201,7 @@ class EmailService
             return ['status' => $response->status(), 'message' => $response->body()];
         } catch (\Exception $e) {
             Log::error('Admin email send exception', ['error' => $e->getMessage()]);
+
             return ['status' => 500, 'message' => $e->getMessage()];
         }
     }

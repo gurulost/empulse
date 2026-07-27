@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 export function useReportsApi() {
-    const getTrends = async (metric = 'engagement', companyId = null) => {
+    const getTrends = async (metric = 'workfit_indicator', companyId = null) => {
         const params = { metric };
         if (companyId) {
             params.company_id = companyId;

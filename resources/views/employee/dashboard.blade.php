@@ -33,7 +33,7 @@
                                     <h4 class="mb-1 fw-bold" style="font-family: 'Outfit', sans-serif; letter-spacing: -0.02em;">{{ $assignment->wave_label ?? 'Active survey' }}</h4>
                                     <div class="small text-muted">
                                         Status: {{ ucfirst($assignment->status ?? 'pending') }}
-                                        @if($assignment->invite_status === 'sent' && $assignment->invited_at)
+                                        @if(in_array($assignment->invite_status, ['accepted', 'delivered'], true) && $assignment->invited_at)
                                             &middot; Invited {{ $assignment->invited_at->format('M d, Y H:i') }}
                                         @endif
                                     </div>
@@ -75,7 +75,7 @@
 
                             <a class="btn btn-primary rounded-pill px-4 fw-semibold"
                                 id="employee-survey-launch-cta"
-                                href="{{ route('survey.take', $assignment->token) }}"
+                                href="{{ route('employee.surveys.launch', $assignment) }}"
                                 target="_blank"
                                 rel="noreferrer"
                                 data-estimated-minutes="{{ (int) ($surveyMeta['estimated_minutes'] ?? 4) }}">

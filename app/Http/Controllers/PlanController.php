@@ -2,18 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Companies;
 use App\Models\Plan;
+use App\Models\User;
+use App\Services\OrganizationEntitlementService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class PlanController extends Controller
 {
+    public function __construct(protected OrganizationEntitlementService $entitlements) {}
+
     public function stripePay()
     {
         $user = auth()->user();
-        abort_unless($user && (int)$user->role === 1 && $user->company_id !== null, 403);
+        $this->billingCompany($user);
         $plans = Plan::query()->orderBy('price')->get();
 
         return view('stripe.plans', [
@@ -26,15 +30,15 @@ class PlanController extends Controller
     public function show(Plan $plan, Request $request)
     {
         $user = auth()->user();
-        abort_unless($user && (int)$user->role === 1 && $user->company_id !== null, 403);
+        $company = $this->billingCompany($user);
         $intent = null;
         $billingAvailable = $this->stripeIsConfigured();
         $planPurchasable = $billingAvailable && filled($plan->stripe_plan);
-        $hasActiveSubscription = (bool) optional($user->subscription('default'))->valid();
+        $hasActiveSubscription = (bool) optional($company->subscription('default'))->valid();
 
-        if ($planPurchasable && !$hasActiveSubscription) {
+        if ($planPurchasable && ! $hasActiveSubscription) {
             try {
-                $intent = $user->createSetupIntent();
+                $intent = $company->createSetupIntent();
             } catch (\Throwable $exception) {
                 Log::warning('Stripe setup intent could not be created', [
                     'user_id' => $user->id,
@@ -58,7 +62,7 @@ class PlanController extends Controller
     public function subscription(Request $request): RedirectResponse
     {
         $user = auth()->user();
-        abort_unless($user && (int)$user->role === 1 && $user->company_id !== null, 403);
+        $company = $this->billingCompany($user);
         $request->validate([
             'plan' => 'required|exists:plans,id',
             'token' => 'required|string',
@@ -66,20 +70,28 @@ class PlanController extends Controller
 
         $plan = Plan::findOrFail($request->plan);
 
-        if (!$this->stripeIsConfigured() || !$plan->stripe_plan) {
+        if (! $this->stripeIsConfigured() || ! $plan->stripe_plan) {
             return redirect()
                 ->route('plans.show', $plan)
                 ->withErrors('Billing is unavailable in this environment until Stripe is configured.');
         }
 
-        if (optional($request->user()->subscription('default'))->valid()) {
+        if (optional($company->subscription('default'))->valid()) {
             return redirect()
                 ->route('billing.index')
                 ->with('status', 'An active subscription is already on this account. Manage it from the billing center.');
         }
 
         try {
-            $request->user()->newSubscription('default', $plan->stripe_plan)->create($request->token);
+            $catalogPlan = config("billing.catalog.{$plan->slug}");
+            if (! is_array($catalogPlan)
+                || blank($catalogPlan['stripe_price'] ?? null)
+                || $catalogPlan['stripe_price'] !== $plan->stripe_plan) {
+                return redirect()
+                    ->route('plans.show', $plan)
+                    ->withErrors('This plan is not reconciled with the production catalog.');
+            }
+            $company->newSubscription('default', $plan->stripe_plan)->create($request->token);
         } catch (\Throwable $exception) {
             Log::warning('Stripe subscription checkout failed', [
                 'user_id' => $request->user()->id,
@@ -100,5 +112,14 @@ class PlanController extends Controller
     protected function stripeIsConfigured(): bool
     {
         return filled(config('services.stripe.key')) && filled(config('services.stripe.secret'));
+    }
+
+    protected function billingCompany(?User $user): Companies
+    {
+        abort_unless($user && $user->company_id !== null, 403);
+        $company = Companies::findOrFail($user->company_id);
+        abort_unless($this->entitlements->isBillingAdmin($user, $company), 403);
+
+        return $company;
     }
 }

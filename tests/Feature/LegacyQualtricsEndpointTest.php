@@ -19,4 +19,3 @@ class LegacyQualtricsEndpointTest extends TestCase
         $response->assertNotFound();
     }
 }
-

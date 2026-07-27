@@ -280,7 +280,7 @@ class OnboardingReportService
             ->join(DB::raw('(
                 SELECT company_id, MAX(created_at) as max_created_at
                 FROM onboarding_events
-                WHERE company_id IN (' . implode(',', array_map('intval', $companyIds)) . ')
+                WHERE company_id IN ('.implode(',', array_map('intval', $companyIds)).')
                 GROUP BY company_id
             ) as latest_events'), function ($join) {
                 $join->on('latest_events.company_id', '=', 'events.company_id')
@@ -351,12 +351,12 @@ class OnboardingReportService
 
     protected function summary(Collection $rows, Collection $alerts): array
     {
-        $started = $rows->filter(fn (array $row) => !empty($row['started_at']));
-        $dispatched = $rows->filter(fn (array $row) => !empty($row['first_wave_at']));
-        $responded = $rows->filter(fn (array $row) => !empty($row['first_response_at']));
+        $started = $rows->filter(fn (array $row) => ! empty($row['started_at']));
+        $dispatched = $rows->filter(fn (array $row) => ! empty($row['first_wave_at']));
+        $responded = $rows->filter(fn (array $row) => ! empty($row['first_response_at']));
         $dormant = $rows->filter(fn (array $row) => ($row['stage']['key'] ?? 'dormant') === 'dormant');
         $stalled = $rows->filter(function (array $row) {
-            if (empty($row['started_at']) || !empty($row['first_response_at'])) {
+            if (empty($row['started_at']) || ! empty($row['first_response_at'])) {
                 return false;
             }
 
@@ -411,7 +411,7 @@ class OnboardingReportService
             ->map(function (Collection $planRows) use ($alertsByCompany) {
                 $first = $planRows->first();
                 $responded = $planRows->filter(fn (array $row) => ($row['stage']['key'] ?? null) === 'live_data')->count();
-                $billingReady = $planRows->filter(fn (array $row) => !empty($row['billing_allows_scheduling']))->count();
+                $billingReady = $planRows->filter(fn (array $row) => ! empty($row['billing_allows_scheduling']))->count();
 
                 return [
                     'key' => $first['plan_key'],
@@ -462,7 +462,7 @@ class OnboardingReportService
             );
         }
 
-        if ($stageKey === 'started' && !$row['billing_allows_scheduling']) {
+        if ($stageKey === 'started' && ! $row['billing_allows_scheduling']) {
             return $this->buildAlert(
                 $row,
                 key: 'billing_blocked_before_first_wave',
@@ -583,7 +583,7 @@ class OnboardingReportService
 
     protected function stageForMetrics(?array $metrics): array
     {
-        if (!$metrics || empty($metrics['started_at'])) {
+        if (! $metrics || empty($metrics['started_at'])) {
             return [
                 'key' => 'dormant',
                 'label' => 'Dormant',
@@ -591,7 +591,7 @@ class OnboardingReportService
             ];
         }
 
-        if (!empty($metrics['first_response_at'])) {
+        if (! empty($metrics['first_response_at'])) {
             return [
                 'key' => 'live_data',
                 'label' => 'Live Data',
@@ -599,7 +599,7 @@ class OnboardingReportService
             ];
         }
 
-        if (!empty($metrics['first_wave_at'])) {
+        if (! empty($metrics['first_wave_at'])) {
             return [
                 'key' => 'wave_sent',
                 'label' => 'Wave Sent',
@@ -616,7 +616,7 @@ class OnboardingReportService
 
     protected function minutesBetween(?string $from, ?string $to): ?int
     {
-        if (!$from || !$to) {
+        if (! $from || ! $to) {
             return null;
         }
 
@@ -625,7 +625,7 @@ class OnboardingReportService
 
     protected function hoursSince(?string $value): ?int
     {
-        if (!$value) {
+        if (! $value) {
             return null;
         }
 

@@ -18,11 +18,11 @@ class InstallApp extends Command
 
     public function handle(): int
     {
-        if (!$this->canRunInCurrentEnvironment()) {
+        if (! $this->canRunInCurrentEnvironment()) {
             return self::FAILURE;
         }
 
-        if (!$this->canConnectToDatabase()) {
+        if (! $this->canConnectToDatabase()) {
             return self::FAILURE;
         }
 
@@ -32,8 +32,9 @@ class InstallApp extends Command
             return $migrateExitCode;
         }
 
-        if (!$this->shouldSeed()) {
+        if (! $this->shouldSeed()) {
             $this->info('Skipping seeders.');
+
             return self::SUCCESS;
         }
 
@@ -45,7 +46,7 @@ class InstallApp extends Command
 
     protected function canRunInCurrentEnvironment(): bool
     {
-        if (!app()->environment('production')) {
+        if (! app()->environment('production')) {
             return true;
         }
 
@@ -100,12 +101,12 @@ class InstallApp extends Command
             return true;
         }
 
-        if (!(bool) $this->option('seed-if-empty')) {
+        if (! (bool) $this->option('seed-if-empty')) {
             return false;
         }
 
         try {
-            if (!Schema::hasTable('users')) {
+            if (! Schema::hasTable('users')) {
                 return false;
             }
 
@@ -115,4 +116,3 @@ class InstallApp extends Command
         }
     }
 }
-

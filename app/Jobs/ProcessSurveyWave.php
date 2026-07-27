@@ -2,12 +2,13 @@
 
 namespace App\Jobs;
 
-use App\Jobs\SendSurveyAssignmentInvitation;
 use App\Models\SurveyAssignment;
 use App\Models\SurveyWave;
 use App\Models\SurveyWaveLog;
-use App\Services\OnboardingTelemetryService;
 use App\Models\User;
+use App\Services\OnboardingTelemetryService;
+use App\Services\OrganizationEntitlementService;
+use App\Services\SurveyCohortService;
 use App\Services\SurveyService;
 use App\Support\CompanyBilling;
 use App\Support\SurveyWaveAutomation;
@@ -21,9 +22,9 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
-class ProcessSurveyWave implements ShouldQueue, ShouldBeUnique
+class ProcessSurveyWave implements ShouldBeUnique, ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, Batchable;
+    use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $uniqueFor;
 
@@ -37,27 +38,33 @@ class ProcessSurveyWave implements ShouldQueue, ShouldBeUnique
         return "survey-wave:{$this->waveId}";
     }
 
-    public function handle(SurveyService $surveyService, ?OnboardingTelemetryService $telemetry = null): void
-    {
+    public function handle(
+        SurveyService $surveyService,
+        ?OnboardingTelemetryService $telemetry = null,
+        ?SurveyCohortService $cohorts = null
+    ): void {
+        $cohorts = $cohorts ?: app(SurveyCohortService::class);
         $telemetry = $telemetry ?: app(OnboardingTelemetryService::class);
         $wave = SurveyWave::with('survey', 'surveyVersion')->find($this->waveId);
-        if (!$wave || !$wave->survey || !$wave->company_id) {
+        if (! $wave || ! $wave->survey || ! $wave->company_id) {
             return;
         }
 
         if ($wave->status === 'paused') {
             $this->logEvent($wave, null, 'skipped', 'Wave was paused before processing started.');
+
             return;
         }
 
         if ($wave->due_at && $wave->due_at->isPast()) {
             $wave->update(['status' => 'completed']);
             $this->logEvent($wave, null, 'completed', 'Wave passed its due date before processing started.');
+
             return;
         }
 
         $manager = CompanyBilling::manager($wave->company_id);
-        if (!CompanyBilling::allowsScheduling($manager)) {
+        if (! CompanyBilling::allowsScheduling((int) $wave->company_id)) {
             $wave->update(['status' => 'paused']);
             $this->logEvent(
                 $wave,
@@ -65,12 +72,15 @@ class ProcessSurveyWave implements ShouldQueue, ShouldBeUnique
                 'paused',
                 'Billing became inactive before processing started.'
             );
+
             return;
         }
 
-        if ($wave->kind === 'drip' && !SurveyWaveAutomation::dripEnabledForTariff((int) $manager?->tariff)) {
+        if ($wave->kind === 'drip'
+            && ! CompanyBilling::hasFeature((int) $wave->company_id, 'recurring_waves')) {
             $wave->update(['status' => 'paused']);
             $this->logEvent($wave, null, 'paused', 'Current plan does not allow drip cadences.');
+
             return;
         }
 
@@ -84,11 +94,15 @@ class ProcessSurveyWave implements ShouldQueue, ShouldBeUnique
         if (empty($targetRoles)) {
             $wave->update(['status' => 'scheduled']);
             $this->logEvent($wave, null, 'skipped', 'Wave has no eligible target roles.');
+
             return;
         }
 
-        $companyUsers = User::where('company_id', $wave->company_id)
-            ->whereIn('role', $targetRoles)
+        $cycle = $cohorts->freeze($wave, $targetRoles);
+        $audience = $cycle->audienceMembers->keyBy('user_id');
+        $companyUsers = User::query()
+            ->whereIn('id', $audience->keys())
+            ->orderBy('id')
             ->get();
         $stats = [
             'dispatched' => 0,
@@ -98,33 +112,64 @@ class ProcessSurveyWave implements ShouldQueue, ShouldBeUnique
 
         foreach ($companyUsers as $user) {
             try {
-                $assignment = $surveyService->getOrCreateAssignmentForWave($user, $wave);
-                if (!$assignment) {
+                $entitlements = app(OrganizationEntitlementService::class);
+                $assignment = $surveyService->getOrCreateAssignmentForWave(
+                    $user,
+                    $wave,
+                    $cycle,
+                    $audience->get($user->id)
+                );
+                if (! $assignment) {
                     $stats['skipped']++;
                     $this->logEvent($wave, $user, 'skipped', 'No assignment available.');
+
                     continue;
                 }
 
                 if ($message = $this->shouldSkipAssignment($wave, $assignment)) {
                     $stats['skipped']++;
                     $this->logEvent($wave, $user, 'skipped', $message);
+
                     continue;
                 }
 
-                $assignment->update([
-                    'survey_wave_id' => $wave->id,
-                    'wave_label' => $wave->label,
-                    'last_dispatched_at' => now(),
-                    'dispatch_count' => ($assignment->dispatch_count ?? 0) + 1,
-                    'invite_status' => 'queued',
-                    'invite_error' => null,
-                ]);
+                $consumed = $entitlements->consumeActiveRespondent(
+                    (int) $wave->company_id,
+                    $user->id,
+                    function () use ($assignment, $wave, $cycle, $entitlements): void {
+                        $assignment->update([
+                            'survey_wave_id' => $wave->id,
+                            'wave_label' => $wave->label,
+                            'last_dispatched_at' => now(),
+                            'dispatch_count' => ($assignment->dispatch_count ?? 0) + 1,
+                            'invite_status' => 'queued',
+                            'invite_error' => null,
+                        ]);
+                        $entitlements->recordUsage(
+                            (int) $wave->company_id,
+                            "assignment_dispatch:{$cycle->id}:{$assignment->user_id}",
+                            'dispatched_assignments',
+                            1,
+                            'assignment',
+                            [
+                                'survey_wave_id' => $wave->id,
+                                'survey_wave_cycle_id' => $cycle->id,
+                            ]
+                        );
+                    }
+                );
+                if (! $consumed) {
+                    $stats['skipped']++;
+                    $this->logEvent($wave, $user, 'skipped', 'Plan active-respondent limit reached.');
+
+                    continue;
+                }
 
                 SendSurveyAssignmentInvitation::dispatch($assignment->id);
 
                 $stats['dispatched']++;
                 $this->logEvent($wave, $user, 'dispatched', 'Assignment refreshed and invitation queued.');
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 Log::error('Wave scheduling failed', [
                     'wave' => $wave->id,
                     'user' => $user->id,
@@ -135,13 +180,14 @@ class ProcessSurveyWave implements ShouldQueue, ShouldBeUnique
             }
         }
 
+        $cohorts->markDispatched($cycle);
         $this->finalizeWave($wave, $stats, $telemetry);
     }
 
     public function failed(Throwable $exception): void
     {
         $wave = SurveyWave::find($this->waveId);
-        if (!$wave) {
+        if (! $wave) {
             return;
         }
 
@@ -151,7 +197,7 @@ class ProcessSurveyWave implements ShouldQueue, ShouldBeUnique
             $wave->update(['status' => $recoveredStatus]);
         }
 
-        $message = 'Queue job failed: ' . $exception->getMessage();
+        $message = 'Queue job failed: '.$exception->getMessage();
         if ($recoveredStatus) {
             $message .= " Wave reset to {$recoveredStatus}.";
         }
@@ -188,7 +234,7 @@ class ProcessSurveyWave implements ShouldQueue, ShouldBeUnique
         }
 
         $threshold = SurveyWaveAutomation::cadenceThreshold($wave->cadence);
-        if (!$threshold) {
+        if (! $threshold) {
             return null;
         }
 
@@ -229,21 +275,26 @@ class ProcessSurveyWave implements ShouldQueue, ShouldBeUnique
 
     protected function determineNextStatus(SurveyWave $wave): string
     {
-        if ($wave->kind === 'full') {
-            return 'completed';
-        }
-
         if ($wave->due_at && $wave->due_at->isPast()) {
             return 'completed';
         }
 
+        if ($wave->assignments()->exists()
+            && ! $wave->assignments()->where('status', '!=', 'completed')->exists()) {
+            return 'completed';
+        }
+
+        if ($wave->kind === 'full') {
+            return 'active';
+        }
+
         if ($wave->cadence === 'manual') {
             $assignmentQuery = $wave->assignments();
-            if (!$assignmentQuery->exists()) {
+            if (! $assignmentQuery->exists()) {
                 return 'scheduled';
             }
 
-            if (!$assignmentQuery->whereNull('last_dispatched_at')->exists()) {
+            if (! $assignmentQuery->whereNull('last_dispatched_at')->exists()) {
                 return 'completed';
             }
 

@@ -17,7 +17,7 @@ class SurveyBuilderController extends Controller
 
     public function __construct(SurveyService $surveyService)
     {
-        $this->middleware(['auth', 'workfit_admin']);
+        $this->middleware(['auth', 'capability:survey-builder.manage']);
         $this->surveyService = $surveyService;
     }
 
@@ -35,10 +35,18 @@ class SurveyBuilderController extends Controller
     public function getStructure($versionId)
     {
         $version = SurveyVersion::with([
-            'pages' => function ($q) { $q->orderBy('sort_order'); },
-            'pages.sections' => function ($q) { $q->orderBy('sort_order'); },
-            'pages.items' => function ($q) { $q->orderBy('sort_order'); },
-            'pages.sections.items' => function ($q) { $q->orderBy('sort_order'); },
+            'pages' => function ($q) {
+                $q->orderBy('sort_order');
+            },
+            'pages.sections' => function ($q) {
+                $q->orderBy('sort_order');
+            },
+            'pages.items' => function ($q) {
+                $q->orderBy('sort_order');
+            },
+            'pages.sections.items' => function ($q) {
+                $q->orderBy('sort_order');
+            },
             'pages.items.options',
             'pages.items.optionSource',
             'pages.sections.items.options',
@@ -56,11 +64,11 @@ class SurveyBuilderController extends Controller
             ->orderByDesc('id')
             ->first();
 
-        if (!$latestVersion) {
+        if (! $latestVersion) {
             $latestVersion = SurveyVersion::orderByDesc('id')->first();
         }
 
-        if (!$latestVersion) {
+        if (! $latestVersion) {
             return response()->json(['message' => 'No base version found'], 404);
         }
 
@@ -72,12 +80,19 @@ class SurveyBuilderController extends Controller
     public function publishVersion($versionId)
     {
         $version = SurveyVersion::findOrFail($versionId);
-        
+
         if ($version->is_active) {
             return response()->json(['message' => 'Already active'], 422);
         }
 
-        $this->surveyService->publishVersion($version);
+        try {
+            $this->surveyService->publishVersion($version);
+        } catch (\DomainException $exception) {
+            return response()->json([
+                'message' => 'Survey version failed publication checks.',
+                'errors' => [$exception->getMessage()],
+            ], 422);
+        }
 
         return response()->json(['status' => 'published']);
     }
@@ -86,7 +101,7 @@ class SurveyBuilderController extends Controller
     {
         $item = SurveyItem::findOrFail($itemId);
         $optionTypes = ['dropdown', 'single_select', 'single_select_text', 'multi_select'];
-        
+
         if ($item->version->is_active) {
             return response()->json(['message' => 'Cannot edit active version'], 403);
         }
@@ -117,7 +132,7 @@ class SurveyBuilderController extends Controller
             'display_logic' => $validated['display_logic'] ?? null,
         ]);
 
-        if (!in_array($validated['type'], $optionTypes, true)) {
+        if (! in_array($validated['type'], $optionTypes, true)) {
             $item->options()->delete();
             $item->optionSource()->delete();
         } elseif (array_key_exists('options', $validated)) {
@@ -169,7 +184,7 @@ class SurveyBuilderController extends Controller
 
         return response()->json($section->fresh());
     }
-    
+
     public function reorderItems(Request $request)
     {
         $validated = $request->validate([
@@ -183,7 +198,7 @@ class SurveyBuilderController extends Controller
         DB::transaction(function () use ($items) {
             foreach ($items as $itemData) {
                 $item = SurveyItem::with('version')->find($itemData['id']);
-                if (!$item || $item->version?->is_active) {
+                if (! $item || $item->version?->is_active) {
                     continue;
                 }
 

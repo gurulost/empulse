@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use App\Services\UserService;
 use App\Services\EmailService;
+use App\Services\UserService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class AdminRefactorTest extends TestCase
 {
@@ -42,7 +42,7 @@ class AdminRefactorTest extends TestCase
     public function test_user_service_has_helper_methods()
     {
         $service = app(UserService::class);
-        
+
         // Test generatePassword
         $password = $service->generatePassword(10);
         $this->assertEquals(10, strlen($password));

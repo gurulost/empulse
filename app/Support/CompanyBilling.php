@@ -2,7 +2,9 @@
 
 namespace App\Support;
 
+use App\Models\Companies;
 use App\Models\User;
+use App\Services\OrganizationEntitlementService;
 
 class CompanyBilling
 {
@@ -13,25 +15,16 @@ class CompanyBilling
             ->first();
     }
 
-    public static function status(?User $manager): string
+    public static function status(User|Companies|int|null $subject): string
     {
-        if (!$manager) {
+        $companyId = self::companyId($subject);
+        if (! $companyId) {
             return 'none';
         }
 
-        $subscription = $manager->subscriptions()
-            ->orderByDesc('created_at')
-            ->first();
+        $entitlement = app(OrganizationEntitlementService::class)->current($companyId);
 
-        if ($subscription && $subscription->stripe_status) {
-            return $subscription->stripe_status;
-        }
-
-        if (SurveyWaveAutomation::dripEnabledForTariff((int) $manager->tariff)) {
-            return 'manual-premium';
-        }
-
-        return 'none';
+        return $entitlement ? $entitlement->status : 'none';
     }
 
     public static function statusForCompany(int $companyId): string
@@ -39,14 +32,43 @@ class CompanyBilling
         return self::status(self::manager($companyId));
     }
 
-    public static function allowsScheduling(?User $manager): bool
+    public static function allowsScheduling(User|Companies|int|null $subject): bool
     {
-        $status = self::status($manager);
+        $companyId = self::companyId($subject);
 
-        if ($status === 'manual-premium') {
-            return true;
+        return $companyId
+            ? app(OrganizationEntitlementService::class)->canDispatch($companyId)
+            : false;
+    }
+
+    public static function hasFeature(User|Companies|int|null $subject, string $feature): bool
+    {
+        $companyId = self::companyId($subject);
+
+        return $companyId
+            ? app(OrganizationEntitlementService::class)->hasFeature($companyId, $feature)
+            : false;
+    }
+
+    public static function planKey(User|Companies|int|null $subject): string
+    {
+        $companyId = self::companyId($subject);
+
+        if (! $companyId) {
+            return 'none';
         }
+        $entitlement = app(OrganizationEntitlementService::class)->current($companyId);
 
-        return SurveyWaveAutomation::billingStatusAllows($status);
+        return $entitlement ? $entitlement->plan_key : 'none';
+    }
+
+    protected static function companyId(User|Companies|int|null $subject): ?int
+    {
+        return match (true) {
+            $subject instanceof User => $subject->company_id ? (int) $subject->company_id : null,
+            $subject instanceof Companies => (int) $subject->id,
+            is_int($subject) => $subject,
+            default => null,
+        };
     }
 }

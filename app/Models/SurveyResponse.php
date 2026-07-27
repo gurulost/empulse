@@ -13,18 +13,25 @@ class SurveyResponse extends Model
         'survey_id',
         'survey_version_id',
         'survey_wave_id',
+        'survey_wave_cycle_id',
+        'survey_wave_audience_member_id',
         'assignment_id',
         'user_id',
         'wave_label',
         'meta',
         'submitted_at',
         'duration_ms',
+        'cohort_snapshot',
+        'privacy_policy_version',
+        'metric_registry_version_id',
+        'metric_definition_hash',
     ];
 
     protected $casts = [
         'meta' => 'array',
         'submitted_at' => 'datetime',
         'duration_ms' => 'integer',
+        'cohort_snapshot' => 'array',
     ];
 
     public function assignment()

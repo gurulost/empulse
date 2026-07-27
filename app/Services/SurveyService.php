@@ -8,6 +8,8 @@ use App\Models\SurveyAssignment;
 use App\Models\SurveyResponse;
 use App\Models\SurveyVersion;
 use App\Models\SurveyWave;
+use App\Models\SurveyWaveAudienceMember;
+use App\Models\SurveyWaveCycle;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -15,99 +17,40 @@ use Illuminate\Support\Str;
 
 class SurveyService
 {
-    public function __construct(protected OnboardingTelemetryService $telemetry)
-    {
-    }
+    public function __construct(
+        protected OnboardingTelemetryService $telemetry,
+        protected SurveyVersionIntegrityService $versionIntegrity,
+        protected OrganizationEntitlementService $entitlements
+    ) {}
 
     public function getOrCreateAssignment(User $user, ?SurveyWave $wave = null): ?SurveyAssignment
     {
-        if ($wave) {
-            $wave->loadMissing('survey', 'surveyVersion');
-        }
-
-        $survey = $wave?->survey
-            ?: ($wave?->survey_id ? Survey::find($wave->survey_id) : null)
-            ?: $this->defaultSurvey();
-
-        $version = $wave?->surveyVersion
-            ?: ($wave?->survey_version_id ? SurveyVersion::find($wave->survey_version_id) : null)
-            ?: SurveyVersion::where('is_active', true)->orderByDesc('id')->first();
-
-        if (!$survey || !$version) {
-            return null;
-        }
-
-        $wave = $wave ?: $this->resolveCurrentWave($survey, $version, $user);
-
-        if ($wave) {
-            $assignment = SurveyAssignment::firstOrCreate(
-                [
-                    'survey_id' => $survey->id,
-                    'user_id' => $user->id,
-                    'survey_wave_id' => $wave->id,
-                ],
-                [
-                    'token' => (string) Str::uuid(),
-                    'status' => 'pending',
-                    'survey_version_id' => $version->id,
-                    'wave_label' => $wave->label ?? $this->currentWaveLabel($version),
-                    'due_at' => $wave->due_at,
-                ]
-            );
-        } else {
-            $assignment = SurveyAssignment::query()
-                ->where('survey_id', $survey->id)
+        if (! $wave) {
+            return SurveyAssignment::query()
                 ->where('user_id', $user->id)
-                ->orderByRaw("CASE WHEN status = 'completed' THEN 1 ELSE 0 END")
+                ->where('status', 'pending')
+                ->whereNotNull('survey_version_id')
                 ->orderByDesc('id')
                 ->first();
-
-            if (!$assignment) {
-                $assignment = SurveyAssignment::create([
-                    'survey_id' => $survey->id,
-                    'user_id' => $user->id,
-                    'token' => (string) Str::uuid(),
-                    'status' => 'pending',
-                    'survey_version_id' => $version->id,
-                    'wave_label' => $this->currentWaveLabel($version),
-                ]);
-            }
         }
 
-        $updates = [];
-        if (!$assignment->survey_version_id) {
-            $updates['survey_version_id'] = $version->id;
-        }
-        if (!$assignment->wave_label) {
-            $updates['wave_label'] = $wave?->label ?? $this->currentWaveLabel($version);
-        }
-        if ($wave && (int) ($assignment->survey_wave_id ?? 0) !== (int) $wave->id) {
-            $updates['survey_wave_id'] = $wave->id;
-        }
-        if ($wave && !$assignment->due_at && $wave->due_at) {
-            $updates['due_at'] = $wave->due_at;
-        }
-
-        if (!empty($updates)) {
-            $assignment->update($updates);
-        }
-
-        return $assignment->fresh();
+        return $this->getOrCreateAssignmentForWave($user, $wave);
     }
 
-    public function getOrCreateAssignmentForWave(User $user, SurveyWave $wave): ?SurveyAssignment
-    {
+    public function getOrCreateAssignmentForWave(
+        User $user,
+        SurveyWave $wave,
+        ?SurveyWaveCycle $cycle = null,
+        ?SurveyWaveAudienceMember $audienceMember = null
+    ): ?SurveyAssignment {
         $wave->loadMissing('survey', 'surveyVersion');
 
-        $survey = $wave->survey
-            ?: ($wave->survey_id ? Survey::find($wave->survey_id) : null)
-            ?: $this->defaultSurvey();
+        $survey = $wave->survey;
+        $version = $wave->surveyVersion;
 
-        $version = $wave->surveyVersion
-            ?: ($wave->survey_version_id ? SurveyVersion::find($wave->survey_version_id) : null)
-            ?: SurveyVersion::where('is_active', true)->orderByDesc('id')->first();
-
-        if (!$survey || !$version) {
+        if (! $survey
+            || ! $version
+            || ($survey->instrument_id && $survey->instrument_id !== $version->instrument_id)) {
             return null;
         }
 
@@ -115,27 +58,37 @@ class SurveyService
             ->where('survey_id', $survey->id)
             ->where('user_id', $user->id)
             ->where('survey_wave_id', $wave->id)
+            ->when(
+                $cycle,
+                fn ($query) => $query->where('survey_wave_cycle_id', $cycle->id)
+            )
             ->where('status', '!=', 'completed')
             ->orderByDesc('id')
             ->first();
 
-        if (!$assignment) {
+        if (! $assignment) {
             $assignment = SurveyAssignment::create([
                 'survey_id' => $survey->id,
                 'survey_version_id' => $version->id,
                 'survey_wave_id' => $wave->id,
+                'survey_wave_cycle_id' => $cycle?->id,
+                'survey_wave_audience_member_id' => $audienceMember?->id,
                 'user_id' => $user->id,
                 'token' => (string) Str::uuid(),
                 'status' => 'pending',
                 'wave_label' => $wave->label ?: $this->currentWaveLabel($version),
                 'due_at' => $wave->due_at,
+                'cohort_snapshot' => $audienceMember?->snapshot,
             ]);
         } else {
             $assignment->fill([
                 'survey_version_id' => $assignment->survey_version_id ?: $version->id,
                 'survey_wave_id' => $assignment->survey_wave_id ?: $wave->id,
+                'survey_wave_cycle_id' => $assignment->survey_wave_cycle_id ?: $cycle?->id,
+                'survey_wave_audience_member_id' => $assignment->survey_wave_audience_member_id ?: $audienceMember?->id,
                 'wave_label' => $assignment->wave_label ?: ($wave->label ?: $this->currentWaveLabel($version)),
                 'due_at' => $assignment->due_at ?: $wave->due_at,
+                'cohort_snapshot' => $assignment->cohort_snapshot ?: $audienceMember?->snapshot,
             ]);
 
             if ($assignment->isDirty()) {
@@ -148,54 +101,53 @@ class SurveyService
 
     public function markPendingAssignmentsForCompany(int $companyId): void
     {
-        $survey = $this->defaultSurvey();
-        if (!$survey) {
-            return;
-        }
-
-        $users = User::where('company_id', $companyId)->get();
-        foreach ($users as $user) {
-            $this->getOrCreateAssignment($user);
-        }
+        // Roster maintenance must not manufacture measurement assignments.
     }
 
     public function recordResponse(SurveyAssignment $assignment, array $answers, array $context = []): SurveyResponse
     {
         return DB::transaction(function () use ($assignment, $answers, $context) {
+            $assignment = SurveyAssignment::query()
+                ->whereKey($assignment->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($assignment->status !== 'pending' || $assignment->response()->exists()) {
+                throw new \DomainException('This survey has already been completed.');
+            }
+
             $assignment->loadMissing('surveyVersion.pages.sections.items', 'surveyVersion.pages.items');
 
             $version = $assignment->surveyVersion;
-            if (!$version) {
-                $version = SurveyVersion::where('is_active', true)->orderByDesc('id')->first();
-                if (!$version) {
-                    throw new \RuntimeException('No active survey version available.');
-                }
-                $assignment->update(['survey_version_id' => $version->id]);
+            if (! $version) {
+                throw new \DomainException('Assignment is not pinned to a survey version.');
             }
 
             $itemsByQid = $this->collectItems($version);
-
-            $assignment->update([
-                'status' => 'completed',
-                'completed_at' => now(),
-                'draft_answers' => null,
-                'last_autosaved_at' => null,
-            ]);
+            $cycle = $assignment->survey_wave_cycle_id
+                ? SurveyWaveCycle::find($assignment->survey_wave_cycle_id)
+                : null;
 
             $response = SurveyResponse::create([
                 'survey_id' => $assignment->survey_id,
                 'survey_version_id' => $version->id,
                 'survey_wave_id' => $assignment->survey_wave_id,
+                'survey_wave_cycle_id' => $assignment->survey_wave_cycle_id,
+                'survey_wave_audience_member_id' => $assignment->survey_wave_audience_member_id,
                 'assignment_id' => $assignment->id,
                 'user_id' => $assignment->user_id,
                 'wave_label' => $assignment->wave_label,
                 'submitted_at' => now(),
                 'duration_ms' => $context['duration_ms'] ?? null,
+                'cohort_snapshot' => $assignment->cohort_snapshot,
+                'privacy_policy_version' => $assignment->privacy_policy_version,
+                'metric_registry_version_id' => $cycle?->metric_registry_version_id,
+                'metric_definition_hash' => $cycle?->metric_definition_hash,
             ]);
 
             foreach ($answers as $qid => $value) {
                 $item = $itemsByQid->get($qid);
-                if (!$item) {
+                if (! $item) {
                     continue;
                 }
 
@@ -216,30 +168,41 @@ class SurveyService
                 ]);
             }
 
+            $assignment->update([
+                'status' => 'completed',
+                'completed_at' => now(),
+                'draft_answers' => null,
+                'last_autosaved_at' => null,
+                'token_revoked_at' => now(),
+            ]);
+
+            if ($assignment->survey_wave_id) {
+                $wave = SurveyWave::find($assignment->survey_wave_id);
+                if ($wave
+                    && $wave->kind === 'full'
+                    && ! $wave->assignments()->where('status', '!=', 'completed')->exists()) {
+                    $wave->update(['status' => 'completed']);
+                }
+            }
+
             $response->loadMissing('user');
+            if ($response->user?->company_id) {
+                $this->entitlements->recordUsage(
+                    (int) $response->user->company_id,
+                    "survey_response:{$response->id}",
+                    'completed_responses',
+                    1,
+                    'response',
+                    [
+                        'survey_wave_id' => $response->survey_wave_id,
+                        'survey_wave_cycle_id' => $response->survey_wave_cycle_id,
+                    ]
+                );
+            }
             $this->telemetry->recordFirstResponseCompleted($response);
 
             return $response;
         });
-    }
-
-    public function assignmentLink(User $user): ?string
-    {
-        $assignment = SurveyAssignment::query()
-            ->where('user_id', $user->id)
-            ->where('status', 'pending')
-            ->orderByDesc('id')
-            ->first();
-
-        if (!$assignment) {
-            $assignment = $this->getOrCreateAssignment($user);
-        }
-
-        if (!$assignment) {
-            return null;
-        }
-
-        return route('survey.take', ['token' => $assignment->token]);
     }
 
     public function defaultSurvey(): ?Survey
@@ -256,12 +219,14 @@ class SurveyService
                     return $section->items->map(function ($item) use ($page, $section) {
                         $item->setRelation('page', $page);
                         $item->setRelation('section', $section);
+
                         return $item;
                     });
                 });
 
                 $pageItems = $page->items->map(function ($item) use ($page) {
                     $item->setRelation('page', $page);
+
                     return $item;
                 });
 
@@ -291,39 +256,29 @@ class SurveyService
     {
         $suffix = $version ? $version->version : null;
         $datePart = now()->format('Y-m');
+
         return $suffix ? "{$suffix}-{$datePart}" : "wave-{$datePart}";
     }
 
-    protected function resolveCurrentWave(?Survey $survey, ?SurveyVersion $version, User $user): ?SurveyWave
-    {
-        if (!$survey || !$version || !$user->company_id) {
-            return null;
-        }
-
-        $label = $this->currentWaveLabel($version);
-
-        return SurveyWave::firstOrCreate(
-            [
-                'company_id' => $user->company_id,
-                'survey_id' => $survey->id,
-                'survey_version_id' => $version->id,
-                'label' => $label,
-            ],
-            [
-                'kind' => 'full',
-                'opens_at' => now(),
-                'due_at' => now()->copy()->addMonth(),
-            ]
-        );
-    }
     public function cloneVersion(SurveyVersion $source): SurveyVersion
     {
         return DB::transaction(function () use ($source) {
+            $source->loadMissing($this->versionIntegrity->relations());
+            $sourceHash = $this->versionIntegrity->semanticHash($source);
             $newVersion = $source->replicate();
             $newVersion->version = $this->incrementVersion($source->version);
             $newVersion->is_active = false;
+            $newVersion->content_hash = null;
+            $newVersion->published_at = null;
+            $newVersion->published_by = null;
             $newVersion->created_utc = now();
             $newVersion->push();
+
+            foreach ($source->scalePresets as $preset) {
+                $newPreset = $preset->replicate();
+                $newPreset->survey_version_id = $newVersion->id;
+                $newPreset->push();
+            }
 
             foreach ($source->pages as $page) {
                 $newPage = $page->replicate();
@@ -345,6 +300,11 @@ class SurveyService
                 }
             }
 
+            $newVersion->load($this->versionIntegrity->relations());
+            if (! hash_equals($sourceHash, $this->versionIntegrity->semanticHash($newVersion))) {
+                throw new \DomainException('Cloned survey version is not semantically identical.');
+            }
+
             return $newVersion;
         });
     }
@@ -362,17 +322,29 @@ class SurveyService
             $newOption->survey_item_id = $newItem->id;
             $newOption->push();
         }
+
+        if ($sourceItem->optionSource) {
+            $newSource = $sourceItem->optionSource->replicate();
+            $newSource->survey_item_id = $newItem->id;
+            $newSource->push();
+        }
     }
 
     public function publishVersion(SurveyVersion $version): void
     {
-        DB::transaction(function () use ($version) {
-            // Deactivate all other versions of this instrument
-            SurveyVersion::where('instrument_id', $version->instrument_id)
-                ->where('id', '!=', $version->id)
+        $contentHash = $this->versionIntegrity->assertPublishable($version);
+
+        DB::transaction(function () use ($version, $contentHash) {
+            SurveyVersion::where('id', '!=', $version->id)
+                ->where('is_active', true)
                 ->update(['is_active' => false]);
 
-            $version->update(['is_active' => true]);
+            $version->update([
+                'is_active' => true,
+                'content_hash' => $contentHash,
+                'published_at' => now(),
+                'published_by' => auth()->id(),
+            ]);
         });
     }
 
@@ -380,10 +352,11 @@ class SurveyService
     {
         $parts = explode('.', $versionStr);
         if (count($parts) >= 3) {
-            $parts[2] = (int)$parts[2] + 1;
+            $parts[2] = (int) $parts[2] + 1;
         } else {
             $parts[] = 1;
         }
+
         return implode('.', $parts);
     }
 }

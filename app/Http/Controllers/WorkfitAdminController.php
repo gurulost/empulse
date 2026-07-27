@@ -12,7 +12,7 @@ class WorkfitAdminController extends Controller
 {
     public function __construct(protected OnboardingReportService $onboardingReport)
     {
-        $this->middleware(['auth', 'workfit_admin']);
+        $this->middleware(['auth', 'capability:workfit.admin']);
     }
 
     public function index()
@@ -63,37 +63,6 @@ class WorkfitAdminController extends Controller
         return response()->json($query->orderByDesc('created_at')->paginate(20));
     }
 
-    public function deleteUser($id)
-    {
-        $user = User::findOrFail($id);
-
-        if ($user->id === auth()->id()) {
-            return response()->json(['message' => 'Cannot delete yourself.'], 403);
-        }
-
-        if ($user->role === 0) {
-            return response()->json(['message' => 'Cannot delete Super Admin.'], 403);
-        }
-
-        $user->delete();
-        return response()->json(['status' => 'ok']);
-    }
-
-    public function impersonate($id)
-    {
-        $user = User::findOrFail($id);
-        
-        // Guard against impersonating other super admins if needed, but usually allowed.
-        
-        auth()->loginUsingId($user->id);
-
-        $redirect = ((int) $user->role === 4)
-            ? route('employee.dashboard')
-            : route('home');
-
-        return response()->json(['redirect' => $redirect]);
-    }
-
     public function getSubscriptionList()
     {
         $subscriptions = DB::table('subscriptions')
@@ -101,7 +70,7 @@ class WorkfitAdminController extends Controller
             ->select([
                 'subscriptions.*',
                 'users.name as user_name',
-                'users.email as user_email'
+                'users.email as user_email',
             ])
             ->orderByDesc('subscriptions.created_at')
             ->paginate(10);
@@ -134,15 +103,15 @@ class WorkfitAdminController extends Controller
     public function getCompany($id)
     {
         $company = Companies::findOrFail($id);
-        
+
         $manager = User::where('email', $company->manager_email)
             ->where('role', 1)
             ->first();
-        
+
         $workerCount = DB::table('company_worker')
             ->where('company_id', $id)
             ->count();
-            
+
         $departmentCount = DB::table('company_department')
             ->where('company_id', $id)
             ->count();

@@ -129,7 +129,6 @@ return [
     ],
 
     'validation' => [
-        'strict_server_validation' => env('SURVEY_STRICT_VALIDATION_ENABLED', false),
         'default_required_types' => [
             'slider',
             'single_select',

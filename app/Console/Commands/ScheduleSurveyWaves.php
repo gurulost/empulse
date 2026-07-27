@@ -13,13 +13,15 @@ use Illuminate\Support\Facades\Cache;
 class ScheduleSurveyWaves extends Command
 {
     protected $signature = 'survey:waves:schedule';
+
     protected $description = 'Create survey assignments for active waves if due.';
 
     public function handle(): int
     {
         $lock = Cache::lock('survey:waves:schedule', 55);
-        if (!$lock->get()) {
+        if (! $lock->get()) {
             $this->info('Wave scheduling pass skipped: another run is in progress.');
+
             return Command::SUCCESS;
         }
 
@@ -33,46 +35,64 @@ class ScheduleSurveyWaves extends Command
 
             foreach ($waves as $wave) {
                 try {
-                    if (!$wave->survey || !$wave->company_id) {
+                    if (! $wave->survey || ! $wave->company_id) {
                         continue;
                     }
 
                     $manager = CompanyBilling::manager($wave->company_id);
-                    $billingStatus = CompanyBilling::status($manager);
+                    $billingStatus = CompanyBilling::status((int) $wave->company_id);
 
                     if ($wave->status === 'paused') {
                         $this->logWaveEvent($wave, 'skipped', 'Paused');
+
                         continue;
                     }
 
                     if ($wave->due_at && $wave->due_at->isPast()) {
                         $wave->update(['status' => 'completed']);
                         $this->logWaveEvent($wave, 'completed', 'Wave past due date.');
+
                         continue;
                     }
 
-                    if (!CompanyBilling::allowsScheduling($manager)) {
+                    if (! CompanyBilling::allowsScheduling((int) $wave->company_id)) {
                         $wave->update(['status' => 'paused']);
                         $this->logWaveEvent(
                             $wave,
                             'paused',
-                            'Billing inactive: ' . SurveyWaveAutomation::billingStatusLabel($billingStatus)
+                            'Billing inactive: '.SurveyWaveAutomation::billingStatusLabel($billingStatus)
                         );
+
                         continue;
                     }
 
-                    if ($wave->kind === 'drip' && !SurveyWaveAutomation::dripEnabledForTariff($manager?->tariff)) {
+                    if ($wave->kind === 'drip'
+                        && ! CompanyBilling::hasFeature((int) $wave->company_id, 'recurring_waves')) {
                         $wave->update(['status' => 'paused']);
                         $this->logWaveEvent($wave, 'paused', 'Current plan does not allow drip cadences.');
+
                         continue;
                     }
 
-                    if ($wave->status === 'processing' && !$this->recoverStaleProcessingWave($wave)) {
+                    if ($wave->status === 'processing' && ! $this->recoverStaleProcessingWave($wave)) {
                         continue;
                     }
 
-                    if ($wave->kind === 'drip' && !$this->waveHasDispatchableAssignments($wave)) {
+                    if ($wave->kind === 'full' && $wave->assignments()->exists()) {
+                        if (! $wave->assignments()->where('status', '!=', 'completed')->exists()) {
+                            $wave->update(['status' => 'completed']);
+                            $this->logWaveEvent($wave, 'completed', 'All frozen-audience assignments completed.');
+                        } else {
+                            $wave->update(['status' => 'active']);
+                            $this->logWaveEvent($wave, 'skipped', 'Wave is active and awaiting responses.');
+                        }
+
+                        continue;
+                    }
+
+                    if ($wave->kind === 'drip' && ! $this->waveHasDispatchableAssignments($wave)) {
                         $this->logWaveEvent($wave, 'skipped', 'All assignments are still inside cadence window.');
+
                         continue;
                     }
 
@@ -80,12 +100,13 @@ class ScheduleSurveyWaves extends Command
                     ProcessSurveyWave::dispatch($wave->id);
                     $this->logWaveEvent($wave, 'processing', 'Wave dispatched to queue.');
                 } catch (\Throwable $e) {
-                    \Log::error("Failed to schedule wave {$wave->id}: " . $e->getMessage());
-                    $this->logWaveEvent($wave, 'error', 'Scheduler error: ' . $e->getMessage());
+                    \Log::error("Failed to schedule wave {$wave->id}: ".$e->getMessage());
+                    $this->logWaveEvent($wave, 'error', 'Scheduler error: '.$e->getMessage());
                 }
             }
 
             $this->info('Wave scheduling pass completed.');
+
             return Command::SUCCESS;
         } finally {
             $lock->release();
@@ -100,7 +121,7 @@ class ScheduleSurveyWaves extends Command
 
         $assignmentsQuery = $wave->assignments();
 
-        if (!$assignmentsQuery->exists()) {
+        if (! $assignmentsQuery->exists()) {
             return true;
         }
 
@@ -109,7 +130,7 @@ class ScheduleSurveyWaves extends Command
         }
 
         $threshold = SurveyWaveAutomation::cadenceThreshold($wave->cadence);
-        if (!$threshold) {
+        if (! $threshold) {
             return true;
         }
 

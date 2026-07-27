@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('qualtrics', function(Blueprint $table) {
+        Schema::create('qualtrics', function (Blueprint $table) {
             $table->id();
             $table->json('data')->nullable();
             $table->bigInteger('date')->default(0);

@@ -6,8 +6,11 @@ use App\Models\SurveyItem;
 use App\Models\SurveyOption;
 use App\Models\SurveyOptionSource;
 use App\Models\SurveyPage;
+use App\Models\SurveyScalePreset;
 use App\Models\SurveyVersion;
 use App\Models\User;
+use App\Services\SurveyService;
+use App\Services\SurveyVersionIntegrityService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -239,5 +242,72 @@ class SurveyBuilderTest extends TestCase
         $item->refresh();
         $this->assertSame('text_short', $item->type);
         $this->assertNull($item->scale_config);
+    }
+
+    public function test_publish_fails_closed_when_structure_is_not_valid(): void
+    {
+        $admin = $this->workfitAdmin();
+        $item = $this->draftItem(['type' => 'dropdown']);
+
+        $this->actingAs($admin)
+            ->postJson("/admin/builder/publish/{$item->survey_version_id}")
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Survey version failed publication checks.');
+
+        $this->assertFalse($item->version->fresh()->is_active);
+        $this->assertNull($item->version->fresh()->content_hash);
+    }
+
+    public function test_publish_records_content_hash_and_enforces_one_live_instrument(): void
+    {
+        $admin = $this->workfitAdmin();
+        $old = SurveyVersion::create([
+            'instrument_id' => 'old-instrument',
+            'version' => '1.0.0',
+            'title' => 'Old Live',
+            'is_active' => true,
+        ]);
+        $item = $this->draftItem();
+
+        $this->actingAs($admin)
+            ->postJson("/admin/builder/publish/{$item->survey_version_id}")
+            ->assertOk()
+            ->assertJsonPath('status', 'published');
+
+        $published = $item->version->fresh();
+        $this->assertTrue($published->is_active);
+        $this->assertSame(64, strlen($published->content_hash));
+        $this->assertSame($admin->id, $published->published_by);
+        $this->assertNotNull($published->published_at);
+        $this->assertFalse($old->fresh()->is_active);
+        $this->assertSame(1, SurveyVersion::where('is_active', true)->count());
+    }
+
+    public function test_clone_preserves_full_semantics_including_presets_and_option_sources(): void
+    {
+        $item = $this->draftItem(['type' => 'dropdown']);
+        SurveyOptionSource::create([
+            'survey_item_id' => $item->id,
+            'kind' => 'ISO_3166_COUNTRIES_EN',
+            'config' => ['source' => 'canonical'],
+        ]);
+        SurveyScalePreset::create([
+            'survey_version_id' => $item->survey_version_id,
+            'preset_key' => 'likert',
+            'config' => ['min' => 1, 'max' => 5, 'step' => 1],
+            'sort_order' => 1,
+        ]);
+        $source = $item->version;
+
+        $clone = app(SurveyService::class)->cloneVersion($source);
+        $integrity = app(SurveyVersionIntegrityService::class);
+
+        $this->assertSame(
+            $integrity->semanticHash($source),
+            $integrity->semanticHash($clone)
+        );
+        $this->assertSame(1, $clone->scalePresets()->count());
+        $clonedItem = SurveyItem::where('survey_version_id', $clone->id)->sole();
+        $this->assertSame('ISO_3166_COUNTRIES_EN', $clonedItem->optionSource->kind);
     }
 }

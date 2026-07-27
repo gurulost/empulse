@@ -7,6 +7,20 @@ on:
 jobs:
     test:
         runs-on: ubuntu-latest
+        services:
+            postgres:
+                image: postgres:16
+                env:
+                    POSTGRES_DB: empulse_test
+                    POSTGRES_USER: empulse
+                    POSTGRES_PASSWORD: empulse_test_password
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd "pg_isready -U empulse -d empulse_test"
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
 
         steps:
             - uses: actions/checkout@v4
@@ -15,28 +29,30 @@ jobs:
               uses: shivammathur/setup-php@v2
               with:
                   php-version: '8.2'
-                  extensions: bcmath, ctype, dom, fileinfo, mbstring, pdo_sqlite, sqlite3
+                  extensions: bcmath, ctype, dom, fileinfo, mbstring, pdo_pgsql
                   coverage: none
 
             - name: Setup Node
               uses: actions/setup-node@v4
               with:
-                  node-version: '20'
+                  node-version: '22'
                   cache: npm
 
             - name: Prepare environment
               run: |
                   cp .env.example .env
-                  mkdir -p database
-                  touch database/database.sqlite
                   {
                     echo "APP_ENV=testing"
                     echo "APP_DEBUG=true"
                     echo "APP_URL=http://127.0.0.1:8000"
-                    echo "DB_CONNECTION=sqlite"
-                    echo "DB_DATABASE=${GITHUB_WORKSPACE}/database/database.sqlite"
-                    echo "CACHE_DRIVER=file"
-                    echo "QUEUE_CONNECTION=sync"
+                    echo "DB_CONNECTION=pgsql"
+                    echo "DB_HOST=127.0.0.1"
+                    echo "DB_PORT=5432"
+                    echo "DB_DATABASE=empulse_test"
+                    echo "DB_USERNAME=empulse"
+                    echo "DB_PASSWORD=empulse_test_password"
+                    echo "CACHE_STORE=file"
+                    echo "QUEUE_CONNECTION=database"
                     echo "SESSION_DRIVER=file"
                     echo "MAIL_MAILER=array"
                   } >> .env
@@ -47,17 +63,39 @@ jobs:
             - name: Install Node dependencies
               run: npm ci
 
+            - name: Validate and audit dependencies
+              run: |
+                  composer validate --strict
+                  composer audit --no-interaction
+                  npm audit --audit-level=high
+
             - name: Generate key and migrate
               run: |
                   php artisan key:generate
                   php artisan migrate --force
                   php artisan db:seed --force
 
-            - name: Run backend tests
-              run: php artisan test
+            - name: Verify production cache artifacts
+              run: |
+                  php artisan config:cache
+                  php artisan route:cache
+                  php artisan view:cache
+                  php artisan config:clear
+                  php artisan route:clear
+                  php artisan view:clear
 
-            - name: Run frontend lint
-              run: npm run lint
+            - name: Run backend tests
+              run: composer test
+
+            - name: Run PHP formatting and static-analysis gates
+              run: |
+                  vendor/bin/pint --test
+                  composer analyse
+
+            - name: Run frontend lint and component tests
+              run: |
+                  npm run lint
+                  npm run test:unit
 
             - name: Build frontend assets
               run: npm run build
@@ -65,10 +103,39 @@ jobs:
             - name: Install Playwright browser
               run: npx playwright install --with-deps chromium
 
-            - name: Start application server
-              run: php artisan serve --host=127.0.0.1 --port=8000 > storage/logs/ci-server.log 2>&1 &
+            - name: Prepare browser journey database
+              run: php artisan migrate:fresh --seed --force
 
-            - name: Run Playwright smoke tests
+            - name: Start real web and worker processes
+              run: |
+                  php artisan queue:work --tries=1 --sleep=1 --timeout=120 > storage/logs/ci-worker.log 2>&1 &
+                  php artisan serve --host=127.0.0.1 --port=8000 > storage/logs/ci-server.log 2>&1 &
+                  for attempt in {1..30}; do
+                    curl --fail --silent http://127.0.0.1:8000/api/readyz && break
+                    sleep 1
+                  done
+                  curl --fail http://127.0.0.1:8000/api/readyz
+
+            - name: Run Playwright role and failure journeys
               env:
                   PLAYWRIGHT_BASE_URL: http://127.0.0.1:8000
               run: npm run test:e2e
+
+            - name: Upload failure evidence
+              if: failure()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: ci-failure-evidence
+                  path: |
+                      storage/logs/*.log
+                      test-results/
+                      playwright-report/
+
+    secret-scan:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+            - name: Scan repository history for secrets
+              uses: gitleaks/gitleaks-action@v2

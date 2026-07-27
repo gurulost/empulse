@@ -46,9 +46,14 @@ return [
     'stripe' => [
         'key' => env('STRIPE_KEY'),
         'secret' => env('STRIPE_SECRET'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
     ],
 
     'brevo' => [
         'key' => env('BREVO_KEY'),
+        'webhook_token' => env('BREVO_WEBHOOK_TOKEN'),
+        // Brevo retains email idempotency keys for 30 minutes. Stop automatic
+        // retries before that boundary so a late retry cannot duplicate mail.
+        'idempotency_retry_minutes' => 25,
     ],
 ];

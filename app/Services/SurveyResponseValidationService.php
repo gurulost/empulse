@@ -11,8 +11,11 @@ class SurveyResponseValidationService
     /**
      * @throws ValidationException
      */
-    public function validateAndSanitize(SurveyAssignment $assignment, array $responses): array
-    {
+    public function validateAndSanitize(
+        SurveyAssignment $assignment,
+        array $responses,
+        bool $requireComplete = true
+    ): array {
         $definition = $this->definitionService->definitionForAssignment($assignment);
         $items = $this->flattenItems($definition['pages'] ?? []);
         $itemsByQid = $this->itemsByQid($items);
@@ -23,24 +26,24 @@ class SurveyResponseValidationService
 
         foreach ($responses as $rawQid => $_) {
             $qid = (string) $rawQid;
-            if (!array_key_exists($qid, $itemsByQid)) {
+            if (! array_key_exists($qid, $itemsByQid)) {
                 $errors["responses.{$qid}"][] = 'Unknown question key.';
             }
         }
 
         foreach ($items as $item) {
             $qid = $item['qid'] ?? null;
-            if (!$qid) {
+            if (! $qid) {
                 continue;
             }
 
-            if (!$this->isVisible($item, $responses, $itemsByQid, $visibilityCache)) {
+            if (! $this->isVisible($item, $responses, $itemsByQid, $visibilityCache)) {
                 continue;
             }
 
             $value = $responses[$qid] ?? null;
             if ($this->isEmptyValue($value)) {
-                if ($this->isRequired($item)) {
+                if ($requireComplete && $this->isRequired($item)) {
                     $errors["responses.{$qid}"][] = 'Please provide an answer.';
                 }
 
@@ -50,13 +53,14 @@ class SurveyResponseValidationService
             [$cleanValue, $error] = $this->sanitizeValue($item, $value);
             if ($error !== null) {
                 $errors["responses.{$qid}"][] = $error;
+
                 continue;
             }
 
             $sanitized[$qid] = $cleanValue;
         }
 
-        if (!empty($errors)) {
+        if (! empty($errors)) {
             throw ValidationException::withMessages($errors);
         }
 
@@ -65,15 +69,14 @@ class SurveyResponseValidationService
 
     public function __construct(
         protected SurveyDefinitionService $definitionService
-    ) {
-    }
+    ) {}
 
     protected function itemsByQid(array $items): array
     {
         $map = [];
         foreach ($items as $item) {
             $qid = $item['qid'] ?? null;
-            if (!$qid) {
+            if (! $qid) {
                 continue;
             }
 
@@ -108,8 +111,7 @@ class SurveyResponseValidationService
         array $itemsByQid = [],
         array &$visibilityCache = [],
         array $stack = []
-    ): bool
-    {
+    ): bool {
         $itemQid = $item['qid'] ?? null;
         if ($itemQid && array_key_exists($itemQid, $visibilityCache)) {
             return $visibilityCache[$itemQid];
@@ -124,7 +126,7 @@ class SurveyResponseValidationService
         }
 
         $logic = $item['display_logic'] ?? null;
-        if (!$logic || (is_array($logic) && empty($logic))) {
+        if (! $logic) {
             if ($itemQid) {
                 $visibilityCache[$itemQid] = true;
             }
@@ -162,7 +164,7 @@ class SurveyResponseValidationService
             return $visible;
         }
 
-        $visible = !in_array(false, $matches, true);
+        $visible = ! in_array(false, $matches, true);
         if ($itemQid) {
             $visibilityCache[$itemQid] = $visible;
         }
@@ -176,27 +178,26 @@ class SurveyResponseValidationService
         array $itemsByQid,
         array &$visibilityCache,
         array $stack
-    ): bool
-    {
+    ): bool {
         $qid = Arr::get($condition, 'qid');
-        if (!$qid) {
+        if (! $qid) {
             return false;
         }
 
-        if (!array_key_exists($qid, $itemsByQid)) {
+        if (! array_key_exists($qid, $itemsByQid)) {
             return false;
         }
 
-        if (!$this->isVisible($itemsByQid[$qid], $responses, $itemsByQid, $visibilityCache, $stack)) {
+        if (! $this->isVisible($itemsByQid[$qid], $responses, $itemsByQid, $visibilityCache, $stack)) {
             return false;
         }
 
-        if (!array_key_exists($qid, $responses)) {
+        if (! array_key_exists($qid, $responses)) {
             return false;
         }
 
         $allowed = Arr::get($condition, 'equals_any', []);
-        if (!is_array($allowed) || empty($allowed)) {
+        if (! is_array($allowed) || empty($allowed)) {
             return true;
         }
 
@@ -216,7 +217,7 @@ class SurveyResponseValidationService
     {
         if (is_array($value)) {
             if (array_is_list($value)) {
-                return array_values($value);
+                return $value;
             }
 
             $candidates = [];
@@ -226,7 +227,7 @@ class SurveyResponseValidationService
                 }
             }
 
-            return !empty($candidates) ? $candidates : array_values($value);
+            return ! empty($candidates) ? $candidates : array_values($value);
         }
 
         return [$value];
@@ -257,6 +258,7 @@ class SurveyResponseValidationService
         }
 
         $requiredTypes = config('survey.validation.default_required_types', []);
+
         return in_array($item['type'] ?? '', $requiredTypes, true);
     }
 
@@ -276,7 +278,7 @@ class SurveyResponseValidationService
             }
 
             foreach ($value as $nestedValue) {
-                if (!$this->isEmptyValue($nestedValue)) {
+                if (! $this->isEmptyValue($nestedValue)) {
                     return false;
                 }
             }
@@ -302,7 +304,7 @@ class SurveyResponseValidationService
 
     protected function sanitizeSlider(array $item, mixed $value): array
     {
-        if (!is_numeric($value)) {
+        if (! is_numeric($value)) {
             return [null, 'Please provide a valid number.'];
         }
 
@@ -332,7 +334,7 @@ class SurveyResponseValidationService
 
     protected function sanitizeInteger(array $item, mixed $value): array
     {
-        if (!is_numeric($value)) {
+        if (! is_numeric($value)) {
             return [null, 'Please provide a valid number.'];
         }
 
@@ -359,13 +361,13 @@ class SurveyResponseValidationService
 
     protected function sanitizeSingleSelect(array $item, mixed $value): array
     {
-        if (!is_scalar($value)) {
+        if (! is_scalar($value)) {
             return [null, 'Please select a valid option.'];
         }
 
         $selected = (string) $value;
         $options = $this->optionMap($item);
-        if (!array_key_exists($selected, $options)) {
+        if (! array_key_exists($selected, $options)) {
             return [null, 'Please select a valid option.'];
         }
 
@@ -384,13 +386,13 @@ class SurveyResponseValidationService
             $selected = $value;
         }
 
-        if (!is_scalar($selected)) {
+        if (! is_scalar($selected)) {
             return [null, 'Please select a valid option.'];
         }
 
         $selectedValue = (string) $selected;
         $options = $this->optionMap($item);
-        if (!array_key_exists($selectedValue, $options)) {
+        if (! array_key_exists($selectedValue, $options)) {
             return [null, 'Please select a valid option.'];
         }
 
@@ -399,7 +401,7 @@ class SurveyResponseValidationService
         $requiresFreeText = array_key_exists('freetext_placeholder', $meta);
 
         if ($requiresFreeText) {
-            if (!is_scalar($text) || trim((string) $text) === '') {
+            if (! is_scalar($text) || trim((string) $text) === '') {
                 return [null, 'Please provide details for the selected option.'];
             }
 
@@ -419,7 +421,7 @@ class SurveyResponseValidationService
 
     protected function sanitizeMultiSelect(array $item, mixed $value): array
     {
-        if (!is_array($value) || !array_is_list($value)) {
+        if (! is_array($value) || ! array_is_list($value)) {
             return [null, 'Please select valid options.'];
         }
 
@@ -427,16 +429,16 @@ class SurveyResponseValidationService
         $selected = [];
 
         foreach ($value as $candidate) {
-            if (!is_scalar($candidate)) {
+            if (! is_scalar($candidate)) {
                 return [null, 'Please select valid options.'];
             }
 
             $candidateValue = (string) $candidate;
-            if (!array_key_exists($candidateValue, $options)) {
+            if (! array_key_exists($candidateValue, $options)) {
                 return [null, 'Please select valid options.'];
             }
 
-            if (!in_array($candidateValue, $selected, true)) {
+            if (! in_array($candidateValue, $selected, true)) {
                 $selected[] = $candidateValue;
             }
         }
@@ -444,7 +446,7 @@ class SurveyResponseValidationService
         $exclusive = array_keys(array_filter($options, fn ($option) => (bool) ($option['exclusive'] ?? false)));
         $selectedExclusive = array_values(array_intersect($selected, $exclusive));
 
-        if (!empty($selectedExclusive)) {
+        if (! empty($selectedExclusive)) {
             $selected = [$selectedExclusive[0]];
         }
 
@@ -453,7 +455,7 @@ class SurveyResponseValidationService
 
     protected function sanitizeText(array $item, mixed $value): array
     {
-        if (!is_scalar($value)) {
+        if (! is_scalar($value)) {
             return [null, 'Please provide a valid text response.'];
         }
 
@@ -470,7 +472,7 @@ class SurveyResponseValidationService
             return [null, sprintf('Please limit your answer to %d characters.', (int) $maxLength)];
         }
 
-        if ($formatHint === 'email' && !filter_var($text, FILTER_VALIDATE_EMAIL)) {
+        if ($formatHint === 'email' && ! filter_var($text, FILTER_VALIDATE_EMAIL)) {
             return [null, 'Please provide a valid email address.'];
         }
 
@@ -481,7 +483,7 @@ class SurveyResponseValidationService
     {
         $map = [];
         foreach (($item['options'] ?? []) as $option) {
-            if (!array_key_exists('value', $option)) {
+            if (! array_key_exists('value', $option)) {
                 continue;
             }
 
@@ -498,6 +500,7 @@ class SurveyResponseValidationService
     protected function responseConfig(array $item): array
     {
         $response = $item['response'] ?? [];
+
         return is_array($response) ? $response : [];
     }
 }

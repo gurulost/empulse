@@ -1,14 +1,16 @@
 # Production Deployment Runbook
 
 ## Purpose
-- Deploy Empulse safely to production with the current billing, survey-wave, and analytics stack.
-- Ensure the runtime matches the app's requirements: migrated DB, built frontend assets, queue worker, and scheduler.
+- Define the provider-neutral contract for a future Empulse production deployment.
+- Keep repository readiness separate from provider selection and live deployment evidence.
+
+Empulse has not been deployed or sold. This runbook is a release contract, not evidence that any production environment exists.
 
 ## Prerequisites
-- Access to the production environment, database, and deployment platform.
-- PHP 8.2+, Composer, Node 20+, and either:
-  - a Herokuish/buildpack platform that provides `heroku-php-apache2` for the checked-in [Procfile](/Users/davedixon/Downloads/empulse%20code/Procfile), or
-  - a container/native web runtime that matches the checked-in [Dockerfile](/Users/davedixon/Downloads/empulse%20code/Dockerfile).
+- A selected production provider, release owner, database, and domain.
+- PHP 8.2+, Composer, Node 22+, and either:
+  - a Herokuish/buildpack platform that provides `heroku-php-apache2` for the checked-in `Procfile`, or
+  - a container runtime that builds the checked-in `Dockerfile`.
 - Stripe production keys and webhook secret.
 - Brevo API key for invitation delivery.
 - Queue, session, and cache backends configured for production.
@@ -16,16 +18,21 @@
 ## Critical Release Notes
 - `public/build` is generated during deployment and is no longer intended to be committed.
 - The app now depends on both a queue worker and the Laravel scheduler for survey wave dispatch and invitation delivery.
-- Cashier compatibility now requires the subscription schema alignment migration:
-  - [2026_03_05_010000_align_subscriptions_table_with_cashier.php](/Users/davedixon/Downloads/empulse%20code/database/migrations/2026_03_05_010000_align_subscriptions_table_with_cashier.php)
+- Image builds and web startup must never run migrations or seed data.
+- Replit settings are development-only; there is no Replit production deployment declaration.
+- PostgreSQL 16 is the production database baseline.
 
 ## Required Environment Configuration
 - App:
   - `APP_ENV=production`
   - `APP_DEBUG=false`
-  - `APP_URL=<production-url>`
+  - `APP_URL=https://<production-host>`
+  - `APP_KEY=<unique production key>`
+  - `TRUSTED_PROXIES=<explicit comma-separated proxy IPs/CIDRs, or empty when direct>`
+  - `AUDIT_HASH_KEY=<separate 32+ character audit-chain secret>`
+  - `BREVO_WEBHOOK_TOKEN=<32+ character bearer token configured on the Brevo webhook>`
 - Database:
-  - `DB_CONNECTION`
+  - `DB_CONNECTION=pgsql`
   - `DB_HOST`
   - `DB_PORT`
   - `DB_DATABASE`
@@ -33,17 +40,27 @@
   - `DB_PASSWORD`
 - Queue / cache / session:
   - `QUEUE_CONNECTION`
-  - `CACHE_DRIVER`
-  - `SESSION_DRIVER`
-  - Redis settings if using Redis
+  - `CACHE_STORE=database` or another durable shared store
+  - `SESSION_DRIVER=database` or another durable shared store
+  - `SESSION_SECURE_COOKIE=true`
 - Billing:
   - `STRIPE_KEY`
   - `STRIPE_SECRET`
   - `STRIPE_WEBHOOK_SECRET`
+  - `STRIPE_PRICE_STARTER`
+  - `STRIPE_PRICE_PULSE`
+  - `BILLING_PRICE_STARTER_CENTS`
+  - `BILLING_PRICE_PULSE_CENTS`
 - Mail:
   - `BREVO_KEY`
   - `MAIL_MAILER`
-  - From-address config as required
+  - `MAIL_FROM_ADDRESS`
+
+Use `.env.production.example` as the variable inventory. Before migration or process start, run:
+
+```bash
+php artisan app:production-check
+```
 
 ## Deployment Order
 1. Put the release on the target revision.
@@ -52,16 +69,19 @@
 3. Install frontend dependencies and build assets:
    - `npm ci`
    - `npm run build`
-4. Ensure writable directories exist:
+4. Run `php artisan app:production-check`.
+5. Ensure writable directories exist:
    - `storage/`
    - `bootstrap/cache/`
-5. Run database migrations:
+6. Run database migrations as a one-time release action:
    - `php artisan migrate --force`
-6. Cache application state:
+7. Reconcile the checkout projection with the approved environment catalog:
+   - `php artisan billing:sync-catalog`
+8. Cache application state:
    - `php artisan config:cache`
    - `php artisan route:cache`
    - `php artisan view:cache`
-7. Restart runtime processes:
+9. Start or restart independently supervised runtime processes:
    - web
    - queue worker
    - scheduler
@@ -71,7 +91,7 @@
   - If deploying with the checked-in `Procfile`, run the Apache/PHP buildpack runtime: `heroku-php-apache2 public/`
   - If your platform does not provide that command, deploy with the checked-in Docker image or the platform's native Apache/nginx + PHP runtime.
 - Queue worker:
-  - `php artisan queue:work --tries=1 --sleep=1 --timeout=120`
+  - `php artisan queue:work --tries=3 --backoff=10 --sleep=1 --timeout=120 --max-time=3600`
 - Scheduler:
   - `php artisan schedule:work`
   - If your platform does not support a long-running scheduler process, run cron with:
@@ -89,7 +109,10 @@
   - `invoice.payment_failed`
 
 ## Post-Deploy Verification
-- Run the basic health checks:
+- Prove the selected release SHA and run health checks:
+  - `/api/healthz` returns `{"status":"live"}`
+- `/api/readyz` returns `{"status":"ready",...}`
+  - in production this also requires fresh scheduler and worker heartbeats; allow the first scheduled minute after a new environment starts
   - app loads at `/`
   - login page renders
   - manager can reach `/home`, `/survey-waves`, and `/account/billing`
@@ -104,11 +127,20 @@
   - dispatch a wave
   - confirm assignments are created
   - confirm invitation jobs leave the queue and `invite_status` updates
+  - force one transient provider retry and confirm the same encrypted survey URL and Brevo idempotency UUID are reused within the automatic retry window
+  - confirm automatic resend stops for manual provider review after 25 minutes
+- Verify customer-scoped advisory:
+  - a customer administrator grants a named advisor access with a purpose and expiry
+  - that advisor can open only the granted customer workspace
+  - revocation immediately removes access and produces an audit event
 - Verify reports/dashboard:
   - no-data tenant shows onboarding states instead of blank UI
   - seeded/demo tenant shows populated analytics and reports
 
-## Demo Environment Prep
+## Non-production demo environment
+
+Demo data is forbidden in the production customer database. In an isolated non-production environment only:
+
 - Seed a demo tenant if needed:
   - `php artisan demo:seed --import-instrument --employees=120 --months=6 --force`
 - Confirm demo credentials work for:
@@ -132,7 +164,7 @@
 
 ## Operational Commands
 - Backend tests:
-  - `php artisan test`
+  - `composer test`
 - Frontend lint:
   - `npm run lint`
 - Frontend build:
@@ -141,7 +173,10 @@
   - `npm run test:e2e`
 
 ## Ownership Checklist
-- Product owner confirms demo accounts and data are ready.
+- Product owner confirms the approved launch account, offer, prices, respondent promise, and claims.
 - Engineering confirms migrations, env vars, worker, and scheduler are live.
 - Billing owner confirms Stripe webhook delivery is healthy.
 - Ops confirms logs, queue depth, and scheduler execution after release.
+- Release owner attaches the evidence required by [`RELEASE_AND_ROLLBACK_POLICY.md`](RELEASE_AND_ROLLBACK_POLICY.md).
+- Ops completes the isolated restore drill in [`BACKUP_RESTORE_AND_DISASTER_RECOVERY.md`](BACKUP_RESTORE_AND_DISASTER_RECOVERY.md).
+- Monitoring is configured against [`OBSERVABILITY_AND_SERVICE_LEVELS.md`](OBSERVABILITY_AND_SERVICE_LEVELS.md).

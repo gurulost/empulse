@@ -152,7 +152,7 @@
                                     <span class="badge rounded-pill text-bg-primary">Recommended</span>
                                 </div>
                                 <p class="small text-muted mb-2">
-                                    Start with <strong>Full</strong> + <strong>Manual</strong>. That gives you the cleanest first benchmark with the least operational overhead.
+                                    Start with <strong>Full</strong> + <strong>Manual</strong>. That gives you the cleanest first baseline with the least operational overhead.
                                 </p>
                                 <p class="small text-muted mb-0">
                                     Use <strong>Drip</strong> only after your first baseline is live and you want recurring measurement.
@@ -184,7 +184,7 @@
                             <div class="alert alert-light border rounded-4 mb-0">
                                 <div class="fw-semibold mb-1">Decision guide</div>
                                 <div class="small text-muted">
-                                    Full waves are best when you need a first benchmark or a clean reset. Drip waves are better once you already have a baseline and want a recurring pulse.
+                                    Full waves are best when you need a first baseline or a clean reset. Drip waves are better once you already have a baseline and want a recurring pulse.
                                 </div>
                             </div>
                         </div>
@@ -340,7 +340,8 @@
                                 $totalAssigned = $stats->total ?? 0;
                                 $sentAssigned = $stats->dispatched ?? 0;
                                 $completedAssigned = $stats->completed ?? 0;
-                                $invitedAssigned = $stats->invited ?? 0;
+                                $acceptedInvites = $stats->accepted ?? 0;
+                                $deliveredInvites = $stats->delivered ?? 0;
                                 $failedInvites = $stats->invite_failed ?? 0;
                                 $canDispatchWave = $wave->status === 'scheduled';
                                 $canToggleWaveStatus = in_array($wave->status, ['scheduled', 'paused'], true);
@@ -366,7 +367,8 @@
                                     <div class="small text-muted">Done {{ $completedAssigned }}</div>
                                 </td>
                                 <td>
-                                    <div class="small text-muted">{{ $invitedAssigned }} delivered</div>
+                                    <div class="small text-muted">{{ $acceptedInvites }} accepted</div>
+                                    <div class="small text-muted">{{ $deliveredInvites }} delivered</div>
                                     @if($failedInvites > 0)
                                         <div class="small text-danger">{{ $failedInvites }} failed</div>
                                     @endif

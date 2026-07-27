@@ -28,7 +28,7 @@ class ProfileRequest extends FormRequest
             'image' => [
                 'required',
                 File::image()
-                    ->max(12 * 1024)
+                    ->max(12 * 1024),
             ],
         ];
     }

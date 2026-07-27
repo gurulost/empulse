@@ -10,21 +10,21 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('survey_waves', function (Blueprint $table) {
-            if (!Schema::hasColumn('survey_waves', 'target_roles')) {
+            if (! Schema::hasColumn('survey_waves', 'target_roles')) {
                 $table->json('target_roles')->nullable()->after('label');
             }
         });
 
         Schema::table('survey_assignments', function (Blueprint $table) {
-            if (!Schema::hasColumn('survey_assignments', 'invited_at')) {
+            if (! Schema::hasColumn('survey_assignments', 'invited_at')) {
                 $table->timestamp('invited_at')->nullable()->after('dispatch_count');
             }
 
-            if (!Schema::hasColumn('survey_assignments', 'invite_status')) {
+            if (! Schema::hasColumn('survey_assignments', 'invite_status')) {
                 $table->string('invite_status')->default('pending')->after('invited_at');
             }
 
-            if (!Schema::hasColumn('survey_assignments', 'invite_error')) {
+            if (! Schema::hasColumn('survey_assignments', 'invite_error')) {
                 $table->text('invite_error')->nullable()->after('invite_status');
             }
         });

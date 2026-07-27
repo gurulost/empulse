@@ -23,19 +23,6 @@ export function useTeamApi() {
         return data;
     };
 
-    const importUsers = async (file) => {
-        const formData = new FormData();
-        formData.append('file', file);
-        const { data } = await axios.post('/team/api/members/import', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        });
-        return data;
-    };
-
-    const exportTemplate = async (role) => {
-        window.location.href = `/users/export/${role}`;
-    };
-
     const getDepartments = async () => {
         const { data } = await axios.get('/team/api/departments');
         return data; // Returns { data: [...], ... }
@@ -61,8 +48,6 @@ export function useTeamApi() {
         addTeamMember,
         updateTeamMember,
         deleteTeamMember,
-        importUsers,
-        exportTemplate,
         getDepartments,
         addDepartment,
         updateDepartment,

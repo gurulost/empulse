@@ -13,7 +13,7 @@ The product is not intended to be a generic form builder. Its center is a versio
 
 ## The product loop
 
-1. A manager creates a company and adds or imports the roster.
+1. A manager creates a company and adds the initial roster.
 2. WorkFit admin keeps the shared survey instrument versioned and publishes the live version.
 3. The manager launches a full baseline wave.
 4. Employees receive secure assignments, autosave progress, and submit responses.
@@ -21,13 +21,13 @@ The product is not intended to be a generic form builder. Its center is a versio
 6. Leaders filter and compare results across departments, teams, and waves.
 7. The company acts, then uses recurring Pulse waves to measure movement.
 
-The first completed response is the workflow activation milestone: it proves the end-to-end path works. It is not enough for a reliable company diagnosis. A minimum-sample and cohort-suppression policy still needs to be defined and implemented. The retained value is trustworthy diagnosis and wave-over-wave learning that changes management decisions.
+The first completed response is the workflow activation milestone: it proves the end-to-end path works. It is not enough for a reliable company diagnosis. Company results require at least 5 valid respondents; subgroup results require at least 7 and complementary suppression. The retained value is trustworthy diagnosis, a recorded leadership response, and governed wave-over-wave learning.
 
 ## Current capabilities
 
 - multi-tenant companies and organization rosters;
 - Manager, Chief, Team Lead, Employee, and WorkFit Admin experiences;
-- CSV/XLSX roster import and export;
+- roster management with expiring account invitations (bulk import/export is intentionally unavailable until a preview-and-reconciliation workflow is built);
 - versioned internal survey engine with pages, sections, item types, scale presets, options, and display logic;
 - token-scoped survey assignments, autosave, validation, and normalized responses;
 - full and recurring survey waves with role-based audiences;
@@ -35,18 +35,21 @@ The first completed response is the workflow activation milestone: it proves the
 - company, department, team, and wave analytics;
 - trend and comparison reports;
 - WorkFit-admin survey builder, customer activation report, and onboarding action queue;
-- Stripe subscriptions through Laravel Cashier.
+- company-owned Stripe subscriptions, explicit billing administrators, entitlement/usage enforcement, and replay-safe webhook reconciliation;
+- versioned respondent privacy acknowledgment and audited data-subject/retention workflows;
+- immutable findings, leadership actions, communications, measurement plans, governed Pulse variants, and non-causal outcomes.
 
 Qualtrics has been replaced for the active survey and analytics path.
 
 ## Architecture at a glance
 
-- Backend: Laravel 11 on PHP 8.2+
+- Backend: Laravel 12 on PHP 8.2+
 - UI: Blade, Bootstrap 5, and conditionally mounted Vue 3 components
 - Assets: Vite
 - Billing: Stripe and Laravel Cashier
 - Background work: Laravel queue and scheduler
 - Charts: Chart.js, vue-chartjs, and dashboard Vue components
+- Production baseline: PostgreSQL 16 with separate web, worker, and scheduler processes
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) before changing survey, analytics, billing, role, or tenant behavior.
 
@@ -56,7 +59,7 @@ Requirements:
 
 - PHP 8.2+
 - Composer
-- Node 20+
+- Node 22+
 - a configured database
 
 ```bash
@@ -68,7 +71,7 @@ npm install
 npm run dev
 ```
 
-Configure database, cache, queue, mail, Socialite, and Stripe values in the environment before exercising those integrations.
+The local example uses PostgreSQL plus database-backed queue, cache, and sessions. Configure mail, Socialite, and Stripe values before exercising those integrations.
 
 Build production assets with:
 
@@ -91,6 +94,8 @@ The import is transactional. Activation deactivates the prior version and makes 
 Do not rename question IDs or change analytics mappings without reviewing [`config/survey.php`](config/survey.php), the product methodology, and analytics tests.
 
 ## Demo data
+
+`php artisan migrate:fresh --seed` is the deterministic browser/CI fixture: it imports the canonical 62-item WorkFit baseline, creates two hash-pinned cycles, and gives the role accounts a complete respondent journey. Use it only in an isolated disposable database.
 
 Create a realistic company with departments, team leads, 100+ employees, several survey waves, and analytics-ready answers:
 
@@ -125,34 +130,54 @@ The command enforces wave state, open/due windows, billing status, audience role
 A complete runtime needs both:
 
 ```bash
-php artisan queue:work --tries=1
+php artisan queue:work --tries=3 --backoff=10 --timeout=120
 php artisan schedule:run
 ```
 
 The production scheduler should invoke `php artisan schedule:run` every minute. Without a worker and scheduler, recurring measurement stalls.
 
-Full waves use manual cadence. Weekly, monthly, and quarterly drip cadences require a tariff listed in `config('survey.automation.drip_tariffs')`; the current Pulse entitlement is tariff `1`.
+Full waves use manual cadence. Recurring and action-linked follow-up waves require the company-level `recurring_waves` entitlement. Governed Pulse variants limit questions to the predeclared metric, freeze their audience, cap reminders, and enforce respondent rest/rolling-frequency rules.
+
+Invitation/reminder retries reuse one encrypted survey URL and one provider idempotency UUID. Automatic resend stops before the provider deduplication window expires and requires manual provider review afterward.
 
 ## Billing
 
-Plans live in `plans` and point to Stripe Price IDs. Managers browse `/plans` and manage the active subscription at `/account/billing`.
+The company is Cashier's billable customer. Billing admins browse `/plans` and `/account/billing`; owner transfer is acceptance-gated. Stripe webhooks reconcile the canonical organization entitlement, and legacy return routes cannot grant access. The plan/feature/limit contract lives in [`config/billing.php`](config/billing.php). Public prices and a trial remain disabled/unconfirmed until the product owner approves them.
 
-Cashier and Stripe webhook events are billing truth. Legacy payment return routes must not grant entitlements.
+After approved Stripe price IDs and integer prices are configured, materialize the checkout projection with `php artisan billing:sync-catalog`. The command fails closed on incomplete plans. Active-respondent limits are reserved atomically with dispatch.
 
-The current code has a $100/month seeded Business Plan and a Starter/Pulse tariff distinction, but the final packaging, trial policy, prices, respondent limits, and service inclusions are open product-owner decisions. Do not hard-code new commercial behavior without reconciling [`docs/PRODUCT_VISION_AND_BUSINESS_MODEL.md`](docs/PRODUCT_VISION_AND_BUSINESS_MODEL.md), plan data, Stripe configuration, customer copy, and tests.
+WorkFit advisors do not have global customer action access. A company administrator grants and revokes named, purpose-bound access from the leadership action workspace.
 
 ## Quality gates
 
 ```bash
-php artisan test
+composer test
+vendor/bin/pint --test
+composer analyse
+composer audit --no-interaction
 npm run lint
+npm run test:unit
 npm run build
+npm audit --audit-level=high
 npm run test:e2e
 ```
 
-CI runs the backend suite, frontend lint/build, and Playwright role smoke tests against a seeded SQLite application.
+CI runs migrations and the backend suite against PostgreSQL 16, formatting, scoped critical-path static analysis, dependency audits, a full-history secret scan, frontend lint/unit/build gates, readiness, and Playwright role/failure/respondent/accessibility journeys with real web and worker processes.
 
 Analytics query changes also require the EXPLAIN workflow in [`docs/ANALYTICS_EXPLAIN_CHECKLIST.md`](docs/ANALYTICS_EXPLAIN_CHECKLIST.md).
+
+## Production runtime contract
+
+No production environment is currently selected or deployed. Repository-level production work targets the provider-neutral contract in [`docs/PRODUCTION_DEPLOYMENT_RUNBOOK.md`](docs/PRODUCTION_DEPLOYMENT_RUNBOOK.md):
+
+- PostgreSQL is the only production database;
+- `APP_DEBUG=false`, HTTPS, secure session cookies, strict survey validation, durable queue/cache/session drivers, mail, and Stripe secrets are mandatory;
+- migrations run as a one-time release action, never in the image build or web startup;
+- web, worker, and scheduler are distinct processes;
+- `/api/healthz` is liveness and `/api/readyz` checks database/runtime-table readiness;
+- `php artisan app:production-check` fails closed on unsafe configuration.
+
+The checked-in Docker and Procfile definitions express the same process contract. Replit configuration is development-only and intentionally has no production deployment block.
 
 ## Documentation map
 
@@ -162,3 +187,10 @@ Analytics query changes also require the EXPLAIN workflow in [`docs/ANALYTICS_EX
 - [`docs/ONBOARDING_FLUENCY_AUDIT_2026-03-06.md`](docs/ONBOARDING_FLUENCY_AUDIT_2026-03-06.md) — activation-path reasoning
 - [`docs/ANALYTICS_EXPLAIN_CHECKLIST.md`](docs/ANALYTICS_EXPLAIN_CHECKLIST.md) — production query-plan review
 - [`docs/PRODUCTION_DEPLOYMENT_RUNBOOK.md`](docs/PRODUCTION_DEPLOYMENT_RUNBOOK.md) — deployment and operations
+- [`docs/OBSERVABILITY_AND_SERVICE_LEVELS.md`](docs/OBSERVABILITY_AND_SERVICE_LEVELS.md) — launch SLOs, signals, alerts, and incident minimum
+- [`docs/BACKUP_RESTORE_AND_DISASTER_RECOVERY.md`](docs/BACKUP_RESTORE_AND_DISASTER_RECOVERY.md) — RPO/RTO and restore drill
+- [`docs/RELEASE_AND_ROLLBACK_POLICY.md`](docs/RELEASE_AND_ROLLBACK_POLICY.md) — evidence packet, canary rollout, and rollback policy
+- [`docs/CAPACITY_AND_PERFORMANCE_TEST_PLAN.md`](docs/CAPACITY_AND_PERFORMANCE_TEST_PLAN.md) — staging data profiles, workloads, and budgets
+- [`docs/METHODOLOGY_AND_CLAIMS_DOSSIER.md`](docs/METHODOLOGY_AND_CLAIMS_DOSSIER.md) — metric intent, interpretation, and claim limits
+- [`docs/RESPONDENT_DATA_PROMISE.md`](docs/RESPONDENT_DATA_PROMISE.md) — working privacy promise and owner decisions
+- [`docs/RELEASE_CANDIDATE_EVIDENCE_2026-07-27.md`](docs/RELEASE_CANDIDATE_EVIDENCE_2026-07-27.md) — current proven checks and external launch gates

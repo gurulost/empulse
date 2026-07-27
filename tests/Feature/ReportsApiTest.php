@@ -24,17 +24,17 @@ class ReportsApiTest extends TestCase
 
     public function test_trends_endpoint_returns_data()
     {
-        $user = User::factory()->create(['company_id' => 1]);
+        $user = User::factory()->create(['company_id' => 1, 'role' => 1]);
 
         $mock = Mockery::mock(SurveyAnalyticsService::class);
         $mock->shouldReceive('getTrendData')
             ->once()
-            ->with(1, 'engagement')
+            ->with(1, 'workfit_indicator', [])
             ->andReturn(['labels' => [], 'datasets' => []]);
 
         $this->app->instance(SurveyAnalyticsService::class, $mock);
 
-        $response = $this->actingAs($user)->getJson('/reports/trends?metric=engagement');
+        $response = $this->actingAs($user)->getJson('/reports/trends?metric=workfit_indicator');
 
         $response->assertOk();
         $response->assertJsonStructure(['labels', 'datasets']);
@@ -48,7 +48,7 @@ class ReportsApiTest extends TestCase
             'manager_email' => 'manager@example.com',
         ]);
 
-        $user = User::factory()->create(['company_id' => $company->id]);
+        $user = User::factory()->create(['company_id' => $company->id, 'role' => 1]);
         $survey = Survey::where('is_default', true)->firstOrFail();
         $version = SurveyVersion::where('is_active', true)->firstOrFail();
 
@@ -66,7 +66,7 @@ class ReportsApiTest extends TestCase
         $mock = Mockery::mock(SurveyAnalyticsService::class);
         $mock->shouldReceive('getComparisonData')
             ->once()
-            ->with($company->id, $wave->id, 'department')
+            ->with($company->id, $wave->id, 'department', [])
             ->andReturn(['labels' => [], 'datasets' => []]);
 
         $this->app->instance(SurveyAnalyticsService::class, $mock);
@@ -132,7 +132,7 @@ class ReportsApiTest extends TestCase
         $mock = Mockery::mock(SurveyAnalyticsService::class);
         $mock->shouldReceive('getTrendData')
             ->once()
-            ->with($company->id, 'culture')
+            ->with($company->id, 'culture', [])
             ->andReturn(['labels' => [], 'datasets' => []]);
 
         $this->app->instance(SurveyAnalyticsService::class, $mock);
@@ -151,7 +151,7 @@ class ReportsApiTest extends TestCase
             'company_id' => null,
         ]);
 
-        $response = $this->actingAs($admin)->getJson('/reports/trends?metric=engagement');
+        $response = $this->actingAs($admin)->getJson('/reports/trends?metric=workfit_indicator');
 
         $response->assertStatus(422)->assertJson([
             'message' => 'Company is required.',

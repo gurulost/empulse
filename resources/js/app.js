@@ -102,8 +102,9 @@ const boot = async () => {
             const definitionUrl = element.dataset.definitionUrl;
             const submitUrl = element.dataset.submitUrl;
             const autosaveUrl = element.dataset.autosaveUrl;
+            const privacyAcknowledgmentUrl = element.dataset.privacyAcknowledgmentUrl;
 
-            if (!definitionUrl || !submitUrl) {
+            if (!definitionUrl || !submitUrl || !autosaveUrl || !privacyAcknowledgmentUrl) {
                 return null;
             }
 
@@ -111,6 +112,7 @@ const boot = async () => {
                 definitionUrl,
                 submitUrl,
                 autosaveUrl,
+                privacyAcknowledgmentUrl,
             };
         }),
         () => mountById('reports-dashboard-root', () => import('./components/reports/ReportsDashboard.vue'), (element) =>

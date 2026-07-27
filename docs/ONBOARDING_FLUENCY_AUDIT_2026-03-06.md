@@ -16,7 +16,7 @@ The goal was not to add a generic tutorial. The goal was to shorten the path fro
 
 ## Product Understanding
 
-Empulse is a multi-tenant employee feedback platform built on Laravel 11 with Vue 3 islands. The main value loop is:
+Empulse is a multi-tenant employee feedback platform built on Laravel 12 with Vue 3 islands. The main value loop is:
 
 1. a manager or admin sets up a company roster
 2. a live survey version exists

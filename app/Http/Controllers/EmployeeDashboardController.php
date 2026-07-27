@@ -3,21 +3,24 @@
 namespace App\Http\Controllers;
 
 use App\Models\SurveyAssignment;
+use App\Services\SurveyAssignmentAccessService;
 use App\Services\SurveyDefinitionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class EmployeeDashboardController extends Controller
 {
-    public function __construct(protected SurveyDefinitionService $definitionService)
-    {
+    public function __construct(
+        protected SurveyDefinitionService $definitionService,
+        protected SurveyAssignmentAccessService $accessService
+    ) {
         $this->middleware('auth');
     }
 
     public function index(Request $request)
     {
         $user = Auth::user();
-        if (!$user || (int) $user->role !== 4) {
+        if (! $user || (int) $user->role !== 4) {
             return redirect()->route('home');
         }
 
@@ -43,6 +46,20 @@ class EmployeeDashboardController extends Controller
             'assignment' => $currentAssignment,
             'assignmentHistory' => $assignmentHistory,
             'surveyMeta' => $surveyMeta,
+        ]);
+    }
+
+    public function launch(Request $request, SurveyAssignment $assignment)
+    {
+        abort_unless((int) $assignment->user_id === (int) $request->user()->id, 404);
+
+        $assignment->loadMissing(['user', 'surveyVersion', 'surveyWave']);
+        $this->accessService->assertEligible($assignment);
+
+        return redirect()->route('survey.take', [
+            'token' => $assignment->rotateAccessToken(
+                $assignment->due_at ?: now()->addDays(14)
+            ),
         ]);
     }
 }

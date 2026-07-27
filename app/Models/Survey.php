@@ -11,6 +11,7 @@ class Survey extends Model
 
     protected $fillable = [
         'company_id',
+        'instrument_id',
         'created_by',
         'title',
         'description',

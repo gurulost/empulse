@@ -9,7 +9,7 @@ trait CreatesSurveyFixtures
 {
     protected function setUpSurveyFixtures(): void
     {
-        if (!Survey::where('is_default', true)->exists()) {
+        if (! Survey::where('is_default', true)->exists()) {
             Survey::factory()->create([
                 'title' => 'Default Survey',
                 'is_default' => true,
@@ -17,7 +17,7 @@ trait CreatesSurveyFixtures
             ]);
         }
 
-        if (!SurveyVersion::where('is_active', true)->exists()) {
+        if (! SurveyVersion::where('is_active', true)->exists()) {
             SurveyVersion::factory()->create([
                 'version' => 'v1',
                 'title' => 'Default Survey Version',

@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('title')
-    Empulse - Transform Employee Feedback
+    Empulse - Workplace Diagnosis to Measurable Action
 @endsection
 
 @section('content')
@@ -16,20 +16,20 @@
                     <div class="animate-fade-in-up">
                         <span class="hero-badge">
                             <span class="hero-badge-dot"></span>
-                            New: Visual Survey Builder
+                            WorkFit diagnostic + continuous learning
                         </span>
                     </div>
                     <h1 class="hero-title animate-fade-in-up delay-1">
-                        Transform Employee
+                        Turn Workplace
                         <span class="hero-title-accent">Feedback</span>
-                        into Action
+                        into Measurable Action
                     </h1>
                     <p class="hero-description animate-fade-in-up delay-2">
-                        Empulse helps you measure engagement, understand culture, and drive meaningful change with powerful analytics and intuitive surveys.
+                        Empulse helps leaders see the gap between what people need from work and what they experience, choose a focused response, and learn whether conditions improve in later waves.
                     </p>
                     <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center justify-content-lg-start animate-fade-in-up delay-3">
                         <a href="{{ route('register') }}" class="btn btn-primary btn-lg rounded-pill px-5 py-3 shadow-lg hover-lift fw-bold">
-                            Get Started Free
+                            Create a Company Workspace
                             <i class="bi bi-arrow-right ms-2"></i>
                         </a>
                         <a href="{{ route('login') }}" class="btn btn-white btn-lg rounded-pill px-5 py-3 shadow-sm hover-lift fw-bold text-dark">
@@ -37,8 +37,8 @@
                         </a>
                     </div>
                     <div class="hero-trust-signals animate-fade-in-up delay-4">
-                        <span><i class="bi bi-check-circle-fill text-success me-1"></i>No credit card required</span>
-                        <span><i class="bi bi-check-circle-fill text-success me-1"></i>14-day free trial</span>
+                        <span><i class="bi bi-check-circle-fill text-success me-1"></i>WorkFit-governed methodology</span>
+                        <span><i class="bi bi-check-circle-fill text-success me-1"></i>Privacy-gated reporting</span>
                     </div>
                 </div>
                 <div class="col-lg-6 position-relative animate-scale-in delay-3">
@@ -50,25 +50,25 @@
                                 <div class="hero-dot bg-warning"></div>
                                 <div class="hero-dot bg-success"></div>
                             </div>
-                            <div class="hero-dashboard-label">Empulse Dashboard</div>
+                            <div class="hero-dashboard-label">Illustrative Empulse Dashboard</div>
                         </div>
                         <div class="hero-dashboard-body">
                             <div class="row g-3 mb-4">
                                 <div class="col-6">
                                     <div class="hero-stat-card">
-                                        <div class="hero-stat-label">Engagement Score</div>
+                                        <div class="hero-stat-label">Priority WorkFit Gap</div>
                                         <div class="d-flex align-items-end gap-2">
-                                            <div class="hero-stat-value">8.4</div>
-                                            <div class="text-success small fw-bold mb-1"><i class="bi bi-arrow-up"></i> 12%</div>
+                                            <div class="hero-stat-value">2.1</div>
+                                            <div class="text-success small fw-bold mb-1"><i class="bi bi-arrow-down"></i> 0.4</div>
                                         </div>
                                         <div class="progress mt-3" style="height: 5px;">
-                                            <div class="progress-bar bg-primary rounded-pill" style="width: 84%"></div>
+                                            <div class="progress-bar bg-primary rounded-pill" style="width: 70%"></div>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-6">
                                     <div class="hero-stat-card">
-                                        <div class="hero-stat-label">Response Rate</div>
+                                        <div class="hero-stat-label">Eligible Response Rate</div>
                                         <div class="d-flex align-items-end gap-2">
                                             <div class="hero-stat-value">92%</div>
                                             <div class="text-success small fw-bold mb-1"><i class="bi bi-arrow-up"></i> 5%</div>
@@ -81,8 +81,8 @@
                             </div>
                             <div class="hero-stat-card">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <div class="hero-stat-label mb-0">Recent Trends</div>
-                                    <span class="badge bg-light text-dark fw-semibold" style="font-size: 0.7rem;">Last 30 Days</span>
+                                    <div class="hero-stat-label mb-0">Comparable Wave Movement</div>
+                                    <span class="badge bg-light text-dark fw-semibold" style="font-size: 0.7rem;">Baseline → Pulse</span>
                                 </div>
                                 <div class="hero-chart-bars">
                                     <div class="hero-bar" style="height: 40%; animation-delay: 0.6s;"></div>
@@ -105,9 +105,9 @@
     <section class="features-section">
         <div class="container py-5">
             <div class="text-center mb-5 pt-3">
-                <h2 class="features-heading">Everything you need to build a better culture</h2>
+                <h2 class="features-heading">A complete loop from diagnosis to learning</h2>
                 <p class="features-subheading">
-                    Powerful tools designed to help you listen, understand, and act on employee feedback.
+                    Collect trustworthy input, focus leadership action, and preserve what the organization learns over time.
                 </p>
             </div>
 
@@ -117,9 +117,9 @@
                         <div class="feature-icon feature-icon-primary">
                             <i class="bi bi-bar-chart-fill"></i>
                         </div>
-                        <h3 class="feature-title">Advanced Analytics</h3>
+                        <h3 class="feature-title">Trustworthy Diagnosis</h3>
                         <p class="feature-text">
-                            Visualize trends, compare benchmarks, and uncover deep insights with our interactive dashboards.
+                            Surface work-content gaps and culture patterns only when sample, missingness, privacy, and reliability rules permit interpretation.
                         </p>
                     </div>
                 </div>
@@ -128,9 +128,9 @@
                         <div class="feature-icon feature-icon-success">
                             <i class="bi bi-ui-checks"></i>
                         </div>
-                        <h3 class="feature-title">Visual Survey Builder</h3>
+                        <h3 class="feature-title">Leadership Action Loop</h3>
                         <p class="feature-text">
-                            Create beautiful, engaging surveys in minutes with our drag-and-drop builder and logic editor.
+                            Turn eligible findings into an owned decision, a governed intervention, a communication, and a predeclared measurement plan.
                         </p>
                     </div>
                 </div>
@@ -139,9 +139,9 @@
                         <div class="feature-icon feature-icon-info">
                             <i class="bi bi-people-fill"></i>
                         </div>
-                        <h3 class="feature-title">Culture Pulse</h3>
+                        <h3 class="feature-title">Comparable Pulse Learning</h3>
                         <p class="feature-text">
-                            Monitor team sentiment in real-time and identify areas for improvement before they become issues.
+                            Use governed follow-up waves to measure movement without overstating causality and keep a durable record of what changed.
                         </p>
                     </div>
                 </div>
@@ -153,12 +153,12 @@
     <section class="cta-section position-relative overflow-hidden">
         <div class="cta-ambient"></div>
         <div class="container py-5 position-relative z-2 text-center">
-            <h2 class="cta-heading">Ready to transform your workplace?</h2>
+            <h2 class="cta-heading">Ready to build a healthier workplace?</h2>
             <p class="cta-subheading">
-                Join thousands of companies using Empulse to build happier, more productive teams.
+                Create your company workspace, prepare the roster, and get ready for a WorkFit baseline learning cycle.
             </p>
             <a href="{{ route('register') }}" class="btn btn-primary btn-lg rounded-pill px-5 py-3 shadow-lg hover-lift fw-bold">
-                Start Your Free Trial
+                Create Your Workspace
                 <i class="bi bi-arrow-right ms-2"></i>
             </a>
         </div>
@@ -217,10 +217,10 @@
     padding: 0.875rem 1.25rem; border-bottom: 1px solid #f1f5f9; background: #fafbfc;
 }
 .hero-dot { width: 10px; height: 10px; border-radius: 50%; }
-.hero-dashboard-label { font-family: 'Outfit', sans-serif; font-size: 0.75rem; font-weight: 600; color: #94a3b8; letter-spacing: 0.02em; }
+.hero-dashboard-label { font-family: 'Outfit', sans-serif; font-size: 0.75rem; font-weight: 600; color: #475569; letter-spacing: 0.02em; }
 .hero-dashboard-body { padding: 1.25rem; background: #fafbfc; }
 .hero-stat-card { background: #fff; padding: 1rem 1.25rem; border-radius: 0.75rem; border: 1px solid #f1f5f9; }
-.hero-stat-label { font-family: 'Outfit', sans-serif; font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 0.5rem; }
+.hero-stat-label { font-family: 'Outfit', sans-serif; font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #475569; margin-bottom: 0.5rem; }
 .hero-stat-value { font-family: 'Outfit', sans-serif; font-size: 1.75rem; font-weight: 700; color: #0c1222; letter-spacing: -0.02em; line-height: 1; }
 .hero-chart-bars { display: flex; align-items: flex-end; justify-content: space-between; gap: 6px; height: 80px; }
 .hero-bar {

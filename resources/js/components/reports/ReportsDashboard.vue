@@ -75,13 +75,13 @@
                     <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
                         <div>
                             <h5 class="mb-1 fw-bold">Historical Trends</h5>
-                            <p class="text-muted small mb-0">Track engagement and culture scores over time.</p>
+                            <p class="text-muted small mb-0">Track the pre-validation WorkFit indicator and culture index over time.</p>
                         </div>
                         <div class="bg-light p-1 rounded-pill d-flex align-items-center border">
                             <button class="btn btn-sm rounded-pill px-3 fw-semibold transition-all"
-                                    :class="trendMetric === 'engagement' ? 'btn-white shadow-sm text-primary' : 'text-muted'"
-                                    @click="trendMetric = 'engagement'; fetchTrends()">
-                                Engagement
+                                    :class="trendMetric === 'workfit_indicator' ? 'btn-white shadow-sm text-primary' : 'text-muted'"
+                                    @click="trendMetric = 'workfit_indicator'; fetchTrends()">
+                                WorkFit Indicator
                             </button>
                             <button class="btn btn-sm rounded-pill px-3 fw-semibold transition-all"
                                     :class="trendMetric === 'culture' ? 'btn-white shadow-sm text-primary' : 'text-muted'"
@@ -188,7 +188,7 @@ const loading = ref(false);
 const globalError = ref(null);
 
 // Trends State
-const trendMetric = ref('engagement');
+const trendMetric = ref('workfit_indicator');
 const trendData = ref(null);
 
 // Comparison State

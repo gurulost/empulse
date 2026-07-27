@@ -81,6 +81,24 @@
             <button class="btn btn-sm btn-link" @click="fetchData">Try Again</button>
         </div>
 
+        <div v-else-if="data.availability && data.availability !== 'eligible'" class="card border-0 shadow-sm">
+            <div class="card-body p-4 p-md-5">
+                <div class="small text-uppercase fw-semibold text-primary mb-2">Collection status</div>
+                <h2 class="h4 mb-3">{{ sampleStateTitle }}</h2>
+                <p class="text-muted mb-3">{{ data.sample?.reason }}</p>
+                <div class="d-flex flex-wrap gap-4 small">
+                    <div><strong>{{ data.sample?.valid_n ?? 0 }}</strong> valid responses</div>
+                    <div><strong>{{ data.sample?.minimum_n ?? 0 }}</strong> required</div>
+                    <div v-if="data.sample?.completion_rate !== null && data.sample?.completion_rate !== undefined">
+                        <strong>{{ Math.round(data.sample.completion_rate * 100) }}%</strong> completion
+                    </div>
+                </div>
+                <p class="small text-muted mt-3 mb-0">
+                    Scores remain hidden until this cohort satisfies the privacy and sample-quality policy.
+                </p>
+            </div>
+        </div>
+
         <div v-else-if="!hasAnalyticsData" class="row g-4">
             <div class="col-xl-8">
                 <setup-checklist :setup="setup" :user="user" @cta-click="handleChecklistCtaClick" />
@@ -186,7 +204,7 @@
                         </div>
                         <div class="card-body">
                             <team-culture-pulse
-                                v-if="data.team_culture"
+                                v-if="data.team_culture?.availability === 'eligible'"
                                 :score="data.team_culture.score"
                                 :positive="data.team_culture.positive"
                                 :negative="data.team_culture.negative"
@@ -220,7 +238,7 @@
                         </div>
                         <div class="card-body">
                             <impact-snapshot
-                                v-if="data.impact"
+                                v-if="data.impact && Object.values(data.impact).some((value) => typeof value === 'number')"
                                 :positive="data.impact.positive"
                                 :importance="data.impact.importance"
                                 :desire="data.impact.desire"
@@ -325,9 +343,15 @@ const hasAnalyticsData = computed(() => {
         (Array.isArray(payload.team_scatter) && payload.team_scatter.length > 0) ||
         payload.temperature !== null && payload.temperature !== undefined ||
         payload.weighted_indicator !== null && payload.weighted_indicator !== undefined ||
-        (payload.team_culture && Object.keys(payload.team_culture).length > 0) ||
-        (payload.impact && Object.keys(payload.impact).length > 0)
+        payload.team_culture?.availability === 'eligible' ||
+        (payload.impact && Object.values(payload.impact).some((value) => typeof value === 'number'))
     );
+});
+
+const sampleStateTitle = computed(() => {
+    if (data.value?.availability === 'suppressed') return 'Results are protected';
+    if (data.value?.availability === 'insufficient_completion') return 'More participation is needed';
+    return 'Responses are still being collected';
 });
 
 const surveyContentAdminOwnedHandoff = computed(() => {

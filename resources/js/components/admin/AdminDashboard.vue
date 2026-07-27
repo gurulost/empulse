@@ -129,8 +129,6 @@
                             @search="fetchUsers(1)"
                             @clear-filter="clearCompanyFilter"
                             @page-change="fetchUsers"
-                            @impersonate="impersonateUser"
-                            @delete="deleteUser"
                         />
 
                         <subscription-list 
@@ -272,28 +270,6 @@ const fetchOnboardingReport = async (page = 1) => {
         alert('Failed to load onboarding telemetry');
     } finally {
         loading.value = false;
-    }
-};
-
-const deleteUser = async (id) => {
-    if (!confirm('Are you sure you want to delete this user?')) return;
-    try {
-        await axios.delete(`/admin/api/users/${id}`);
-        fetchUsers(users.value.current_page);
-    } catch (e) {
-        console.error(e);
-        alert(e.response?.data?.message || 'Failed to delete user');
-    }
-};
-
-const impersonateUser = async (id) => {
-    if (!confirm('Login as this user?')) return;
-    try {
-        const { data } = await axios.post(`/admin/api/users/${id}/impersonate`);
-        window.location.href = data.redirect;
-    } catch (e) {
-        console.error(e);
-        alert('Failed to impersonate user');
     }
 };
 

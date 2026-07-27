@@ -14,8 +14,7 @@ class AddDepartmentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title' => ['required','string','min:1','max:50'],
+            'title' => ['required', 'string', 'min:1', 'max:50'],
         ];
     }
 }
-

@@ -14,11 +14,10 @@ class AddWorkerRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required','string','min:5','max:255'],
-            'email' => ['required','email','max:255'],
-            'role' => ['required','integer','in:1,2,3,4'],
-            'department' => ['nullable','string','max:255'],
+            'name' => ['required', 'string', 'min:5', 'max:255'],
+            'email' => ['required', 'email', 'max:255'],
+            'role' => ['required', 'integer', 'in:1,2,3,4'],
+            'department' => ['nullable', 'string', 'max:255'],
         ];
     }
 }
-

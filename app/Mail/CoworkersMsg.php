@@ -3,7 +3,6 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -18,11 +17,14 @@ class CoworkersMsg extends Mailable
      *
      * @return void
      */
-    
     public $name;
+
     public $link;
+
     public $department;
+
     public $supervisor;
+
     public $company;
 
     public function __construct($name, $department, $supervisor, $company, $link)
@@ -37,19 +39,19 @@ class CoworkersMsg extends Mailable
     public function build()
     {
         return $this->view('coworkersMsg',
-        [
-            "name" => $this->name,
-            "link" => $this->link,
-            "department" => $this->department,
-            "supervisor" => $this->supervisor,
-            "company" => $this->company
-        ]);
+            [
+                'name' => $this->name,
+                'link' => $this->link,
+                'department' => $this->department,
+                'supervisor' => $this->supervisor,
+                'company' => $this->company,
+            ]);
     }
 
     /**
      * Get the message envelope.
      *
-     * @return \Illuminate\Mail\Mailables\Envelope
+     * @return Envelope
      */
     public function envelope()
     {
@@ -61,7 +63,7 @@ class CoworkersMsg extends Mailable
     /**
      * Get the message content definition.
      *
-     * @return \Illuminate\Mail\Mailables\Content
+     * @return Content
      */
     public function content()
     {

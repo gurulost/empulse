@@ -3,13 +3,17 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Providers\RouteServiceProvider;
+use App\Models\Companies;
 use App\Models\User;
+use App\Providers\RouteServiceProvider;
+use App\Services\OrganizationEntitlementService;
+use App\Services\OrganizationService;
+use DB;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Auth\RegistersUsers;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Validator;
-use DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class RegisterController extends Controller
@@ -39,15 +43,16 @@ class RegisterController extends Controller
      *
      * @return void
      */
-    public function __construct()
-    {
+    public function __construct(
+        protected OrganizationService $organizations,
+        protected OrganizationEntitlementService $entitlements
+    ) {
         $this->middleware('guest');
     }
 
     /**
      * Get a validator for an incoming registration request.
      *
-     * @param array $data
      * @return \Illuminate\Contracts\Validation\Validator
      */
     protected function validator(array $data)
@@ -64,75 +69,60 @@ class RegisterController extends Controller
                 Rule::unique('companies', 'manager_email'),
             ],
             'company_title' => ['required', 'string', 'max:255'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => ['required', 'string', 'min:12', 'confirmed'],
         ]);
     }
 
     /**
      * Create a new user instance after a valid registration.
      *
-     * @param array $data
-     * @return \App\Models\User
+     * @return User
      */
-
     protected function create(array $data)
     {
-        $user = User::where('email', $data['email'])->first();
-        $ifWorkerExist = DB::table('company_worker')->where("email", $data["email"])->first();
-        $ifCompanyExist = DB::table("companies")->where("manager_email", $data["email"])->first();
+        try {
+            return DB::transaction(function () use ($data) {
+                $companyId = DB::table('companies')->insertGetId([
+                    'title' => $data['company_title'],
+                    'manager' => $data['name'],
+                    'manager_email' => $data['email'],
+                    'status' => 'active',
+                ]);
 
-        if ($user || $ifWorkerExist || $ifCompanyExist) {
-            throw ValidationException::withMessages([
-                'email' => [__('validation.unique', ['attribute' => 'email'])],
-            ]);
+                $user = User::create([
+                    'name' => $data['name'],
+                    'email' => $data['email'],
+                    'company_id' => $companyId,
+                    'company_title' => $data['company_title'],
+                    'role' => 1,
+                    'company' => 1,
+                    'status' => 'active',
+                    'password' => Hash::make($data['password']),
+                ]);
+
+                DB::table('company_worker')->insert([
+                    'company_id' => $companyId,
+                    'name' => $data['name'],
+                    'email' => $data['email'],
+                    'role' => 1,
+                    'status' => 'active',
+                ]);
+                $this->organizations->synchronize($user, $user, null, null, 'active');
+                $this->entitlements->ensureBillingOwner(
+                    Companies::findOrFail($companyId),
+                    $user
+                );
+
+                return $user;
+            });
+        } catch (QueryException $e) {
+            if (in_array((string) $e->getCode(), ['23000', '23505'], true)) {
+                throw ValidationException::withMessages([
+                    'email' => [__('validation.unique', ['attribute' => 'email'])],
+                ]);
+            }
+
+            throw $e;
         }
-
-        $companyId = DB::table("companies")->insertGetId([
-            "title" => $data['company_title'],
-            "manager" => $data["name"],
-            "manager_email" => $data["email"],
-        ]);
-
-        $default_department = [
-            ['company_id' => $companyId, 'title' => "Marketing & Proposals Department"],
-            ['company_id' => $companyId, 'title' => "Sales Department"],
-            ['company_id' => $companyId, 'title' => "Project Department"],
-            ['company_id' => $companyId, 'title' => "Designing Department"],
-            ['company_id' => $companyId, 'title' => "Production Department"],
-            ['company_id' => $companyId, 'title' => "Maintenance Department"],
-            ['company_id' => $companyId, 'title' => "Store Department"],
-            ['company_id' => $companyId, 'title' => "Procurement Department"],
-            ['company_id' => $companyId, 'title' => "Quality Department"],
-            ['company_id' => $companyId, 'title' => "Inspection department"],
-            ['company_id' => $companyId, 'title' => "Packaging Department"],
-            ['company_id' => $companyId, 'title' => "Finance Department"],
-            ['company_id' => $companyId, 'title' => "Dispatch Department"],
-            ['company_id' => $companyId, 'title' => "Account Department"],
-            ['company_id' => $companyId, 'title' => "Research & Development Department"],
-            ['company_id' => $companyId, 'title' => "Information Technology Department"],
-            ['company_id' => $companyId, 'title' => "Human Resource Department"],
-            ['company_id' => $companyId, 'title' => "Security Department"],
-            ['company_id' => $companyId, 'title' => "Administration department"],
-        ];
-
-        DB::table("company_department")->insert($default_department);
-
-        DB::table('company_worker')->insert([
-            "company_id" => $companyId,
-            "name" => $data["name"],
-            "email" => $data["email"],
-            "role" => 1
-        ]);
-
-        return User::create([
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'company_id' => $companyId,
-            'company_title' => $data['company_title'],
-            'role' => 1,
-            'company' => 1,
-            'password' => Hash::make($data['password']),
-        ]);
     }
-
 }

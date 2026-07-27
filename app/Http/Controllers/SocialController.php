@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Services\SocialAuthService;
-use Laravel\Socialite\Facades\Socialite;
 use Exception;
+use Laravel\Socialite\Facades\Socialite;
 
 class SocialController extends Controller
 {
@@ -25,23 +24,25 @@ class SocialController extends Controller
     {
         try {
             $googleUser = Socialite::driver('google')->user();
-            
+
             $result = $this->socialAuth->handleGoogleLogin(
                 $googleUser->id,
                 $googleUser->email,
                 $googleUser->name
             );
 
-            if (!$result['success']) {
+            if (! $result['success']) {
                 \Session::put('google_auth_error', $result['error']);
-                return redirect()->back();
+
+                return redirect()->route('login')->withErrors($result['error']);
             }
 
             return redirect('/home');
 
         } catch (Exception $exception) {
-            \Session::put('google_auth_error', "Google authentication is currently unavailable.");
-            return redirect()->back();
+            \Session::put('google_auth_error', 'Google authentication is currently unavailable.');
+
+            return redirect()->route('login')->withErrors('Google authentication is currently unavailable.');
         }
     }
 }

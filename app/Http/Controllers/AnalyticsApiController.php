@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\OrganizationScopeService;
 use App\Services\SurveyAnalyticsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,19 +20,19 @@ class AnalyticsApiController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 
         $isSuperAdmin = (int) $user->role === 0 || (int) ($user->is_admin ?? 0) === 1;
 
-        if (!$isSuperAdmin && !$user->company_id) {
+        if (! $isSuperAdmin && ! $user->company_id) {
             return response()->json(['message' => 'User must be associated with a company.'], 422);
         }
 
         $companyId = $request->integer('company_id') ?: $user->company_id;
 
-        if (!$companyId) {
+        if (! $companyId) {
             return response()->json(['message' => 'Company is required.'], 422);
         }
 
@@ -39,40 +40,49 @@ class AnalyticsApiController extends Controller
         // All other users can only view their own company
         $isOwnCompany = (int) $user->company_id === (int) $companyId;
 
-        if (!$isSuperAdmin && !$isOwnCompany) {
+        if (! $isSuperAdmin && ! $isOwnCompany) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
+        $scope = app(OrganizationScopeService::class)->analyticsFilters($user);
         $filters = [
             'company_id' => $companyId,
             'department' => $request->input('department'),
             'team' => $request->input('team'),
             'wave' => $request->input('wave'),
+            ...$scope,
         ];
 
         $data = $this->analytics->companyDashboardAnalytics($filters);
-        
+
         // Fetch available filter options - all scoped to authorized company
-        $exist_departments = \DB::table('company_department')
-            ->where('company_id', $companyId)
-            ->pluck('title')
-            ->toArray();
-            
-        $departments = \DB::table('company_worker')
-            ->where('company_id', $companyId)
-            ->whereNotNull('department')
-            ->where('department', '!=', '')
-            ->select('department')
-            ->distinct()
-            ->get();
-            
-        $teamleads = \DB::table('company_worker')
-            ->where('company_id', $companyId)
-            ->whereNotNull('supervisor')
-            ->where('supervisor', '!=', '')
-            ->select('supervisor as name')
-            ->distinct()
-            ->get();
+        $canSeeCompanyFilterCatalog = $scope === [];
+        $exist_departments = $canSeeCompanyFilterCatalog
+            ? \DB::table('company_department')
+                ->where('company_id', $companyId)
+                ->pluck('title')
+                ->toArray()
+            : [];
+
+        $departments = $canSeeCompanyFilterCatalog
+            ? \DB::table('company_worker')
+                ->where('company_id', $companyId)
+                ->whereNotNull('department')
+                ->where('department', '!=', '')
+                ->select('department')
+                ->distinct()
+                ->get()
+            : collect();
+
+        $teamleads = $canSeeCompanyFilterCatalog
+            ? \DB::table('company_worker')
+                ->where('company_id', $companyId)
+                ->whereNotNull('supervisor')
+                ->where('supervisor', '!=', '')
+                ->select('supervisor as name')
+                ->distinct()
+                ->get()
+            : collect();
 
         $waves = $this->analytics->availableWavesForCompany($companyId);
         $setup = $this->analytics->companySetupSummary($companyId);
@@ -86,8 +96,8 @@ class AnalyticsApiController extends Controller
                 'departments' => $departments,
                 'teamleads' => $teamleads,
                 'waves' => $waves,
-                'exist_departments' => $exist_departments
-            ]
+                'exist_departments' => $exist_departments,
+            ],
         ]);
     }
 }

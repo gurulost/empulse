@@ -7,7 +7,7 @@ Read [`PRODUCT_VISION_AND_BUSINESS_MODEL.md`](PRODUCT_VISION_AND_BUSINESS_MODEL.
 
 ## System summary
 
-Empulse is a multi-tenant Laravel 11 application with Vue 3 components mounted into Blade pages. It manages company rosters, versioned WorkFit survey content, survey-wave scheduling and invitations, response capture, organizational analytics, reports, onboarding operations, and Stripe subscriptions.
+Empulse is a multi-tenant Laravel 12 application with Vue 3 components mounted into Blade pages. It manages company rosters, versioned WorkFit survey content, survey-wave scheduling and invitations, response capture, organizational analytics, reports, onboarding operations, and Stripe subscriptions.
 
 The application has two operating layers:
 
@@ -18,18 +18,18 @@ The application has two operating layers:
 
 | Layer | Current implementation |
 | --- | --- |
-| Backend | PHP 8.2+, Laravel 11 |
+| Backend | PHP 8.2+, Laravel 12 |
 | Server-rendered UI | Blade and Bootstrap 5 |
 | Interactive UI | Vue 3 components mounted as page-level islands |
-| Asset build | Vite 5 |
+| Asset build | Vite 8 on Node 22+ |
 | Primary production database | PostgreSQL-compatible Laravel schema |
 | Local/test database | SQLite is used by the automated test configuration |
 | Billing | Stripe through Laravel Cashier |
 | Background work | Laravel queue jobs |
 | Scheduling | Laravel scheduler and `survey:waves:schedule` |
 | Charts | Chart.js / vue-chartjs plus lightweight custom components |
-| Roster import/export | Maatwebsite Excel |
-| Authentication | Laravel auth, Socialite, and role middleware |
+| Roster provisioning | Manual, invitation-backed provisioning; bulk import/export is intentionally disabled until a governed preview/reconciliation workflow exists |
+| Authentication | Laravel auth, Socialite, explicit capabilities, and row-scoped policies |
 
 See [`composer.json`](../composer.json) and [`package.json`](../package.json) for the exact dependency set.
 
@@ -45,7 +45,7 @@ Role integers are current schema truth:
 | Team lead | `3` | Company/team views |
 | Employee | `4` | `/employee` and assigned survey links |
 
-The `admin` middleware name is historical: it allows every authenticated role except employees. The `manager` and `workfit_admin` middleware provide narrower access. New authorization work should use explicit capabilities or policies rather than inferring product meaning from a middleware name.
+`config/capabilities.php` is the named capability map. `organization_memberships` supplies the current organization-scoped role when present, and `OrganizationScopeService` resolves chief/team-lead row scope from ID-based units and reporting relationships. The former broad role middleware and platform-admin policy bypasses are removed.
 
 Tenant scope is company-based. Non-WorkFit users must not read or mutate another company's roster, waves, assignments, responses, analytics, or reports.
 
@@ -57,13 +57,14 @@ flowchart TD
     Importer --> VersionedContent["Survey versions, pages, sections, items, options, scales"]
     VersionedContent --> Publish["WorkFit admin publishes one live version"]
 
-    Company["Company and roster"] --> Wave["Manager creates full or drip wave"]
+    Company["Company, memberships, and units"] --> Wave["Manager creates full or drip wave"]
     Billing["Cashier subscription and plan entitlement"] --> Wave
     Publish --> Wave
 
     Wave --> Scheduler["survey:waves:schedule"]
     Scheduler --> Process["ProcessSurveyWave job"]
-    Process --> Assignment["Per-user survey assignment"]
+    Process --> Cohort["Frozen wave cycle and audience"]
+    Cohort --> Assignment["Per-user survey assignment"]
     Assignment --> Invite["Queued invitation"]
     Assignment --> Definition["Token-scoped survey definition"]
     Definition --> SurveyUI["Vue survey renderer"]
@@ -86,11 +87,16 @@ Primary files:
 
 - [`app/Models/Companies.php`](../app/Models/Companies.php)
 - [`app/Models/CompanyWorker.php`](../app/Models/CompanyWorker.php)
+- [`app/Models/OrganizationMembership.php`](../app/Models/OrganizationMembership.php)
+- [`app/Models/OrganizationUnit.php`](../app/Models/OrganizationUnit.php)
+- [`app/Models/OrganizationAssignment.php`](../app/Models/OrganizationAssignment.php)
 - [`app/Http/Controllers/TeamController.php`](../app/Http/Controllers/TeamController.php)
 - [`app/Services/UserService.php`](../app/Services/UserService.php)
 - [`resources/js/components/team`](../resources/js/components/team)
 
-Registration creates a company, a manager user, a manager roster row, and default departments. The `users` table provides authentication and company membership. The `company_worker` table remains the operational roster source for department, supervisor, and role metadata used by filters and wave audiences.
+Registration transactionally creates a company, owner identity, roster projection, effective-dated membership, and explicit unresolved unit assignment. Password registration requires at least 12 characters. Social identities are unique; a provider login cannot silently attach itself to an existing email account.
+
+`organization_memberships`, `organization_units`, and `organization_assignments` are canonical organization history. Membership role/status and unit/reporting changes close the previous effective-dated record and append a new one. `company_worker` and `company_department` remain compatibility projections for the existing team-management UI; they do not own historical analytics truth.
 
 Managers can add or import members and maintain departments. Chiefs and team leads model the reporting hierarchy; employees are the primary respondents.
 
@@ -134,6 +140,8 @@ Primary files:
 
 - [`app/Models/SurveyWave.php`](../app/Models/SurveyWave.php)
 - [`app/Models/SurveyAssignment.php`](../app/Models/SurveyAssignment.php)
+- [`app/Models/SurveyWaveCycle.php`](../app/Models/SurveyWaveCycle.php)
+- [`app/Models/SurveyWaveAudienceMember.php`](../app/Models/SurveyWaveAudienceMember.php)
 - [`app/Http/Controllers/SurveyWaveController.php`](../app/Http/Controllers/SurveyWaveController.php)
 - [`app/Console/Commands/ScheduleSurveyWaves.php`](../app/Console/Commands/ScheduleSurveyWaves.php)
 - [`app/Jobs/ProcessSurveyWave.php`](../app/Jobs/ProcessSurveyWave.php)
@@ -148,7 +156,9 @@ A wave belongs to a company, survey, and survey version. It defines:
 - open and due dates;
 - status and last-dispatch state.
 
-The scheduler finds eligible waves. `ProcessSurveyWave` creates or refreshes per-user assignments, applies cadence rules, queues invitations, records dispatch state, and updates the wave. `survey_wave_logs` provides an operational history.
+The scheduler finds eligible waves. Before assignment creation, `SurveyCohortService` creates an immutable wave occurrence, freezes its eligible audience, and stores audience, instrument, and metric-definition hashes. Each frozen audience member captures organization membership, unit, reporting relationship, role, and unresolved-state truth. `ProcessSurveyWave` creates assignments against that occurrence, applies cadence rules, queues invitations, records dispatch state, and updates the wave. `survey_wave_logs` provides an operational delivery history.
+
+Invitation and reminder attempts use deterministic application keys plus stable UUID provider-idempotency keys. A first attempt rotates the assignment access token once and stores the survey URL encrypted inside the append-only attempt record; automatic retries reuse that exact URL and provider key. Brevo currently retains email idempotency keys for 30 minutes, so Empulse stops automatic retries at 25 minutes and requires provider-activity review before any later resend. `email_delivery_events` distinguishes queued, provider-accepted, delivered, bounced, complained, unsubscribed, and failed states; the manager funnel does not label provider acceptance as delivery. Authenticated Brevo webhooks update the funnel. `delivery_contacts` suppress bounced, complaining, and unsubscribed addresses from future mail, while reminder jobs refuse completed, expired, revoked, or closed-wave assignments.
 
 Full waves are the baseline path and use manual cadence. Drip waves are the recurring path and are plan-gated.
 
@@ -162,7 +172,7 @@ Primary files:
 - [`resources/js/components/survey/SurveyApp.vue`](../resources/js/components/survey/SurveyApp.vue)
 - [`resources/js/components/survey/SurveyItem.vue`](../resources/js/components/survey/SurveyItem.vue)
 
-Every assignment has a random token and is associated with a specific user, version, and optionally a wave. Token routes expose the survey, definition, autosave, and submit endpoints.
+Every assignment is pinned to a user and survey version and, for scheduled measurement, a wave occurrence and frozen audience member. Access tokens are high-entropy, stored only as SHA-256 hashes, expiring, revocable, and rotated immediately before launch or delivery. Token routes are rate-limited and reject expired, revoked, completed, inactive-user, unpinned, future, paused, and closed-wave access.
 
 The Vue renderer supports pagination, progress, sliders, text, number, select, multi-select, conditional display, client-side validation, autosave, and resume. Submission stores:
 
@@ -172,11 +182,9 @@ SurveyAssignment
     └── SurveyAnswer
 ```
 
-Answers retain the stable `question_key`, normalized numeric value when applicable, and item metadata needed by analytics.
+Autosave is revisioned and rejects stale-tab overwrites. Final submission row-locks the assignment and atomically creates one response plus unique answers before completing the assignment and revoking access. Answers retain the stable `question_key`, normalized numeric value when applicable, and item metadata needed by analytics.
 
-The current data model is identifiable: assignments and responses reference a user. This is a product and architecture invariant until a deliberate anonymity design replaces it.
-
-The current source does not establish a complete policy for individual-answer visibility, retention, confidentiality, or minimum cohort suppression. Those are product, privacy, and authorization decisions still to be designed; token security alone does not answer them.
+The collection model is identifiable: assignments and responses reference a user. Respondents acknowledge the versioned promise in `docs/RESPONDENT_DATA_PROMISE.md` before submission. Customer-facing analytics never expose individual answers. `PrivacyGovernanceService` implements verified access, correction, erasure/pseudonymization, and legal-hold workflows; `RetentionService` requires a reviewed dry-run hash before execution. Every consequential privacy transition is audit chained.
 
 ### 5. Analytics and reports
 
@@ -190,11 +198,11 @@ Primary files:
 - [`resources/js/components/dashboard`](../resources/js/components/dashboard)
 - [`resources/js/components/reports`](../resources/js/components/reports)
 
-Dashboard analytics select the latest completed response per employee within a company and optional wave, then apply department and team filters. Only analytics-relevant numeric answers are loaded.
+Dashboard analytics select the latest completed response per employee within one exact immutable wave cycle. A recurring wave's occurrences are never pooled. Department/team filters and role scope are applied from frozen response-cohort IDs: managers receive company scope, chiefs their assigned organization unit, and team leads respondents whose frozen reporting line points to their membership. Request parameters can narrow but cannot widen that scope. Current roster text is a legacy-only fallback for pre-cycle evidence; moving, renaming, or deactivating a person cannot rewrite prior-wave grouping.
 
-High-level calculations:
+The immutable metric registry is the calculation contract for a wave and response. Historical dashboard, trend, comparison, scatter, impact, and reliability calculations resolve the registry definition pinned to the selected cycle and fail closed if its ID/hash cannot be verified; they do not reinterpret frozen responses with current configuration. Registry version labels include a deterministic content-hash suffix. The current canonical baseline has 62 purpose-bound items. High-level calculations:
 
-- work-content gap = `ideal - current`;
+- work-content gap = paired complete-case `ideal - current`; valid N is the number of respondents who supplied both values, and both means use that same population;
 - indicator satisfaction normalizes current against ideal on a 0–10 scale;
 - weighted indicator = configured weighted average of indicator satisfaction;
 - negative culture items are reverse-scored;
@@ -207,11 +215,19 @@ High-level calculations:
 - trend reports compare completed waves;
 - comparison reports group a selected wave by department or team.
 
-`config/survey.php` is the source of truth for question membership, polarity, labels, and weights. Formula changes require tests in `SurveyAnalyticsServiceTest` and representative feature coverage.
+`MetricRegistryService` publishes a content-hashed version derived from governed configuration. Wave cycles and responses pin its ID and hash. Formula changes require a new registry version, publication compatibility checks, golden fixtures, and representative feature coverage.
 
-Configuration and passing tests prove consistent implementation, not scientific validity. Approved methodology evidence, interpretation thresholds, and benchmark provenance must live in a separate reviewed evidence package before product copy or dashboards make those claims.
+Analytics calculate respondent-level scales before cohort aggregation, disclose valid N and missingness, default to one frozen wave, and gate values behind the release sample policy (company N≥5, subgroup N≥7, completion ≥40%). Complementary suppression protects small groups. Trends require compatible instrument and metric hashes; culture reliability is shown only when calculable. The methods and permitted claims are documented in `docs/METHODOLOGY_AND_CLAIMS_DOSSIER.md`. Passing tests prove consistent implementation, not independent scientific validation.
 
-### 6. Billing and entitlements
+### 6. Findings, action, and governed learning
+
+`ActionLoopService` turns an eligible, server-recomputed metric into an immutable finding snapshot. Leadership must record a rationale, owner, hypothesis, planned change, guardrails, success criterion, and predeclared measurement plan before commitment. Communications are attributable and audited. A follow-up can be created only from the frozen metric definition and a company entitlement that includes recurring waves.
+
+`PulseVariantService` produces a published, immutable action-follow-up variant containing only the governed metric items. The audience is frozen per cycle; fatigue rules enforce a minimum 30-day rest and no more than three pulse invitations in 90 days, and reminders are capped per wave. Outcome evaluation requires matching instrument and metric hashes, exposes sampling limits, and always uses non-causal wording.
+
+WorkFit advisory is not a platform-wide customer-data bypass. A customer administrator must grant a named active advisor a purpose-bound, optionally expiring `advisor_company_grants` record. The customer can revoke it at any time; grants and revocations enter the tamper-evident audit stream. Action routes and services re-check the active grant for the selected company.
+
+### 7. Billing and entitlements
 
 Primary files:
 
@@ -223,15 +239,15 @@ Primary files:
 - [`config/billing.php`](../config/billing.php)
 - [`config/survey.php`](../config/survey.php)
 
-Cashier subscriptions belong to the manager user. The webhook is the subscription-state source of truth and propagates the compatibility `tariff` to users in the company.
+Cashier's customer model is `Companies`; its legacy `subscriptions.user_id` column stores the durable company ID. `organization_billing_admins` controls who may manage the account, so manager departure does not orphan billing. `organization_entitlements` is the only feature-gating authority and stores a versioned snapshot of plan, status, features, limits, source, expiry, and Stripe reconciliation state.
 
-Survey scheduling requires an allowed billing state. Drip automation additionally requires a tariff configured in `survey.automation.drip_tariffs`; the current premium tariff is `1`.
+Stripe webhook events are payload-hashed, idempotent, replay-safe, and stale-event guarded in `billing_webhook_events`. Survey scheduling requires an organization entitlement in an allowed state; recurring waves additionally require the `recurring_waves` feature. Expired manual grants and canceled/past-due subscriptions cannot start new dispatches. Existing collected data uses a separate access-state policy.
 
-Product packaging is not fully normalized in code. Plan rows, Stripe prices, marketing metadata, and integer tariffs all participate. Consult the business-model document before adding another entitlement.
+The canonical feature/limit catalog is `config/billing.php`; production Stripe price IDs come from environment configuration. Legacy user `tariff` remains a display/import compatibility field and is not authorization truth. Usage is appended idempotently to `organization_usage_events` and cannot alter collected evidence.
 
-The company is the intended durable customer account, but subscription transfer and multiple billing-administrator behavior do not yet exist as an explicit domain model.
+Trial creation is disabled until the product owner approves a policy. Billing-owner transfer is request/acceptance gated and keeps the old owner as an administrator for continuity. Active-respondent limits are reserved under a company-row lock in the same transaction as assignment dispatch state, preventing concurrent workers from oversubscribing the plan; usage events remain append-only and idempotent. `billing:sync-catalog` materializes only checkout-enabled plans whose Stripe price IDs and approved integer prices are complete. Final public prices remain owner-gated.
 
-### 7. WorkFit administration and activation operations
+### 8. WorkFit administration and activation operations
 
 Primary files:
 
@@ -240,7 +256,9 @@ Primary files:
 - [`app/Services/OnboardingTelemetryService.php`](../app/Services/OnboardingTelemetryService.php)
 - [`resources/js/components/admin`](../resources/js/components/admin)
 
-WorkFit admin can inspect companies and subscriptions, impersonate users for support, publish survey content, and review onboarding health.
+WorkFit admin can inspect companies and subscriptions, publish survey content, and review onboarding health. Direct impersonation and hard user deletion are intentionally unavailable; any future support-access feature must be time-bound, reason-coded, scoped, consent-aware, and audited.
+
+Route and controller access uses named capabilities from `config/capabilities.php`. `RequireCapability` is the enforcement point. The current integer roles are only mapped into this capability vocabulary as a transition toward durable organization memberships; “not an employee” is not an authorization grant.
 
 First-party `onboarding_events` record activation behaviors and durable milestones. The operational stages are:
 
@@ -280,14 +298,16 @@ Without the worker, survey invitations and wave jobs stall. Without the schedule
 Operational commands:
 
 ```bash
-php artisan queue:work --tries=1
+php artisan queue:work --tries=3 --backoff=10 --timeout=120
 php artisan schedule:run
 php artisan survey:waves:schedule
 ```
 
 The scheduler should normally invoke the wave command through [`routes/console.php`](../routes/console.php), not through a second external cadence.
 
-See [`PRODUCTION_DEPLOYMENT_RUNBOOK.md`](PRODUCTION_DEPLOYMENT_RUNBOOK.md) for environment, migration, worker, rollback, and release checks.
+PostgreSQL is the production database authority. The image build does not run migrations. A release process runs `app:production-check`, then applies migrations once, then starts independently supervised web, worker, and scheduler processes. `/api/healthz` is process liveness; `/api/readyz` checks database and required runtime tables without exposing credentials or exception detail.
+
+See [`PRODUCTION_DEPLOYMENT_RUNBOOK.md`](PRODUCTION_DEPLOYMENT_RUNBOOK.md) for environment, migration, worker, rollback, and release checks. No provider-specific deployment has yet been selected or proven.
 
 ## Data ownership and truth boundaries
 
@@ -295,21 +315,33 @@ See [`PRODUCTION_DEPLOYMENT_RUNBOOK.md`](PRODUCTION_DEPLOYMENT_RUNBOOK.md) for e
 | --- | --- |
 | Product intent and commercial direction | `docs/PRODUCT_VISION_AND_BUSINESS_MODEL.md` |
 | Company identity | `companies` |
-| Authenticated users and company membership | `users` |
-| Organizational roster metadata | `company_worker` and `company_department` |
+| Authenticated identity | `users` |
+| Organization membership, role history, units, and reporting relationships | `organization_memberships`, `organization_units`, `organization_assignments` |
+| Current roster UI compatibility projection | `company_worker` and `company_department` |
 | Survey content | active normalized `survey_versions` hierarchy |
 | Instrument source file | `survey_instrument.json` |
-| Assignment and dispatch state | `survey_waves`, `survey_assignments`, `survey_wave_logs` |
+| Recurring program definition | `survey_waves` |
+| Immutable wave occurrence and cohort truth | `survey_wave_cycles`, `survey_wave_audience_members` |
+| Assignment and dispatch state | `survey_assignments`, `survey_wave_logs` |
 | Submitted employee data | `survey_responses` and `survey_answers` |
+| Privileged-change investigation and integrity | append-only `audit_events`, verified by `audit:verify` |
 | Methodology mappings | `config/survey.php` |
+| Versioned calculation contract | `metric_registry_versions`, pinned by wave cycles and responses |
+| Respondent policy and acknowledgments | `config/privacy.php`, `privacy_acknowledgments` |
+| Privacy requests, holds, and retention evidence | `data_subject_requests`, `legal_holds`, `retention_runs` |
+| Reliable findings and leadership response | `diagnostic_findings`, `leadership_actions`, `action_measurement_plans`, `action_outcomes` |
+| Customer-approved WorkFit advisory access | `advisor_company_grants` |
+| Governed Pulse definitions | `pulse_variant_versions` |
 | Subscription status | Cashier `subscriptions`, synchronized by Stripe webhook |
-| Compatibility entitlement | user `tariff`, derived from subscription state |
+| Feature/dispatch entitlement | `organization_entitlements` through `OrganizationEntitlementService` |
+| Billing administrators and transfer continuity | `organization_billing_admins`, `billing_admin_transfer_requests` |
+| Billing event/usage evidence | `billing_webhook_events`, `organization_usage_events` |
 | Onboarding operations | `onboarding_events` and `OnboardingReportService` |
 | Deployment process | `docs/PRODUCTION_DEPLOYMENT_RUNBOOK.md` |
 
 ## Product invariants for developers
 
-1. Never cross company boundaries unless the authenticated actor is explicitly authorized as WorkFit admin.
+1. Never cross company boundaries based only on an internal role. Platform operations require an explicit capability; customer action data additionally requires an active customer-approved advisor grant.
 2. Do not change question IDs after data collection; analytics depends on stable keys.
 3. Do not change formula mappings or polarity silently.
 4. Do not present local, seeded, or demo data as a production customer result.
@@ -318,8 +350,10 @@ See [`PRODUCTION_DEPLOYMENT_RUNBOOK.md`](PRODUCTION_DEPLOYMENT_RUNBOOK.md) for e
 7. Preserve separate full-wave and recurring-drip semantics.
 8. Keep billing webhooks, not return URLs, as subscription truth.
 9. Keep queue and scheduler requirements visible in operational handoffs.
-10. Treat first completed response as workflow activation, not as a reliable company diagnosis. A defined minimum sample must precede confident cohort interpretation.
-11. Treat leadership action and later movement as customer value, while recognizing that action recommendation and tracking are not implemented subsystems today.
+10. Treat first completed response as workflow activation, not as a reliable company diagnosis. Enforce sample, completion, and complementary-suppression gates before interpretation.
+11. Treat leadership action and later movement as customer value; preserve the immutable evidence → decision → action → measurement → non-causal outcome chain.
+12. Never regroup historical responses from the current roster; use the frozen cohort snapshot.
+13. Never update or delete audit events through application code; append and verify the per-organization chain.
 
 ## Transitional seams
 
@@ -327,7 +361,7 @@ These are current-state constraints future work should understand:
 
 - role and plan semantics still use integer fields;
 - billing meaning is distributed across plans, Cashier subscriptions, marketing config, and `tariff`;
-- roster metadata is split between `users` and `company_worker`;
+- team-management screens still write compatibility roster tables, while canonical history is appended to the organization tables;
 - the repository contains older Blade/controllers alongside newer Vue/service flows;
 - both legacy and normalized survey model classes remain, but the normalized version hierarchy powers the current instrument;
 - the shared instrument is global rather than company-specific.
@@ -354,9 +388,12 @@ Do not remove a seam merely because it looks old. First identify its current rou
 Primary quality gates:
 
 ```bash
-php artisan test
+composer test
+vendor/bin/pint --test
 npm run lint
+npm run test:unit
 npm run build
+npm audit --audit-level=high
 npm run test:e2e
 ```
 

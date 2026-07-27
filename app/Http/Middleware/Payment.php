@@ -2,22 +2,29 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
+use App\Support\CompanyBilling;
 use Closure;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class Payment
 {
     /**
      * Handle an incoming request.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Closure(\Illuminate\Http\Request): (\Illuminate\Http\Response|\Illuminate\Http\RedirectResponse)  $next
-     * @return \Illuminate\Http\Response|\Illuminate\Http\RedirectResponse
+     * @param  Closure(Request): (Response|RedirectResponse)  $next
+     * @return Response|RedirectResponse
      */
     public function handle(Request $request, Closure $next)
     {
-        // Only unpaid company owners should access payment pages
-        if ((int)\Auth::user()->tariff === 1 || (int)\Auth::user()->company !== 1) {
+        $user = $request->user();
+        // Only company managers without a dispatch-eligible entitlement use
+        // this legacy payment entry point.
+        if (! $user instanceof User
+            || (int) $user->role !== 1
+            || CompanyBilling::allowsScheduling($user)) {
             return redirect()->route('home');
         }
 

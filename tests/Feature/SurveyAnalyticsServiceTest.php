@@ -9,7 +9,9 @@ use App\Models\SurveyAssignment;
 use App\Models\SurveyResponse;
 use App\Models\SurveyVersion;
 use App\Models\SurveyWave;
+use App\Models\SurveyWaveCycle;
 use App\Models\User;
+use App\Services\MetricRegistryService;
 use App\Services\SurveyAnalyticsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -18,6 +20,23 @@ use Tests\TestCase;
 class SurveyAnalyticsServiceTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config([
+            'privacy.reporting.minimum_company_n' => 1,
+            'privacy.reporting.minimum_subgroup_n' => 1,
+            'privacy.reporting.minimum_completion_rate' => 0,
+            'survey.indicators' => [
+                'relationships' => [
+                    'label' => 'Relationships & Team',
+                    'attributes' => ['WCA_REL'],
+                    'weight' => 1.0,
+                ],
+            ],
+        ]);
+    }
 
     public function test_wave_filter_uses_wave_id_and_not_only_latest_unfiltered_response(): void
     {
@@ -150,7 +169,7 @@ class SurveyAnalyticsServiceTest extends TestCase
         $service = app(SurveyAnalyticsService::class);
         $data = $service->companyDashboardAnalytics([
             'company_id' => $company->id,
-            'wave' => 'wave:' . $waveTwo->id,
+            'wave' => 'wave:'.$waveTwo->id,
         ]);
 
         $attribute = collect($data['attributes'] ?? [])->firstWhere('key', 'WCA_REL');
@@ -206,10 +225,10 @@ class SurveyAnalyticsServiceTest extends TestCase
         $service = app(SurveyAnalyticsService::class);
         $waves = $service->availableWavesForCompany($company->id);
 
-        $this->assertArrayHasKey('wave:' . $waveOne->id, $waves);
-        $this->assertArrayHasKey('wave:' . $waveTwo->id, $waves);
-        $this->assertStringContainsString('Launch Wave', $waves['wave:' . $waveOne->id]);
-        $this->assertStringContainsString('Pulse Wave', $waves['wave:' . $waveTwo->id]);
+        $this->assertArrayHasKey('wave:'.$waveOne->id, $waves);
+        $this->assertArrayHasKey('wave:'.$waveTwo->id, $waves);
+        $this->assertStringContainsString('Launch Wave', $waves['wave:'.$waveOne->id]);
+        $this->assertStringContainsString('Pulse Wave', $waves['wave:'.$waveTwo->id]);
     }
 
     public function test_get_comparison_data_returns_chart_shape_even_without_responses(): void
@@ -288,6 +307,18 @@ class SurveyAnalyticsServiceTest extends TestCase
             'cadence' => 'manual',
             'due_at' => null,
         ]);
+        $registry = app(MetricRegistryService::class)->publishedVersion();
+        $cycle = SurveyWaveCycle::create([
+            'survey_wave_id' => $wave->id,
+            'sequence' => 1,
+            'status' => 'completed',
+            'instrument_hash' => str_repeat('i', 64),
+            'metric_definition_hash' => $registry->definition_hash,
+            'metric_registry_version_id' => $registry->id,
+            'audience_hash' => str_repeat('a', 64),
+            'audience_count' => 1,
+            'frozen_at' => now(),
+        ]);
 
         $user = User::factory()->create([
             'company_id' => $company->id,
@@ -299,6 +330,7 @@ class SurveyAnalyticsServiceTest extends TestCase
             'survey_id' => $survey->id,
             'survey_version_id' => $version->id,
             'survey_wave_id' => $wave->id,
+            'survey_wave_cycle_id' => $cycle->id,
             'user_id' => $user->id,
             'token' => (string) Str::uuid(),
             'status' => 'completed',
@@ -309,10 +341,13 @@ class SurveyAnalyticsServiceTest extends TestCase
             'survey_id' => $survey->id,
             'survey_version_id' => $version->id,
             'survey_wave_id' => $wave->id,
+            'survey_wave_cycle_id' => $cycle->id,
             'assignment_id' => $assignment->id,
             'user_id' => $user->id,
             'wave_label' => $wave->label,
             'submitted_at' => now(),
+            'metric_registry_version_id' => $registry->id,
+            'metric_definition_hash' => $registry->definition_hash,
         ]);
 
         SurveyAnswer::create([
@@ -336,7 +371,7 @@ class SurveyAnalyticsServiceTest extends TestCase
         ]);
 
         $service = app(SurveyAnalyticsService::class);
-        $trend = $service->getTrendData($company->id, 'engagement');
+        $trend = $service->getTrendData($company->id, 'workfit_indicator');
 
         $this->assertNotEmpty($trend['labels']);
         $this->assertSame('No Due Date Wave', $trend['labels'][0]);

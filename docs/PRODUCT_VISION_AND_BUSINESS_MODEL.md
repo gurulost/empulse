@@ -46,7 +46,7 @@ The working buyer assumption is the person accountable for workforce outcomes at
 - an operating executive;
 - an organizational-development or culture leader.
 
-The current application represents this buyer and account owner as the **Manager** role. The durable commercial account is the **company**, even though Stripe billing is currently attached to the manager's user record.
+The current application represents this buyer operationally as the **Manager** role. The durable commercial and billing account is the **company**. Explicit billing administrators can be transferred without moving the subscription or rewriting company evidence.
 
 ### Product users
 
@@ -57,7 +57,9 @@ The current application represents this buyer and account owner as the **Manager
 | Team lead | Understand the experience and culture of the team they influence. |
 | Employee / respondent | Give thoughtful input through a trustworthy, understandable, recoverable survey experience. |
 | WorkFit admin | Protect the instrument and methodology, publish survey versions, support customer activation, and monitor account health. |
-| WorkFit advisor / operator | Help leadership interpret results and translate findings into action. This is a target service role, not yet a distinct application role. |
+| WorkFit advisor / operator | Review reliable findings, support interpretation, and help leadership translate evidence into governed action without receiving individual answer content. |
+
+Advisor access is customer-controlled. A company administrator grants a named advisor a documented purpose and optional expiry, can revoke that access at any time, and receives an auditable record. An internal WorkFit role by itself does not authorize entry into an arbitrary customer action workspace.
 
 ## The value promise
 
@@ -72,7 +74,7 @@ The dashboard is not the product's final value. A credible management decision, 
 
 ## What Empulse measures
 
-The current canonical instrument is the **Organizational Culture & Work Content Survey** in [`survey_instrument.json`](../survey_instrument.json). The current analytics model includes:
+The canonical baseline is the 62-item **Empulse WorkFit Baseline v2.0.0** in [`survey_instrument.json`](../survey_instrument.json). It intentionally excludes direct-contact fields, unused culture items, and demographic questions that are not necessary for the approved product outputs. The analytics model includes:
 
 - twelve work-content attributes measured as:
   - **current** — what the person experiences now;
@@ -100,7 +102,7 @@ Question-to-metric mappings and weights belong in [`config/survey.php`](../confi
 
 ```mermaid
 flowchart LR
-    A["Create company account"] --> B["Add or import the roster"]
+    A["Create company account"] --> B["Add the roster"]
     B --> C["Confirm billing and live WorkFit instrument"]
     C --> D["Send a full baseline wave"]
     D --> E["Employees complete secure assignments"]
@@ -113,7 +115,7 @@ flowchart LR
 
 The first completed response is the **workflow activation milestone**: it proves that roster, content, dispatch, delivery, survey-taking, and persistence are connected. It is not, by itself, a reliable company diagnosis.
 
-The first analytical success is reaching a documented minimum sample at which the company or cohort result can be interpreted responsibly. That policy and its UI safeguards are not implemented yet. Until they are, developers must not turn one response—or any very small cohort—into a confident company-level finding.
+The first analytical success is reaching the governed sample threshold: company results require at least 5 valid respondents, subgroup results require at least 7, and an eligible result requires at least 40% completion. Complementary suppression prevents a hidden small group from being inferred from totals. Metric-level valid N and missingness remain visible. These are conservative product-release rules, not evidence of scientific validation; changing them requires privacy and methodology review.
 
 The complete value loop is:
 
@@ -149,7 +151,7 @@ The current survey content is globally versioned and published by WorkFit admin.
 
 Current responses are linked to an assignment and user. Product copy must describe that truth plainly and must not promise anonymity. If anonymity or confidentiality thresholds become part of the offer, they require an explicit data model, aggregation rules, minimum cohort sizes, access policy, and employee-facing explanation.
 
-The repository does not yet define a complete respondent-data policy: which customer roles may inspect which response detail, how long identifiable answers are retained, when cohorts are suppressed, or which disclosures employees must acknowledge. “Secure assignment” means protected access to the assigned survey; it does not establish anonymous or confidential reporting.
+The versioned respondent promise in [`docs/RESPONDENT_DATA_PROMISE.md`](RESPONDENT_DATA_PROMISE.md) is displayed and acknowledged before submission. Customer-facing surfaces expose governed aggregate results, not individual answers. Access, correction, erasure, legal-hold, and dry-run-first retention workflows are audited. Identifiable evidence is pseudonymized when erasure is approved while aggregate analytical integrity is retained. “Secure and confidential reporting” still does not mean anonymous collection.
 
 ## Product principles
 
@@ -185,7 +187,7 @@ Filters and comparisons must stay tenant-scoped, use consistent populations, dis
 
 ## Working business model
 
-This section is a **recommended working direction inferred from the current product and WorkFit's public service model**. The product owner must confirm it before pricing, marketing, or entitlement work treats it as final.
+This section is the working pre-launch commercial architecture. Offer names, feature boundaries, limits, and lifecycle semantics are encoded and tested; exact public prices, contract language, initial segment, and any trial remain owner decisions before sale.
 
 ### Commercial thesis
 
@@ -203,7 +205,7 @@ This matches how value develops. The first wave proves relevance; recurring wave
 | --- | --- | --- |
 | Baseline / Launch | Company setup, roster readiness, one full baseline wave, initial diagnostic, and optional executive debrief. | One-time implementation or diagnostic fee, likely scaled by respondent band and level of WorkFit support. |
 | Starter | Team management, occasional full/manual measurement, core company analytics, and billing/support access. | Company subscription for customers who do not need automated recurring pulses. |
-| Pulse | Recurring weekly/monthly/quarterly listening, automated dispatch, wave history, trends, comparisons, and operational logs. | Higher recurring company subscription; cadence automation is the clearest current paid entitlement. |
+| Pulse | Governed opportunity-linked follow-up pulses, recurring operation, frozen audiences, fatigue/reminder controls, wave history, trends, comparisons, and operational logs. | Higher recurring company subscription centered on continuous learning rather than survey volume. |
 | Enterprise / Partner | Multiple companies or business units, higher respondent volume, advanced governance, exports/integrations, service levels, approved benchmarking, and facilitated interpretation. | Annual contract with custom pricing. |
 | Advisory add-ons | Executive readout, action planning, facilitated team sessions, culture consulting, and measurement design. | Project, retainer, or bundled professional-services revenue. |
 
@@ -230,20 +232,14 @@ Empulse can grow within an account when a customer:
 
 ### Implemented billing truth
 
-The current repository already has:
-
-- Stripe subscriptions through Laravel Cashier;
-- plan records in the database;
-- billing attached to the company manager's user account;
-- webhook-driven subscription state;
-- a `tariff` compatibility field propagated to company users;
-- plan-aware survey scheduling;
-- recurring drip cadences limited to tariff `1`, labeled **Pulse (Drip Enabled)**;
-- billing states that pause automation when a subscription is not eligible.
-
-The current seed creates one **Business Plan** at **$100/month**. Other code and copy refer to **Starter**, **Pulse**, a **14-day free trial**, and a $199 Pulse demo plan. Those are implementation artifacts, not a confirmed pricing strategy. Do not add more price-dependent behavior until plan names, prices, trial policy, respondent limits, and service inclusions are explicitly approved.
-
-Subscriptions currently belong to one manager user even though the intended customer account is the company. Ownership transfer, multiple billing administrators, and manager-departure behavior are not defined. Do not assume a user-bound subscription is the final commercial account model.
+- Cashier's billable customer is the company.
+- Stripe webhooks are payload-hashed, idempotent, replay-safe, stale-event guarded, and reconcile a company entitlement.
+- Starter, Pulse, and Enterprise catalog entries define features and active-respondent limits; environment-provided Stripe price IDs are the only production price identifiers.
+- Billing-owner transfer requires initiation by the current owner and acceptance by the intended active company member. The prior owner remains a billing administrator unless separately removed.
+- Past-due and canceled states stop new dispatches while collected-data access follows the documented 30-day grace window.
+- Active-respondent usage is append-only, idempotent, visible to billing admins, and reserved atomically with dispatch so concurrent workers cannot exceed the plan limit.
+- Trial creation is disabled until an explicit eligibility, start, expiry, conversion, and abuse policy is approved.
+- Legacy `tariff` fields are compatibility projections and never authorize paid behavior.
 
 ## Measures of success
 
@@ -310,17 +306,13 @@ The repository already implements the operational spine:
 - WorkFit-admin survey publication and customer activation monitoring;
 - Stripe subscription management.
 
-The next product horizon is to make that spine commercially and managerially complete:
+The application now implements the pre-launch product spine from secure baseline collection through reliable findings, owned leadership actions, predeclared follow-up measurement, governed Pulse variants, and non-causal outcome evaluation. The remaining horizon is release assurance and market confirmation:
 
-1. confirm the buyer, initial customer segment, packaging, prices, and trial policy;
-2. document the methodology evidence, interpretation limits, and approved claims;
-3. make every result interpretable and action-oriented;
-4. define the respondent privacy/confidentiality promise and enforce it;
-5. make sample size and cohort reliability visible;
-6. connect findings to recommended and recorded actions;
-7. make wave-over-wave learning the center of the retained customer experience;
-8. define where WorkFit advisory service enters the product journey;
-9. add enterprise capabilities only when they reinforce a confirmed sales motion.
+1. independently review privacy language, methodology evidence, accessibility, and security;
+2. prove clean PostgreSQL install, browser journeys, capacity, backup/restore, and rollback in a selected staging environment;
+3. confirm the initial customer segment, public prices, contract terms, and whether any trial exists;
+4. run a controlled design-partner pilot and use observed activation, burden, interpretation, and action-loop evidence to refine the offer;
+5. add benchmarks, integrations, and enterprise controls only behind validated demand and governed provenance.
 
 ## Product-owner decisions still required
 
@@ -329,11 +321,11 @@ The next product horizon is to make that spine commercially and managerially com
 | Commercial identity | Controls positioning, onboarding, sales, and which workflows remain WorkFit-operated. | Hybrid software plus diagnostic/advisory services. |
 | Initial customer segment | Controls messaging, defaults, integrations, support, and pricing. | Small-to-mid-sized organizations with a leader accountable for culture and retention. |
 | Packaging and pricing | Controls entitlements and every billing-facing surface. | Baseline offer, Starter, Pulse, and custom Enterprise/Advisory. Exact prices unconfirmed. |
-| Trial policy | Current marketing promises 14 days, but product behavior is not defined here. | Keep the claim provisional until eligibility, start, expiry, and conversion behavior are approved. |
-| Privacy promise | Controls respondent trust, reporting thresholds, and data design. | Identifiable secure assignments; no anonymity claim. |
+| Trial policy | Controls acquisition economics, eligibility, expiry, conversion, and abuse. | Disabled; no public trial claim until approved. |
+| Privacy/legal approval | Controls respondent trust, contract terms, retention, and jurisdictional obligations. | Implemented product promise and controls require counsel/DPO review before launch. |
 | Survey ownership | Controls whether Empulse competes as a methodology product or a generic survey builder. | WorkFit owns and publishes the shared instrument; customers operate audiences and waves. |
 | Interpretation service | Controls whether action guidance is software, human service, or both. | Software explains evidence; WorkFit advisory can provide higher-touch interpretation and action planning. |
-| Methodology evidence | Controls which scientific, predictive, benchmark, and outcome claims the product may make. | The code implements approved-looking formulas, but repository documentation does not establish their validation. |
-| Commercial account owner | Controls transfer, renewal, billing administration, and continuity when a manager leaves. | The company is the intended account; one manager user currently owns the Cashier subscription. |
+| Methodology evidence | Controls which scientific, predictive, benchmark, and outcome claims the product may make. | Versioned descriptive methods and claims limits are documented; independent expert validation is still required before stronger claims. |
+| Commercial account owner | Controls transfer, renewal, billing administration, and continuity when a manager leaves. | Company-owned account with explicit, transferable billing administrators. |
 
 When these decisions are confirmed, replace the assumptions in this table with dated decisions and update plan configuration, customer-facing copy, sales materials, and tests together.

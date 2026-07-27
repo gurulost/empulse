@@ -2,7 +2,8 @@
 
 namespace App\Enums;
 
-enum Role: int {
+enum Role: int
+{
     case ADMIN = 0;
     case MANAGER = 1;
     case CHIEF = 2;

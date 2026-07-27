@@ -9,6 +9,8 @@ use App\Models\SurveyAssignment;
 use App\Models\SurveyVersion;
 use App\Models\SurveyWave;
 use App\Models\User;
+use App\Services\OnboardingTelemetryService;
+use App\Services\OrganizationEntitlementService;
 use App\Services\SurveyService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -162,6 +164,11 @@ class OnboardingEventTest extends TestCase
             'company_title' => $company->title,
             'tariff' => 1,
         ]);
+        app(OrganizationEntitlementService::class)->grantManual(
+            $company,
+            'pulse',
+            now()->addYear()
+        );
 
         $employee = User::factory()->create([
             'role' => 4,
@@ -194,8 +201,8 @@ class OnboardingEventTest extends TestCase
 
         Queue::fake();
 
-        (new ProcessSurveyWave($firstWave->id))->handle(app(SurveyService::class), app(\App\Services\OnboardingTelemetryService::class));
-        (new ProcessSurveyWave($secondWave->id))->handle(app(SurveyService::class), app(\App\Services\OnboardingTelemetryService::class));
+        (new ProcessSurveyWave($firstWave->id))->handle(app(SurveyService::class), app(OnboardingTelemetryService::class));
+        (new ProcessSurveyWave($secondWave->id))->handle(app(SurveyService::class), app(OnboardingTelemetryService::class));
 
         $this->assertDatabaseCount('onboarding_events', 1);
         $this->assertDatabaseHas('onboarding_events', [

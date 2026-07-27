@@ -36,7 +36,62 @@
                     </div>
                 </div>
             </div>
-            
+
+            <div v-else-if="!privacyAccepted" key="privacy">
+                <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                    <div class="card-body p-4 p-md-5">
+                        <div class="small text-uppercase fw-semibold text-primary mb-2">Before you begin</div>
+                        <h1 class="h3 fw-bold mb-3">{{ privacy.title }}</h1>
+                        <p class="text-muted">{{ privacy.purpose }}</p>
+
+                        <dl class="row small mb-4">
+                            <dt class="col-sm-3">Identity</dt>
+                            <dd class="col-sm-9">{{ privacy.identity }}</dd>
+                            <dt class="col-sm-3">Who sees results</dt>
+                            <dd class="col-sm-9">{{ privacy.visibility }}</dd>
+                            <dt class="col-sm-3">WorkFit access</dt>
+                            <dd class="col-sm-9">{{ privacy.workfit_access }}</dd>
+                            <dt class="col-sm-3">Retention</dt>
+                            <dd class="col-sm-9">{{ privacy.retention }}</dd>
+                            <dt class="col-sm-3">Progress</dt>
+                            <dd class="col-sm-9">{{ privacy.progress }}</dd>
+                            <dt class="col-sm-3">Your rights</dt>
+                            <dd class="col-sm-9">{{ privacy.rights }}</dd>
+                        </dl>
+
+                        <div class="alert alert-info border-0 small" role="note">
+                            This survey is confidential at the reporting layer, but it is not anonymous. Empulse uses your identity for secure collection and cohort integrity.
+                        </div>
+
+                        <div class="form-check mb-4">
+                            <input
+                                id="privacy-acceptance"
+                                v-model="privacyChecked"
+                                class="form-check-input"
+                                type="checkbox"
+                                :disabled="acceptingPrivacy"
+                            >
+                            <label class="form-check-label" for="privacy-acceptance">
+                                I have read this respondent data promise (version {{ privacy.version }}).
+                            </label>
+                        </div>
+
+                        <div v-if="privacyError" class="alert alert-danger" role="alert">{{ privacyError }}</div>
+                        <button
+                            class="btn btn-primary rounded-pill px-4"
+                            :disabled="!privacyChecked || acceptingPrivacy"
+                            @click="acceptPrivacy"
+                        >
+                            <span v-if="acceptingPrivacy" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                            Continue to survey
+                        </button>
+                        <div class="small text-muted mt-3">
+                            Questions? Contact {{ privacy.contact }}.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div v-else key="survey">
                 <div class="alert alert-light border-0 shadow-sm rounded-4 mb-4">
                     <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
@@ -60,10 +115,14 @@
                 <div class="mb-4 px-1">
                     <div class="d-flex justify-content-between text-muted small mb-2 fw-semibold">
                         <span>Page {{ currentPageIndex + 1 }} of {{ totalPages }}</span>
-                        <span>{{ Math.round(((currentPageIndex + 1) / totalPages) * 100) }}% Completed</span>
+                        <span>{{ Math.round(((currentPageIndex + 1) / totalPages) * 100) }}% complete</span>
                     </div>
                     <div class="progress" style="height: 6px; background-color: #e9ecef;">
                         <div class="progress-bar bg-primary rounded-pill" role="progressbar" 
+                             aria-label="Survey progress"
+                             :aria-valuemin="0"
+                             :aria-valuemax="100"
+                             :aria-valuenow="Math.round(((currentPageIndex + 1) / totalPages) * 100)"
                              :style="{ width: `${((currentPageIndex + 1) / totalPages) * 100}%` }"></div>
                     </div>
                 </div>
@@ -73,7 +132,7 @@
                         <Transition name="slide-fade" mode="out-in">
                             <div :key="currentPageIndex">
                                 <div class="mb-4 border-bottom pb-3">
-                                    <h1 class="h4 fw-bold mb-2 text-primary">{{ currentPage?.title }}</h1>
+                                    <h1 ref="pageHeading" tabindex="-1" class="h4 fw-bold mb-2 text-primary">{{ currentPage?.title }}</h1>
                                     <p class="text-muted mb-0" v-if="currentPage?.attribute_label">{{ currentPage.attribute_label }}</p>
                                 </div>
 
@@ -116,7 +175,7 @@
                             </button>
                             
                             <div class="d-flex align-items-center gap-3">
-                                <div class="d-none d-md-block text-end me-2">
+                                <div class="text-end me-2" aria-live="polite" aria-atomic="true">
                                     <small class="text-muted d-block lh-1" v-if="autosaveState.status === 'saving'">Saving...</small>
                                     <small class="text-muted d-block lh-1" v-else-if="autosaveState.status === 'saved'">Saved {{ autosaveState.timestamp }}</small>
                                     <small class="text-danger d-block lh-1" v-else-if="autosaveState.status === 'error'">Autosave failed</small>
@@ -169,7 +228,7 @@
 </style>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import axios from 'axios';
 import SurveyItem from './SurveyItem.vue';
 import SkeletonLoader from '../common/SkeletonLoader.vue';
@@ -179,6 +238,7 @@ const props = defineProps({
     definitionUrl: { type: String, required: true },
     submitUrl: { type: String, required: true },
     autosaveUrl: { type: String, required: true },
+    privacyAcknowledgmentUrl: { type: String, required: true },
 });
 
 const toast = useToast();
@@ -187,17 +247,24 @@ const error = ref(null);
 const definition = ref(null);
 const surveyMeta = ref({ question_count: 0, estimated_minutes: 4 });
 const assignment = ref(null);
+const privacy = ref({});
+const privacyAccepted = ref(false);
+const privacyChecked = ref(false);
+const acceptingPrivacy = ref(false);
+const privacyError = ref(null);
 const pages = ref([]);
 const currentPageIndex = ref(0);
 const responses = reactive({});
 const errors = reactive({});
 const autosaveState = ref({ status: 'idle', timestamp: null });
 const autosaveTimer = ref(null);
+const draftRevision = ref(0);
 const submitting = ref(false);
 const completed = ref(false);
 const alreadyCompleted = ref(false);
 const hasLoaded = ref(false);
 const startTime = Date.now();
+const pageHeading = ref(null);
 
 const currentPage = computed(() => pages.value[currentPageIndex.value] ?? null);
 const totalPages = computed(() => pages.value.length);
@@ -211,6 +278,11 @@ const fetchDefinition = async () => {
         definition.value = data.version;
         surveyMeta.value = data.survey_meta || { question_count: 0, estimated_minutes: 4 };
         assignment.value = data.assignment;
+        privacy.value = data.privacy || {};
+        privacyAccepted.value =
+            assignment.value.privacy_policy_version === privacy.value.version &&
+            Boolean(assignment.value.privacy_acknowledged_at);
+        draftRevision.value = Number(assignment.value.draft_revision || 0);
         pages.value = data.pages || [];
         currentPageIndex.value = 0;
         alreadyCompleted.value = assignment.value.status === 'completed';
@@ -231,7 +303,42 @@ const fetchDefinition = async () => {
     }
 };
 
-onMounted(fetchDefinition);
+const acceptPrivacy = async () => {
+    if (!privacyChecked.value || acceptingPrivacy.value) {
+        return;
+    }
+
+    acceptingPrivacy.value = true;
+    privacyError.value = null;
+    try {
+        const { data } = await axios.post(props.privacyAcknowledgmentUrl, { accepted: true });
+        assignment.value.privacy_policy_version = data.policy_version;
+        assignment.value.privacy_acknowledged_at = data.acknowledged_at;
+        privacyAccepted.value = true;
+    } catch (err) {
+        console.error('Privacy acknowledgment failed', err);
+        privacyError.value = 'We could not record your acknowledgment. Please try again before entering responses.';
+    } finally {
+        acceptingPrivacy.value = false;
+    }
+};
+
+const handleVisibilityChange = () => {
+    if (document.visibilityState === 'hidden' && hasLoaded.value && !completed.value) {
+        clearTimeout(autosaveTimer.value);
+        saveDraft();
+    }
+};
+
+onMounted(() => {
+    fetchDefinition();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+});
+
+onBeforeUnmount(() => {
+    clearTimeout(autosaveTimer.value);
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+});
 
 watch(
     responses,
@@ -246,20 +353,30 @@ watch(
 
 const scheduleAutosave = () => {
     clearTimeout(autosaveTimer.value);
-    autosaveTimer.value = setTimeout(async () => {
-        try {
-            autosaveState.value = { status: 'saving', timestamp: null };
-            await axios.post(props.autosaveUrl, { responses: cloneResponses() });
-            autosaveState.value = { status: 'saved', timestamp: new Date().toLocaleTimeString() };
-        } catch (err) {
-            console.error('Autosave failed', err);
-            autosaveState.value = { status: 'error', timestamp: null };
-            toast.error('Autosave failed. Please check your connection.');
-        }
-    }, 1000);
+    autosaveTimer.value = setTimeout(saveDraft, 1000);
 };
 
 const cloneResponses = () => JSON.parse(JSON.stringify(responses));
+
+const saveDraft = async () => {
+    try {
+        autosaveState.value = { status: 'saving', timestamp: null };
+        const { data } = await axios.post(props.autosaveUrl, {
+            responses: cloneResponses(),
+            revision: draftRevision.value,
+        });
+        draftRevision.value = Number(data.revision);
+        autosaveState.value = { status: 'saved', timestamp: new Date().toLocaleTimeString() };
+    } catch (err) {
+        console.error('Autosave failed', err);
+        autosaveState.value = { status: 'error', timestamp: null };
+        if (err.response?.status === 409) {
+            toast.error('A newer draft exists in another tab. Reload before continuing.');
+            return;
+        }
+        toast.error('Autosave failed. Please check your connection.');
+    }
+};
 
 const updateResponse = (qid, value) => {
     responses[qid] = value;
@@ -420,7 +537,11 @@ const previousPage = () => {
 };
 
 const nextPage = () => {
-    if (!validatePage() || submitting.value) {
+    if (!validatePage()) {
+        focusFirstError();
+        return;
+    }
+    if (submitting.value) {
         return;
     }
     if (currentPageIndex.value < totalPages.value - 1) {
@@ -430,6 +551,7 @@ const nextPage = () => {
 
 const submitSurvey = async () => {
     if (!validatePage()) {
+        focusFirstError();
         return;
     }
 
@@ -477,10 +599,15 @@ const submitSurvey = async () => {
 
                 if (pageIndex >= 0) {
                     currentPageIndex.value = pageIndex;
+                    nextTick(focusFirstError);
                 }
             }
 
             error.value = 'Please correct the highlighted responses and submit again.';
+        } else if (err.response && err.response.status === 428) {
+            privacyAccepted.value = false;
+            privacyChecked.value = false;
+            privacyError.value = 'The respondent data promise changed. Please review the current version.';
         } else {
             console.error(err);
             error.value = 'Something went wrong while submitting your responses. Please try again.';
@@ -489,4 +616,17 @@ const submitSurvey = async () => {
         submitting.value = false;
     }
 };
+
+const focusFirstError = () => {
+    nextTick(() => {
+        const firstQid = Object.keys(errors).find((qid) => Boolean(errors[qid]));
+        if (!firstQid) return;
+        const escaped = window.CSS?.escape ? window.CSS.escape(firstQid) : firstQid.replace(/"/g, '\\"');
+        document.querySelector(`[data-qid="${escaped}"] input, [data-qid="${escaped}"] select, [data-qid="${escaped}"] textarea`)?.focus();
+    });
+};
+
+watch(currentPageIndex, () => {
+    nextTick(() => pageHeading.value?.focus());
+});
 </script>

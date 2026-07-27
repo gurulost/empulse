@@ -12,6 +12,7 @@ use App\Models\SurveyWave;
 use App\Models\SurveyWaveLog;
 use App\Models\User;
 use App\Services\EmailService;
+use App\Services\OrganizationEntitlementService;
 use App\Services\SurveyService;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -45,6 +46,12 @@ class SurveyWaveTest extends TestCase
             'is_active' => true,
         ]);
 
+        app(OrganizationEntitlementService::class)->grantManual(
+            $company,
+            'pulse',
+            now()->addYear()
+        );
+
         return [$company, $survey, $version];
     }
 
@@ -58,6 +65,11 @@ class SurveyWaveTest extends TestCase
             'company_id' => $company->id,
             'tariff' => 0,
         ]);
+        app(OrganizationEntitlementService::class)->grantManual(
+            $company,
+            'starter',
+            now()->addYear()
+        );
 
         $response = $this->actingAs($user)->post(route('survey-waves.store'), [
             'survey_id' => $survey->id,
@@ -156,6 +168,33 @@ class SurveyWaveTest extends TestCase
                 'survey_version_id' => $draftVersion->id,
                 'kind' => 'full',
                 'label' => 'Blocked Wave',
+                'target_roles' => [4],
+                'status' => 'scheduled',
+                'cadence' => 'manual',
+            ])
+            ->assertSessionHasErrors();
+
+        $this->assertDatabaseCount('survey_waves', 0);
+    }
+
+    public function test_wave_creation_rejects_incompatible_instrument_binding(): void
+    {
+        [$company, $survey, $version] = $this->createSurveyArtifacts();
+        $survey->update(['instrument_id' => 'another-instrument']);
+        $manager = User::factory()->create([
+            'role' => 1,
+            'company' => 1,
+            'company_id' => $company->id,
+            'tariff' => 1,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($manager)
+            ->post(route('survey-waves.store'), [
+                'survey_id' => $survey->id,
+                'survey_version_id' => $version->id,
+                'kind' => 'full',
+                'label' => 'Incompatible',
                 'target_roles' => [4],
                 'status' => 'scheduled',
                 'cadence' => 'manual',
@@ -293,16 +332,9 @@ class SurveyWaveTest extends TestCase
             'tariff' => 1,
         ]);
 
-        DB::table('subscriptions')->insert([
-            'user_id' => $manager->id,
-            'name' => 'default',
-            'stripe_id' => 'sub_fake',
-            'stripe_status' => 'past_due',
-            'stripe_price' => 'price_fake',
-            'quantity' => 1,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        DB::table('organization_entitlements')
+            ->where('company_id', $company->id)
+            ->update(['status' => 'past_due']);
 
         $wave = SurveyWave::create([
             'company_id' => $company->id,
@@ -390,6 +422,48 @@ class SurveyWaveTest extends TestCase
         );
     }
 
+    public function test_full_wave_stays_active_after_invitation_queueing_and_is_not_redispatched(): void
+    {
+        [$company, $survey, $version] = $this->createSurveyArtifacts();
+
+        User::factory()->create([
+            'role' => 1,
+            'company' => 1,
+            'company_id' => $company->id,
+            'tariff' => 1,
+        ]);
+        User::factory()->create([
+            'role' => 4,
+            'company_id' => $company->id,
+        ]);
+
+        $wave = SurveyWave::create([
+            'company_id' => $company->id,
+            'survey_id' => $survey->id,
+            'survey_version_id' => $version->id,
+            'kind' => 'full',
+            'label' => 'Baseline',
+            'status' => 'scheduled',
+            'cadence' => 'manual',
+        ]);
+
+        Queue::fake();
+        (new ProcessSurveyWave($wave->id))->handle(app(SurveyService::class));
+
+        $this->assertSame('active', $wave->fresh()->status);
+        $this->assertGreaterThan(0, $wave->assignments()->where('status', 'pending')->count());
+
+        Queue::fake();
+        Artisan::call('survey:waves:schedule');
+
+        Queue::assertNothingPushed();
+        $this->assertSame('active', $wave->fresh()->status);
+        $this->assertStringContainsString(
+            'awaiting responses',
+            SurveyWaveLog::latest('id')->value('message')
+        );
+    }
+
     public function test_process_wave_respects_target_roles_and_queues_invitations(): void
     {
         [$company, $survey, $version] = $this->createSurveyArtifacts();
@@ -449,7 +523,7 @@ class SurveyWaveTest extends TestCase
         Queue::assertPushed(SendSurveyAssignmentInvitation::class, 1);
     }
 
-    public function test_invitation_job_marks_assignment_as_sent_in_testing(): void
+    public function test_invitation_job_marks_assignment_as_provider_accepted_in_testing(): void
     {
         [$company, $survey, $version] = $this->createSurveyArtifacts();
 
@@ -484,7 +558,7 @@ class SurveyWaveTest extends TestCase
         (new SendSurveyAssignmentInvitation($assignment->id))->handle(app(EmailService::class));
 
         $assignment->refresh();
-        $this->assertSame('sent', $assignment->invite_status);
+        $this->assertSame('accepted', $assignment->invite_status);
         $this->assertNotNull($assignment->invited_at);
         $this->assertNull($assignment->invite_error);
     }
@@ -521,9 +595,16 @@ class SurveyWaveTest extends TestCase
             'invite_status' => 'queued',
         ]);
 
-        $this->app->instance(EmailService::class, new class extends EmailService {
-            public function sendSurveyInvitation(string $email, string $name, string $surveyUrl, string $companyName, ?string $waveLabel = null): array
-            {
+        $this->app->instance(EmailService::class, new class extends EmailService
+        {
+            public function sendSurveyInvitation(
+                string $email,
+                string $name,
+                string $surveyUrl,
+                string $companyName,
+                ?string $waveLabel = null,
+                ?string $providerIdempotencyKey = null
+            ): array {
                 return [
                     'status' => 503,
                     'message' => 'Email delivery is unavailable because Brevo is not configured for this environment.',
@@ -589,39 +670,6 @@ class SurveyWaveTest extends TestCase
         $this->assertSame('completed', $assignments->first()->status);
         $this->assertSame('pending', $assignments->last()->status);
         $this->assertNotSame($assignments->first()->id, $assignments->last()->id);
-    }
-
-    public function test_assignment_link_prefers_latest_pending_assignment(): void
-    {
-        [$company, $survey, $version] = $this->createSurveyArtifacts();
-
-        $employee = User::factory()->create([
-            'role' => 4,
-            'company_id' => $company->id,
-            'tariff' => 1,
-        ]);
-
-        $first = SurveyAssignment::create([
-            'survey_id' => $survey->id,
-            'survey_version_id' => $version->id,
-            'user_id' => $employee->id,
-            'token' => 'first-token',
-            'status' => 'pending',
-        ]);
-
-        $latest = SurveyAssignment::create([
-            'survey_id' => $survey->id,
-            'survey_version_id' => $version->id,
-            'user_id' => $employee->id,
-            'token' => 'latest-token',
-            'status' => 'pending',
-        ]);
-
-        $link = app(SurveyService::class)->assignmentLink($employee);
-
-        $this->assertNotNull($link);
-        $this->assertStringEndsWith($latest->token, $link);
-        $this->assertNotSame($first->token, $latest->token);
     }
 
     public function test_manager_can_update_existing_wave(): void
@@ -750,6 +798,11 @@ class SurveyWaveTest extends TestCase
             'company_id' => $company->id,
             'tariff' => 0,
         ]);
+        app(OrganizationEntitlementService::class)->grantManual(
+            $company,
+            'starter',
+            now()->addYear()
+        );
 
         $wave = SurveyWave::create([
             'company_id' => $company->id,

@@ -17,7 +17,7 @@
                     <th class="ps-4 py-3 text-secondary text-uppercase small fw-bold">User</th>
                     <th class="py-3 text-secondary text-uppercase small fw-bold">Role</th>
                     <th class="py-3 text-secondary text-uppercase small fw-bold">Company ID</th>
-                    <th class="pe-4 py-3 text-secondary text-uppercase small fw-bold text-end">Actions</th>
+                    <th class="pe-4 py-3 text-secondary text-uppercase small fw-bold text-end">Access</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -39,15 +39,8 @@
                         </span>
                     </td>
                     <td class="py-3 text-muted">{{ user.company_id }}</td>
-                    <td class="pe-4 py-3 text-end">
-                        <div class="btn-group">
-                            <button class="btn btn-sm btn-outline-primary rounded-start-pill" @click="$emit('impersonate', user.id)" title="Login as this user">
-                                <i class="bi bi-box-arrow-in-right"></i> Login
-                            </button>
-                            <button class="btn btn-sm btn-outline-danger rounded-end-pill" @click="$emit('delete', user.id)" title="Delete User">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
+                    <td class="pe-4 py-3 text-end text-muted small">
+                        Managed through organization access
                     </td>
                 </tr>
                 <tr v-if="users.data.length === 0">
@@ -77,7 +70,7 @@ defineProps({
     companyFilter: [String, Number]
 });
 
-defineEmits(['update:searchQuery', 'search', 'clear-filter', 'page-change', 'impersonate', 'delete']);
+defineEmits(['update:searchQuery', 'search', 'clear-filter', 'page-change']);
 
 const getRoleLabel = (role) => {
     const roles = { 0: 'Super Admin', 1: 'Manager', 2: 'Chief', 3: 'Team Lead', 4: 'Employee' };

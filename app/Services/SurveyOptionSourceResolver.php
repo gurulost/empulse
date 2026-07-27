@@ -10,7 +10,7 @@ class SurveyOptionSourceResolver
 
     public function resolve(?SurveyOptionSource $source): array
     {
-        if (!$source) {
+        if (! $source) {
             return ['options' => [], 'meta' => null];
         }
 
@@ -19,6 +19,7 @@ class SurveyOptionSourceResolver
 
         if (str_starts_with($kind, 'algorithm:')) {
             $algorithm = substr($kind, strlen('algorithm:'));
+
             return [
                 'options' => $this->resolveAlgorithm($algorithm, $config),
                 'meta' => ['kind' => $kind, 'config' => $config],
@@ -54,7 +55,7 @@ class SurveyOptionSourceResolver
         }
 
         $path = '/usr/share/zoneinfo/iso3166.tab';
-        if (!is_readable($path)) {
+        if (! is_readable($path)) {
             return $this->isoCountries = [];
         }
 
@@ -79,11 +80,11 @@ class SurveyOptionSourceResolver
 
     protected function buildYearsOptions(array $config): array
     {
-        $start = max(1, (int)($config['start'] ?? 1));
-        $end = max($start, (int)($config['end'] ?? $start));
+        $start = max(1, (int) ($config['start'] ?? 1));
+        $end = max($start, (int) ($config['end'] ?? $start));
         $labels = $config['labels'] ?? [];
-        $includeLt1 = (bool)($config['include_less_than_one'] ?? false);
-        $includePlus = (bool)($config['include_50_plus'] ?? false);
+        $includeLt1 = (bool) ($config['include_less_than_one'] ?? false);
+        $includePlus = (bool) ($config['include_50_plus'] ?? false);
 
         $options = [];
         if ($includeLt1) {

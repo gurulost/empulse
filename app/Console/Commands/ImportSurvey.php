@@ -22,14 +22,16 @@ class ImportSurvey extends Command
     public function handle(): int
     {
         $path = $this->argument('path');
-        if (!is_file($path)) {
+        if (! is_file($path)) {
             $this->error("Survey file not found at {$path}");
+
             return Command::FAILURE;
         }
 
         $payload = json_decode(file_get_contents($path), true);
-        if (!$payload) {
+        if (! $payload) {
             $this->error('Unable to parse JSON file.');
+
             return Command::FAILURE;
         }
 
@@ -101,7 +103,7 @@ class ImportSurvey extends Command
                 );
             }
 
-            if (!empty($pageData['items'])) {
+            if (! empty($pageData['items'])) {
                 $this->storeItems($pageData['items'], $version, $page, null);
             }
         }
@@ -138,7 +140,7 @@ class ImportSurvey extends Command
                 'scale_config' => $scaleConfig,
                 'response_config' => Arr::get($item, 'response'),
                 'display_logic' => Arr::get($item, 'display_logic'),
-                'metadata' => !empty($metadata) ? $metadata : null,
+                'metadata' => ! empty($metadata) ? $metadata : null,
                 'sort_order' => $itemIndex,
             ]);
 
@@ -174,7 +176,7 @@ class ImportSurvey extends Command
             $source = $rawItem['options_algorithm'];
             SurveyOptionSource::create([
                 'survey_item_id' => $item->id,
-                'kind' => 'algorithm:' . Arr::get($source, 'kind', 'custom'),
+                'kind' => 'algorithm:'.Arr::get($source, 'kind', 'custom'),
                 'config' => $source,
             ]);
         }

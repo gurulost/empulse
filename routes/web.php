@@ -1,38 +1,35 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Request;
-use Illuminate\Support\Facades\Auth;
-use App\Models\User;
-use App\Http\Controllers\Auth\LoginController;
-use App\Http\Controllers\WelcomeController;
-use App\Http\Controllers\ApiController;
-use App\Http\Controllers\SocialController;
-use App\Http\Controllers\HomeController;
-use App\Http\Controllers\ReportController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\FacebookController;
-use App\Http\Controllers\ManagerController;
-use App\Http\Controllers\ChiefController;
-
-use App\Http\Controllers\TeamleadController;
-use App\Http\Controllers\ExportController;
-use App\Http\Controllers\CompanyMainPageController;
-use App\Http\Controllers\PaymentController;
-use App\Http\Controllers\ContactUsController;
-use App\Http\Controllers\WorkfitAdminController;
-use App\Http\Controllers\PlanController;
-use App\Http\Controllers\StripeWebhookController;
+use App\Http\Controllers\AccountInvitationController;
+use App\Http\Controllers\ActionLoopController;
+use App\Http\Controllers\AdvisorAccessController;
+use App\Http\Controllers\AnalyticsApiController;
 use App\Http\Controllers\BillingController;
+use App\Http\Controllers\BrevoWebhookController;
+use App\Http\Controllers\ContactUsController;
+use App\Http\Controllers\DashboardAnalyticsController;
+use App\Http\Controllers\EmployeeDashboardController;
+use App\Http\Controllers\FacebookController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\OnboardingEventController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PlanController;
+use App\Http\Controllers\PrivacyRequestController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ReportsApiController;
+use App\Http\Controllers\SocialController;
+use App\Http\Controllers\StripeWebhookController;
+use App\Http\Controllers\SurveyBuilderController;
 use App\Http\Controllers\SurveyController;
 use App\Http\Controllers\SurveyManagementController;
 use App\Http\Controllers\SurveyWaveController;
-use App\Http\Controllers\SurveyBuilderController;
 use App\Http\Controllers\TeamController;
-use App\Http\Controllers\DashboardAnalyticsController;
-use App\Http\Controllers\AnalyticsApiController;
-use App\Http\Controllers\EmployeeDashboardController;
-use App\Http\Controllers\OnboardingEventController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\WelcomeController;
+use App\Http\Controllers\WorkfitAdminController;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -60,41 +57,57 @@ Route::get('/auth/google/callback', [SocialController::class, 'loginWithGoogle']
 Route::get('/facebook', [FacebookController::class, 'facebookRedirect'])->name('auth.facebook');
 Route::get('/facebook/callback', [FacebookController::class, 'facebookLogin']);
 
-Route::get('/survey/{token}', [SurveyController::class, 'show'])->name('survey.take');
-Route::get('/survey/{token}/definition', [SurveyController::class, 'definition'])->name('survey.definition');
-// Reports
-Route::get('/reports', [ReportController::class, 'index'])->middleware(['auth', 'admin'])->name('reports.index');
-Route::get('/reports/trends', [App\Http\Controllers\ReportsApiController::class, 'getTrends'])->middleware(['auth', 'admin']);
-Route::get('/reports/comparison', [App\Http\Controllers\ReportsApiController::class, 'getComparison'])->middleware(['auth', 'admin'])->name('reports.comparison');
-Route::get('/reports/options', [App\Http\Controllers\ReportsApiController::class, 'getOptions'])->middleware(['auth', 'admin'])->name('reports.options');
+Route::get('/invitation/{token}', [AccountInvitationController::class, 'show'])
+    ->middleware('throttle:30,1')
+    ->name('invitations.show');
+Route::post('/invitation/{token}', [AccountInvitationController::class, 'accept'])
+    ->middleware('throttle:10,1')
+    ->name('invitations.accept');
 
-Route::post('/survey/{token}/autosave', [SurveyController::class, 'autosave'])->name('survey.autosave');
-Route::post('/survey/{token}', [SurveyController::class, 'submit'])->name('survey.submit');
+Route::get('/survey/{token}', [SurveyController::class, 'show'])->middleware('throttle:60,1')->name('survey.take');
+Route::get('/survey/{token}/definition', [SurveyController::class, 'definition'])->middleware('throttle:60,1')->name('survey.definition');
+// Reports
+Route::get('/reports', [ReportController::class, 'index'])->middleware(['auth', 'capability:analytics.view'])->name('reports.index');
+Route::get('/reports/trends', [ReportsApiController::class, 'getTrends'])->middleware(['auth', 'capability:analytics.view']);
+Route::get('/reports/comparison', [ReportsApiController::class, 'getComparison'])->middleware(['auth', 'capability:analytics.view'])->name('reports.comparison');
+Route::get('/reports/options', [ReportsApiController::class, 'getOptions'])->middleware(['auth', 'capability:analytics.view'])->name('reports.options');
+
+Route::post('/survey/{token}/autosave', [SurveyController::class, 'autosave'])->middleware('throttle:30,1')->name('survey.autosave');
+Route::post('/survey/{token}/privacy-acknowledgment', [SurveyController::class, 'acknowledgePrivacy'])
+    ->middleware('throttle:10,1')
+    ->name('survey.privacy.acknowledge');
+Route::post('/survey/{token}', [SurveyController::class, 'submit'])->middleware('throttle:10,1')->name('survey.submit');
 
 // Stripe webhook endpoint (Cashier) - must be publicly accessible (Stripe won't be authenticated)
 Route::post('/stripe/webhook', [StripeWebhookController::class, 'handleWebhook'])->name('stripe.webhook');
+Route::post('/brevo/webhook', BrevoWebhookController::class)
+    ->middleware('throttle:120,1')
+    ->name('brevo.webhook');
 
 Route::group(['middleware' => 'auth'], function () {
-    Route::get('/employee', [EmployeeDashboardController::class, 'index'])->name('employee.dashboard');
+    Route::get('/employee', [EmployeeDashboardController::class, 'index'])
+        ->middleware('capability:employee.dashboard')
+        ->name('employee.dashboard');
+    Route::get('/employee/surveys/{assignment}', [EmployeeDashboardController::class, 'launch'])
+        ->middleware('capability:employee.dashboard')
+        ->name('employee.surveys.launch');
 
-    Route::group(['prefix' => 'home', 'middleware' => 'admin'], function () {
+    Route::group(['prefix' => 'home', 'middleware' => 'capability:analytics.view'], function () {
         Route::get('/', [HomeController::class, 'index'])->name('home');
-        Route::post('/updatePassword/{email}', [HomeController::class, 'updatePassword']);
         Route::get('/response_error', [PaymentController::class, 'responses_error']);
     });
 
     // Team Management (Vue Dashboard)
-    Route::get('/team/manage', [TeamController::class, 'index'])->middleware('admin')->name('team.manage');
+    Route::get('/team/manage', [TeamController::class, 'index'])->middleware('capability:team.manage')->name('team.manage');
 
     // Team Management JSON API
-    Route::group(['prefix' => 'team/api', 'middleware' => 'admin'], function () {
+    Route::group(['prefix' => 'team/api', 'middleware' => 'capability:team.manage'], function () {
         // Members
         Route::get('/members', [TeamController::class, 'getMembers']);
         Route::post('/members', [TeamController::class, 'addMember']);
         Route::put('/members/{email}', [TeamController::class, 'updateMember']);
         Route::delete('/members/{email}', [TeamController::class, 'deleteMember']);
-        Route::post('/members/import', [TeamController::class, 'importUsers']);
-        
+
         // Departments
         Route::get('/departments', [TeamController::class, 'getDepartments']);
         Route::post('/departments', [TeamController::class, 'addDepartment']);
@@ -102,30 +115,23 @@ Route::group(['middleware' => 'auth'], function () {
         Route::delete('/departments/{title}', [TeamController::class, 'deleteDepartment']);
     });
 
-    Route::group(['prefix' => 'users', 'middleware' => 'admin'], function () {
-        Route::get('/export/{role}', [UserController::class, 'exportTable']);
-    });
-
-    Route::group(['prefix' => 'users', 'middleware' => 'admin'], function () {
-        Route::get('/delete/{email}', [TeamController::class, 'deleteMemberLegacy'])->name('users.delete');
+    Route::group(['prefix' => 'users', 'middleware' => 'capability:team.manage'], function () {
         Route::get('/list', [TeamController::class, 'getMembersLegacy'])->name('users.list');
-        Route::post('/import', [TeamController::class, 'importUsers'])->name('users.import');
     });
 
-    Route::group(['prefix' => 'departments', 'middleware' => 'admin'], function () {
+    Route::group(['prefix' => 'departments', 'middleware' => 'capability:team.manage'], function () {
         Route::get('/list', [TeamController::class, 'getDepartmentsLegacy'])->name('departments.list');
         Route::post('/', [TeamController::class, 'addDepartmentLegacy'])->name('departments.store');
-        Route::get('/delete/{title}', [TeamController::class, 'deleteDepartmentLegacy'])->name('departments.delete');
     });
 
-    Route::group(['prefix' => 'payment', 'middleware' => 'manager'], function() {
+    Route::group(['prefix' => 'payment', 'middleware' => 'capability:billing.manage'], function () {
         Route::get('/', [PaymentController::class, 'payment'])->name('payment')->middleware('payment');
         Route::get('/payment-success', [PaymentController::class, 'payment_success'])->name('payment-success');
         Route::get('/error', [PaymentController::class, 'payment_error'])->name('payment_error');
     });
 
     // Stripe subscription (Laravel Cashier) routes
-    Route::group(['middleware' => 'manager'], function () {
+    Route::group(['middleware' => 'capability:billing.manage'], function () {
         Route::get('/plans', [PlanController::class, 'stripePay'])->name('plans.index');
         Route::get('/plans/{plan}', [PlanController::class, 'show'])->name('plans.show');
         Route::post('/subscription', [PlanController::class, 'subscription'])->name('subscription.create');
@@ -137,36 +143,43 @@ Route::group(['middleware' => 'auth'], function () {
             Route::post('/billing/cancel', [BillingController::class, 'cancel'])->name('billing.cancel');
             Route::post('/billing/resume', [BillingController::class, 'resume'])->name('billing.resume');
             Route::post('/billing/portal', [BillingController::class, 'portal'])->name('billing.portal');
+            Route::post('/billing/transfer', [BillingController::class, 'initiateTransfer'])->name('billing.transfer.initiate');
         });
     });
 
+    Route::get('/account/billing/transfer/{transfer}', [BillingController::class, 'showTransfer'])
+        ->name('billing.transfer.show');
+    Route::post('/account/billing/transfer/{transfer}', [BillingController::class, 'decideTransfer'])
+        ->name('billing.transfer.decide');
+
     // Profile is available to any authenticated user, including employees.
-    Route::group([], function() {
+    Route::group([], function () {
         Route::get('/profile', [UserController::class, 'profile'])->name('profile');
-        Route::post("/profile/edit_password", [UserController::class, 'editPassword'])->name("edit-password");
+        Route::post('/profile/edit_password', [UserController::class, 'editPassword'])->name('edit-password');
         Route::get('/add/avatar', [UserController::class, 'addAvatar'])->name('add.avatar');
         Route::post('/store/avatar', [UserController::class, 'storeAvatar'])->name('store.avatar');
-        Route::get('/delete/avatar/{id}', [UserController::class, 'deleteAvatar'])->name('delete.avatar');
+        Route::delete('/profile/avatar', [UserController::class, 'deleteAvatar'])->name('delete.avatar');
     });
 
-    Route::group(['middleware' => 'manager'], function() {
+    Route::group(['middleware' => 'capability:survey.manage'], function () {
         Route::get('/surveys/manage', [SurveyManagementController::class, 'index'])->name('surveys.manage');
+    });
+
+    Route::group(['middleware' => 'capability:survey-waves.manage'], function () {
         Route::get('/survey-waves', [SurveyWaveController::class, 'index'])->name('survey-waves.index');
         Route::post('/survey-waves', [SurveyWaveController::class, 'store'])->name('survey-waves.store');
         Route::put('/survey-waves/{wave}', [SurveyWaveController::class, 'update'])->name('survey-waves.update');
         Route::post('/survey-waves/{wave}/status', [SurveyWaveController::class, 'updateStatus'])->name('survey-waves.status');
         Route::post('/survey-waves/{wave}/dispatch', [SurveyWaveController::class, 'dispatchWave'])->name('survey-waves.dispatch');
     });
-    Route::group(['middleware' => 'workfit_admin'], function () {
+    Route::group(['middleware' => 'capability:workfit.admin'], function () {
         Route::prefix('/admin')->name('admin.')->group(function () {
             Route::get('/', [WorkfitAdminController::class, 'index'])->name('dashboard');
-            
+
             Route::prefix('/api')->group(function () {
                 Route::get('/companies', [WorkfitAdminController::class, 'getCompanies']);
                 Route::get('/users', [WorkfitAdminController::class, 'getUsers']);
                 Route::get('/onboarding', [WorkfitAdminController::class, 'getOnboardingReport']);
-                Route::delete('/users/{id}', [WorkfitAdminController::class, 'deleteUser']);
-                Route::post('/users/{id}/impersonate', [WorkfitAdminController::class, 'impersonate']);
             });
 
             Route::prefix('/builder')->name('builder.')->group(function () {
@@ -190,17 +203,47 @@ Route::group(['middleware' => 'auth'], function () {
             });
 
             Route::prefix('/users')->name('users.')->group(function () {
-                Route::get('delete/{id}', [WorkfitAdminController::class, 'deleteUser'])->name('delete');
                 Route::get('list', [WorkfitAdminController::class, 'getUsersList'])->name('list');
             });
         });
     });
 
-    Route::get('/dashboard/analytics', DashboardAnalyticsController::class)->middleware('admin')
+    Route::prefix('/admin/privacy')
+        ->middleware('capability:privacy.manage')
+        ->name('admin.privacy.')
+        ->group(function () {
+            Route::get('/requests', [PrivacyRequestController::class, 'index'])->name('requests.index');
+            Route::post('/requests', [PrivacyRequestController::class, 'store'])->name('requests.store');
+            Route::post('/requests/{privacyRequest}/verify', [PrivacyRequestController::class, 'verifyIdentity'])->name('requests.verify');
+            Route::post('/requests/{privacyRequest}/approve', [PrivacyRequestController::class, 'approve'])->name('requests.approve');
+            Route::post('/requests/{privacyRequest}/execute', [PrivacyRequestController::class, 'execute'])->name('requests.execute');
+        });
+
+    Route::get('/dashboard/analytics', DashboardAnalyticsController::class)->middleware('capability:analytics.view')
         ->name('dashboard.analytics');
 
-    Route::get('/analytics/api/dashboard', [AnalyticsApiController::class, 'index'])->middleware('admin')
+    Route::get('/analytics/api/dashboard', [AnalyticsApiController::class, 'index'])->middleware('capability:analytics.view')
         ->name('analytics.api.dashboard');
+
+    Route::get('/actions', [ActionLoopController::class, 'index'])
+        ->middleware('capability:actions.view')
+        ->name('actions.index');
+    Route::middleware('capability:actions.manage')->group(function () {
+        Route::post('/actions/findings', [ActionLoopController::class, 'storeFinding'])->name('actions.findings.store');
+        Route::post('/actions/findings/{finding}/decision', [ActionLoopController::class, 'decideFinding'])->name('actions.findings.decide');
+        Route::post('/actions/plans', [ActionLoopController::class, 'storeAction'])->name('actions.plans.store');
+        Route::post('/actions/plans/{action}/measurement', [ActionLoopController::class, 'storeMeasurementPlan'])->name('actions.measurement.store');
+        Route::post('/actions/plans/{action}/transition', [ActionLoopController::class, 'transitionAction'])->name('actions.transition');
+        Route::post('/actions/plans/{action}/communications', [ActionLoopController::class, 'publishCommunication'])->name('actions.communications.publish');
+        Route::post('/actions/measurement/{plan}/evaluate', [ActionLoopController::class, 'evaluate'])->name('actions.evaluate');
+        Route::post('/actions/measurement/{plan}/followup-wave', [ActionLoopController::class, 'createFollowupWave'])->name('actions.followup-wave.create');
+    });
+    Route::middleware('capability:advisor-access.manage')->group(function () {
+        Route::post('/actions/advisors', [AdvisorAccessController::class, 'store'])
+            ->name('actions.advisors.store');
+        Route::delete('/actions/advisors/{advisorGrant}', [AdvisorAccessController::class, 'destroy'])
+            ->name('actions.advisors.destroy');
+    });
 
     Route::post('/onboarding/events', [OnboardingEventController::class, 'store'])
         ->name('onboarding.events.store');

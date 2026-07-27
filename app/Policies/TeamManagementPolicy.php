@@ -8,16 +8,9 @@ use App\Models\User;
 
 class TeamManagementPolicy
 {
-    public function before(User $user, string $ability)
-    {
-        if ((int) ($user->is_admin ?? 0) === 1) {
-            return true;
-        }
-    }
-
     public function manageMembers(User $user, Companies $company): bool
     {
-        if (!$this->belongsToCompany($user, $company)) {
+        if (! $this->belongsToCompany($user, $company)) {
             return false;
         }
 
@@ -31,7 +24,7 @@ class TeamManagementPolicy
 
     public function manageDepartments(User $user, Companies $company): bool
     {
-        if (!$this->belongsToCompany($user, $company)) {
+        if (! $this->belongsToCompany($user, $company)) {
             return false;
         }
 

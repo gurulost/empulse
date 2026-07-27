@@ -132,7 +132,7 @@ h1, h2, h3, h4, h5, h6,
         font-size: 0.8125rem;
         text-transform: uppercase;
         letter-spacing: 0.04em;
-        color: #64748b;
+        color: theme.$secondary;
         border-bottom-width: 1px;
     }
 
@@ -450,7 +450,7 @@ h1, h2, h3, h4, h5, h6,
     }
 
     .page-subtitle {
-        color: #64748b;
+        color: theme.$secondary;
         font-size: 0.9375rem;
         margin-bottom: 0;
     }
@@ -473,7 +473,7 @@ h1, h2, h3, h4, h5, h6,
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        color: #64748b;
+        color: theme.$secondary;
         margin-bottom: 0.5rem;
     }
 

@@ -1,6 +1,8 @@
 # Laravel defaults
 /.env
 /.env.*
+!/.env.example
+!/.env.production.example
 /vendor/
 /node_modules/
 /public/storage

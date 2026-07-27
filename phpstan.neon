@@ -1,0 +1,14 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - app/Http/Middleware
+        - app/Services/AnalyticsSamplePolicyService.php
+        - app/Services/SurveyResponseValidationService.php
+        - app/Services/SurveyAssignmentAccessService.php
+        - app/Services/AuditTrailService.php
+        - app/Support/CompanyBilling.php
+    level: 5
+    reportUnmatchedIgnoredErrors: true
+    tmpDir: storage/framework/cache/phpstan

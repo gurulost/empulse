@@ -3,7 +3,6 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -14,7 +13,9 @@ class ContactUs extends Mailable
     use Queueable, SerializesModels;
 
     public $name;
+
     public $email;
+
     public $phone;
 
     public function __construct($name, $email, $phone)
@@ -27,9 +28,9 @@ class ContactUs extends Mailable
     public function build()
     {
         return $this->view('mail', [
-            "name" => $this->name,
-            "email" => $this->email,
-            "phone" => $this->phone,
+            'name' => $this->name,
+            'email' => $this->email,
+            'phone' => $this->phone,
         ]);
     }
 

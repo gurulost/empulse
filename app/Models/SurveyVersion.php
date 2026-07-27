@@ -17,12 +17,16 @@ class SurveyVersion extends Model
         'is_active',
         'source_note',
         'meta',
+        'content_hash',
+        'published_at',
+        'published_by',
     ];
 
     protected $casts = [
         'created_utc' => 'date',
         'is_active' => 'boolean',
         'meta' => 'array',
+        'published_at' => 'datetime',
     ];
 
     public function scalePresets()

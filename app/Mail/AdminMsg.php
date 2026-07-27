@@ -3,7 +3,6 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -18,14 +17,20 @@ class AdminMsg extends Mailable
      *
      * @return void
      */
-
     public $name;
+
     public $link;
+
     public $email;
+
     public $password;
+
     public $status;
+
     public $company;
+
     public $surveyLink;
+
     public $department;
 
     public function __construct($name, $link, $email, $password, $company, $status, $surveyLink, $department)
@@ -44,21 +49,21 @@ class AdminMsg extends Mailable
     {
         return $this->view('admin-msg',
             [
-                "name" => $this->name,
-                "link" => $this->link,
-                "email" => $this->email,
-                "password" => $this->password,
-                "status" => $this->status,
-                "company" => $this->company,
-                "department" => $this->department,
-                "surveyLink" => $this->surveyLink,
+                'name' => $this->name,
+                'link' => $this->link,
+                'email' => $this->email,
+                'password' => $this->password,
+                'status' => $this->status,
+                'company' => $this->company,
+                'department' => $this->department,
+                'surveyLink' => $this->surveyLink,
             ]);
     }
 
     /**
      * Get the message envelope.
      *
-     * @return \Illuminate\Mail\Mailables\Envelope
+     * @return Envelope
      */
     public function envelope()
     {
@@ -70,7 +75,7 @@ class AdminMsg extends Mailable
     /**
      * Get the message content definition.
      *
-     * @return \Illuminate\Mail\Mailables\Content
+     * @return Content
      */
     public function content()
     {

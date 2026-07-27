@@ -1,5 +1,11 @@
 <?php
 
+use App\Http\Middleware\EnsureEmailBelongsToCompany;
+use App\Http\Middleware\Payment;
+use App\Http\Middleware\RedirectIfAuthenticated;
+use App\Http\Middleware\RequireCapability;
+use App\Http\Middleware\SecurityHeaders;
+use App\Http\Middleware\Welcome;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -12,28 +18,39 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        $trustedProxies = array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('TRUSTED_PROXIES', ''))
+        )));
+
+        $middleware->append(SecurityHeaders::class);
+        $middleware->trustHosts(
+            at: static function (): array {
+                $host = parse_url((string) config('app.url'), PHP_URL_HOST);
+
+                return $host ? ['^'.preg_quote($host, '/').'$'] : [];
+            },
+            subdomains: false,
+        );
+        $middleware->validateCsrfTokens(except: [
+            'stripe/webhook',
+            'brevo/webhook',
+        ]);
+
         $middleware->trustProxies(
-            at: '*',
+            at: $trustedProxies,
             headers: Request::HEADER_X_FORWARDED_FOR |
-                Request::HEADER_X_FORWARDED_HOST |
                 Request::HEADER_X_FORWARDED_PORT |
                 Request::HEADER_X_FORWARDED_PROTO |
                 Request::HEADER_X_FORWARDED_AWS_ELB,
         );
 
-        // Add middleware to rewrite asset URLs to relative paths
-        $middleware->append(\App\Http\Middleware\RewriteAssetUrls::class);
-        
         $middleware->alias([
-            'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
-            'manager' => \App\Http\Middleware\Manager::class,
-            'teamlead' => \App\Http\Middleware\Teamlead::class,
-            'chief' => \App\Http\Middleware\Chief::class,
-            'admin' => \App\Http\Middleware\Admin::class,
-            'workfit_admin' => \App\Http\Middleware\WorkfitAdmin::class,
-            'welcome' => \App\Http\Middleware\Welcome::class,
-            'payment' => \App\Http\Middleware\Payment::class,
-            'tenant.email' => \App\Http\Middleware\EnsureEmailBelongsToCompany::class,
+            'guest' => RedirectIfAuthenticated::class,
+            'capability' => RequireCapability::class,
+            'welcome' => Welcome::class,
+            'payment' => Payment::class,
+            'tenant.email' => EnsureEmailBelongsToCompany::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

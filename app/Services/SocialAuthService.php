@@ -4,8 +4,7 @@ namespace App\Services;
 
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class SocialAuthService
 {
@@ -19,34 +18,44 @@ class SocialAuthService
         if (empty($email)) {
             return [
                 'success' => false,
-                'error' => "Unable to retrieve email from {$provider} account."
+                'error' => "Unable to retrieve email from {$provider} account.",
             ];
         }
 
-        $existingUser = User::where($socialIdColumn, $socialId)->first();
-        if ($existingUser) {
-            Auth::login($existingUser);
-            return ['success' => true, 'user' => $existingUser];
+        $result = DB::transaction(function () use ($socialIdColumn, $socialId, $email, $provider) {
+            $existingUser = User::where($socialIdColumn, $socialId)->lockForUpdate()->first();
+            if ($existingUser) {
+                if ($existingUser->status === 'inactive') {
+                    return ['success' => false, 'error' => 'This account is inactive.'];
+                }
+                if ($existingUser->company_id === null && ! $existingUser->is_admin) {
+                    return [
+                        'success' => false,
+                        'error' => 'This identity is not linked to an Empulse company workspace.',
+                    ];
+                }
+
+                return ['success' => true, 'user' => $existingUser];
+            }
+
+            if (User::where('email', $email)->exists()) {
+                return [
+                    'success' => false,
+                    'error' => "Sign in with your password before linking {$provider}.",
+                ];
+            }
+
+            return [
+                'success' => false,
+                'error' => 'Create a company workspace first or accept your organization invitation before using social sign-in.',
+            ];
+        });
+
+        if ($result['success']) {
+            Auth::login($result['user']);
         }
 
-        $userByEmail = User::where('email', $email)->first();
-        if ($userByEmail) {
-            $userByEmail->update([$socialIdColumn => $socialId]);
-            Auth::login($userByEmail);
-            return ['success' => true, 'user' => $userByEmail];
-        }
-
-        $newUser = User::create([
-            'name' => $name,
-            'email' => $email,
-            $socialIdColumn => $socialId,
-            'password' => Hash::make(Str::random(32)),
-            'role' => 4,
-            'company_id' => null,
-        ]);
-
-        Auth::login($newUser);
-        return ['success' => true, 'user' => $newUser, 'is_new' => true];
+        return $result;
     }
 
     public function handleGoogleLogin(string $googleId, ?string $email, string $name): array

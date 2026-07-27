@@ -9,11 +9,11 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasTable('subscriptions')) {
+        if (! Schema::hasTable('subscriptions')) {
             return;
         }
 
-        if (!Schema::hasColumn('subscriptions', 'type')) {
+        if (! Schema::hasColumn('subscriptions', 'type')) {
             Schema::table('subscriptions', function (Blueprint $table) {
                 $table->string('type')->default('default')->after('user_id');
             });
@@ -31,7 +31,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        if (!Schema::hasTable('subscriptions') || !Schema::hasColumn('subscriptions', 'type')) {
+        if (! Schema::hasTable('subscriptions') || ! Schema::hasColumn('subscriptions', 'type')) {
             return;
         }
 

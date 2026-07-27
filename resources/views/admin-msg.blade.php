@@ -56,7 +56,7 @@
 </style>
 
 @php
-    $surveyLink = $surveyLink ?? (config('app.test_url') ?? '#');
+    $setupLink = $setupLink ?? null;
 @endphp
 
 <div class="greetings">
@@ -65,31 +65,21 @@
 </div>
 
 <article>
-    @if($status === 'employee')
-        You have to pass test in order to we can to improve our relationship due to your test results. <br />
-        <p><i>** <a href="{{ $surveyLink }}" target="_blank" rel="noreferrer">THE TEST PAGE</a> **</i></p><br /><br />
+    @if($setupLink)
+        <p>You have been invited to join Empulse as a {{ $status }}.</p>
+        <p>This invitation is single-use and expires. Empulse will never email you a temporary password.</p>
+        <p>
+            <a href="{{ $setupLink }}" class="href" target="_blank" rel="noreferrer">
+                Set up your account securely
+            </a>
+        </p>
     @else
-        <div class="credent-block">
-            Now, you can get more control above your employees as a {{$status}} via our web-site! <br />
-
-            <div class="lp-block">
-                <p>Your personal login: <span>{{$email}}</span></p>
-                @if($password !== null) <p>Your personal password: <span>{{$password}}</span></p> @endif
-                <a href="{{ config('app.url') }}/login" class='href' target="_blank">You can authorize yourself here!</a>
-            </div>
-
-            @if($status !== 'company manager')
-                <div class="test-info-block">
-                    <p>Also, you have to pass test in order to we can to improve our relationship due to your test results.<p>
-                    <p><i>** <a class='href' href="{{ $surveyLink }}" target="_blank" rel="noreferrer">THE TEST PAGE</a> **</i></p><br /><br />
-                </div>
-            @endif
-        </div>
+        <p>Your Empulse account details were updated.</p>
+        <p><a href="{{ route('login') }}" class="href" target="_blank">Sign in to review your account.</a></p>
     @endif
 
     <div class="importantly">
-        <h3 style="color: red;">*** IMPORTANTLY!</h3>
-        <mark>For correct identification, enter the following data in the first block of the survey:</mark>
+        <h3 style="color: red;">Account details</h3>
         <div>
             <p>company: <span>{{$company}}</span></p>
             <p>email: <span>{{$email}}</span></p>

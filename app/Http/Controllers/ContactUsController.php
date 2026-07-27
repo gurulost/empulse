@@ -2,10 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Mail\ContactUs;
-use Illuminate\Support\Facades\Mail;
 use App\Services\EmailService;
+use Illuminate\Http\Request;
 
 class ContactUsController extends Controller
 {
@@ -26,15 +24,15 @@ class ContactUsController extends Controller
         $name = $request->input('name');
         $email = $request->input('email');
         $phone = $request->input('phone');
-        
+
         $this->emailService->sendContactForm($name, $email, $phone);
 
         sleep(4);
-        
+
         if (\Auth::check()) {
             return redirect('home');
         }
-        
+
         return redirect()->route('contact.response');
     }
 

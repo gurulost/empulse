@@ -27,13 +27,13 @@ class ExplainAnalytics extends Command
 
         $driver = DB::connection()->getDriverName();
         $wave = (string) ($this->option('wave') ?? '');
-        $withAnalyze = !((bool) $this->option('no-analyze'));
+        $withAnalyze = ! ((bool) $this->option('no-analyze'));
 
         $this->info(sprintf(
             'Running analytics EXPLAIN on %s (company_id=%d%s, analyze=%s)',
             $driver,
             $companyId,
-            $wave !== '' ? ', wave=' . $wave : '',
+            $wave !== '' ? ', wave='.$wave : '',
             $withAnalyze ? 'yes' : 'no'
         ));
 
@@ -51,8 +51,8 @@ class ExplainAnalytics extends Command
         foreach ($queries as $name => $query) {
             $this->line('');
             $this->line("=== {$name} ===");
-            $this->line('SQL: ' . $query->toSql());
-            $this->line('Bindings: ' . json_encode($query->getBindings()));
+            $this->line('SQL: '.$query->toSql());
+            $this->line('Bindings: '.json_encode($query->getBindings()));
 
             $planRows = $this->runExplain($query, DB::connection(), $withAnalyze);
             foreach ($planRows as $line) {
@@ -94,7 +94,7 @@ class ExplainAnalytics extends Command
             ->whereIn('a.response_id', $latestResponsesSubquery)
             ->whereNotNull('a.value_numeric');
 
-        if (!empty($analyticsQuestionKeys)) {
+        if (! empty($analyticsQuestionKeys)) {
             $query->whereIn('a.question_key', $analyticsQuestionKeys);
         }
 
@@ -194,21 +194,21 @@ class ExplainAnalytics extends Command
                 }
             };
 
-            if (!empty($selector['wave_ids'])) {
+            if (! empty($selector['wave_ids'])) {
                 $appendCondition(function ($q) use ($selector) {
                     $q->whereIn('sr.survey_wave_id', $selector['wave_ids'])
                         ->orWhereIn('sa.survey_wave_id', $selector['wave_ids']);
                 });
             }
 
-            if (!empty($selector['version_ids'])) {
+            if (! empty($selector['version_ids'])) {
                 $appendCondition(function ($q) use ($selector) {
                     $q->whereIn('sr.survey_version_id', $selector['version_ids'])
                         ->orWhereIn('sa.survey_version_id', $selector['version_ids']);
                 });
             }
 
-            if (!empty($selector['labels'])) {
+            if (! empty($selector['labels'])) {
                 $appendCondition(function ($q) use ($selector) {
                     $q->whereIn('sr.wave_label', $selector['labels'])
                         ->orWhereIn('sa.wave_label', $selector['labels']);
@@ -250,21 +250,21 @@ class ExplainAnalytics extends Command
 
         if ($driver === 'pgsql') {
             $prefix = $withAnalyze ? 'EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) ' : 'EXPLAIN ';
-            $rows = $connection->select($prefix . $sql, $bindings);
+            $rows = $connection->select($prefix.$sql, $bindings);
 
             return array_map(fn ($row) => (string) $row->{'QUERY PLAN'}, $rows);
         }
 
         if ($driver === 'mysql') {
             if ($withAnalyze) {
-                $rows = $connection->select('EXPLAIN ANALYZE ' . $sql, $bindings);
+                $rows = $connection->select('EXPLAIN ANALYZE '.$sql, $bindings);
 
                 return array_map(function ($row) {
                     return implode(' | ', array_map('strval', (array) $row));
                 }, $rows);
             }
 
-            $rows = $connection->select('EXPLAIN FORMAT=JSON ' . $sql, $bindings);
+            $rows = $connection->select('EXPLAIN FORMAT=JSON '.$sql, $bindings);
 
             return array_map(function ($row) {
                 return implode(' | ', array_map('strval', (array) $row));
@@ -272,14 +272,14 @@ class ExplainAnalytics extends Command
         }
 
         if ($driver === 'sqlite') {
-            $rows = $connection->select('EXPLAIN QUERY PLAN ' . $sql, $bindings);
+            $rows = $connection->select('EXPLAIN QUERY PLAN '.$sql, $bindings);
 
             return array_map(function ($row) {
                 return implode(' | ', array_map('strval', (array) $row));
             }, $rows);
         }
 
-        $rows = $connection->select('EXPLAIN ' . $sql, $bindings);
+        $rows = $connection->select('EXPLAIN '.$sql, $bindings);
 
         return array_map(function ($row) {
             return implode(' | ', array_map('strval', (array) $row));
