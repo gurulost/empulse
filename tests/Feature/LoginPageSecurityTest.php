@@ -20,9 +20,11 @@ class LoginPageSecurityTest extends TestCase
             'HTTP_X_FORWARDED_PORT' => '443',
         ])->get("http://{$host}/login");
 
+        $canonicalUrl = rtrim((string) config('app.url'), '/');
+
         $response->assertOk();
-        $response->assertSee('action="http://localhost/login"', false);
-        $response->assertSee('href="http://localhost/register"', false);
+        $response->assertSee("action=\"{$canonicalUrl}/login\"", false);
+        $response->assertSee("href=\"{$canonicalUrl}/register\"", false);
         $response->assertDontSee($host);
     }
 
