@@ -1,4 +1,5 @@
 {
+    "name": "empulse",
     "private": true,
     "type": "module",
     "scripts": {
