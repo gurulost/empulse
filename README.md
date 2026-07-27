@@ -190,6 +190,7 @@ The checked-in Docker and Procfile definitions express the same process contract
 - [`docs/OBSERVABILITY_AND_SERVICE_LEVELS.md`](docs/OBSERVABILITY_AND_SERVICE_LEVELS.md) — launch SLOs, signals, alerts, and incident minimum
 - [`docs/BACKUP_RESTORE_AND_DISASTER_RECOVERY.md`](docs/BACKUP_RESTORE_AND_DISASTER_RECOVERY.md) — RPO/RTO and restore drill
 - [`docs/RELEASE_AND_ROLLBACK_POLICY.md`](docs/RELEASE_AND_ROLLBACK_POLICY.md) — evidence packet, canary rollout, and rollback policy
+- [`docs/GIT_HISTORY_SECRET_REMEDIATION_RUNBOOK.md`](docs/GIT_HISTORY_SECRET_REMEDIATION_RUNBOOK.md) — rehearsed credential-rotation and history-cleanup procedure
 - [`docs/CAPACITY_AND_PERFORMANCE_TEST_PLAN.md`](docs/CAPACITY_AND_PERFORMANCE_TEST_PLAN.md) — staging data profiles, workloads, and budgets
 - [`docs/METHODOLOGY_AND_CLAIMS_DOSSIER.md`](docs/METHODOLOGY_AND_CLAIMS_DOSSIER.md) — metric intent, interpretation, and claim limits
 - [`docs/RESPONDENT_DATA_PROMISE.md`](docs/RESPONDENT_DATA_PROMISE.md) — working privacy promise and owner decisions
