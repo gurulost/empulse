@@ -10,7 +10,7 @@ Current product, architecture, and release truth are separated from historical i
 
 Canonical repository: `gurulost/empulse`
 
-Validated implementation candidate: `070447da2ec42379da52509b9b6b9d860fbbb7f0`
+Last fully validated canonical `main` snapshot before this evidence update: `3e311fd91142003a62593a51e894df14199c386c`
 
 Implementation branch: `codex/production-readiness`
 
@@ -32,7 +32,7 @@ The unsafe legacy roster importer remains removed. Its replacement uses encrypte
 
 ### Application and database
 
-- `composer test` on SQLite: 200 tests, 1,121 assertions passed.
+- `composer test` on the canonical GitHub runner: 219 tests, 1,302 assertions passed.
 - Clean PostgreSQL 14 migration and canonical 62-item demo seed: passed.
 - `composer test` on PostgreSQL 14: 200 tests, 1,121 assertions passed.
 - Browser gate: all 17 role, roster-import authorization, route-failure, privacy-acknowledgment, required-answer, submission, completed-state, automated accessibility, admin-governance, and north-star action-loop journeys passed together against a fresh seeded PostgreSQL application with real web and queue processes. The baseline respondent journey answered all 62 canonical items and persisted exactly 62 answers. The north-star journey captured evidence, created an owned dated action and measurement plan, dispatched a governed three-item Pulse, collected five completions, evaluated a comparable non-causal outcome, and verified the WorkFit-admin value report through the UI.
@@ -48,15 +48,15 @@ The unsafe legacy roster importer remains removed. Its replacement uses encrypte
 - `npm audit --audit-level=high`: zero vulnerabilities.
 - Dependency-license inventory: all PHP packages are permissive or usable under an available permissive license; the unused direct PHPMailer dependency was removed. Direct JavaScript dependencies are MIT/Apache-2.0, the development-only axe Playwright adapter is MPL-2.0, and the self-hosted DM Sans, Outfit, and Inter font packages are OFL-1.1. Bootstrap Icons is MIT. No direct dependency has an unknown license.
 - `npm run lint`: passed.
-- `npm run test:unit`: 2 files / 6 tests passed, including untouched slider, exclusive multiselect, and analytics state coverage.
-- `npm run build`: passed with 182 modules transformed.
+- `npm run test:unit`: 2 files / 8 tests passed, including slider/error/group semantics, exclusive multiselect, and analytics state coverage.
+- `npm run build`: passed with 200 modules transformed.
 - Laravel configuration, route, and Blade view caches build and clear successfully.
 - Gitleaks current-source scan: no findings after removal of the legacy attachment directory.
 - Gitleaks unignored full-history baseline: exactly three pre-existing findings remain—two generic-key matches in removed attachment history and one old Sendinblue/Brevo token in a historical controller commit. The repository owner and WorkFit mail administrator confirmed that the credential was revoked and deactivated.
 - The owner declined a Git-history rewrite and accepted the residual visibility of the dead credential in old commits. The root `.gitleaksignore` contains only the three exact finding fingerprints. CI-pinned Gitleaks 8.24.3 proves that the unignored baseline is exactly that set, the approved full-history scan passes, and a newly generated unrecognized finding still fails.
 - The first committed-SHA GitHub run exposed an npm lock inconsistency before tests began. The lock was regenerated from a clean dependency graph and then passed `npm ci` with the exact npm 10.9.8 version used by that runner.
 - The initial GitHub secret job fetched full history but the action’s push-event command scanned only `-1` commit. The workflow now retains the proposed-change scan and adds an explicit fail-closed `gitleaks git --log-opts="--all"` history scan; a one-commit green result is not accepted as full-history evidence.
-- GitHub Actions run `30377166138` on the product candidate promoted to `main`, `96985c01728197781471aae84d8367a58e753609`, passed the complete product job: PostgreSQL 16 migration/seed, 200 tests/1,121 assertions, Composer/npm audits, cache construction, Pint, static analysis, frontend lint and six component tests, the 182-module production build, real web/worker readiness, and all 17 Playwright role/failure/respondent/accessibility/governance/product-loop journeys. The proposed-change secret scan also passed. The overall workflow is red only because the explicit full-history job correctly detects the three historical findings.
+- GitHub Actions run `30392355036` on canonical `main` snapshot `3e311fd91142003a62593a51e894df14199c386c` passed both jobs. The product job proved PostgreSQL 16 migration/seed, 219 tests/1,302 assertions, Composer/npm audits, cache construction, Pint, static analysis, frontend lint and eight component tests, the 200-module production build, real web/worker readiness, and all 17 Playwright role/failure/respondent/accessibility/governance/product-loop journeys. The secret job passed the strict proposed-change scan and the CI-pinned Gitleaks 8.24.3 full-history policy: the unignored baseline is exactly the three owner-approved findings, the exact-fingerprint scan passes, and a new unrecognized finding fails.
 - A disposable mirror rehearsal previously removed the two obsolete affected paths across all 366 commits and four affected refs. After rewriting, the old tainted commits/blobs were unreachable, `git fsck` passed, and Gitleaks scanned the rewritten history with no findings. The release-candidate tree remained exactly `cf4a3a028e652770c81bf4c5ec1050f2af84906c`, with a matching recursive tree-listing SHA-256 of `a493d9cff743dff816962ce60c54ea46872428c34788ba1785396f7f3f8a5387`. No remote ref was changed. The owner has now declined this rewrite; `docs/GIT_HISTORY_SECRET_REMEDIATION_RUNBOOK.md` retains it only as a future contingency.
 
 ### Fresh-review blocker closure
@@ -85,7 +85,7 @@ A second independent fresh-context review found five additional analytics and go
 - hierarchy-scoped trends preserve the subgroup context through sample and invited/completion assessment, so five or six scoped respondents cannot clear the subgroup N≥7 contract;
 - the pre-validation weighted ratio is labeled `WorkFit Indicator (pre-validation)` throughout customer-facing reports and is not represented as engagement.
 
-The independent reviewer confirmed no P0/P1 remains in this late review scope. The final local candidate passes 200 tests/1,121 assertions on SQLite and PostgreSQL, static analysis, formatting, lint, six frontend tests, the production build, and all 17 browser/accessibility/product journeys.
+The independent reviewer confirmed no P0/P1 remains in this late review scope. The canonical GitHub candidate passes 219 tests/1,302 assertions on PostgreSQL 16, static analysis, formatting, lint, eight frontend tests, the production build, and all 17 browser/accessibility/product journeys.
 
 ### Final governance and product-loop closure
 
@@ -213,6 +213,8 @@ The repository is a strong release candidate, but customer launch is not yet app
 6. The owner must approve the initial buyer, segment, pricing, trial/advisory packaging, contract terms, and whether governed CSV plus manual roster management is sufficient for the first cohort or a contracted integration is required.
 
 No item above should be represented as complete based only on source code or local tests.
+
+[`LAUNCH_DECISIONS_AND_EXTERNAL_REVIEW_HANDOFF.md`](LAUNCH_DECISIONS_AND_EXTERNAL_REVIEW_HANDOFF.md) converts these boundaries into a recommended narrow design-partner launch, eleven explicit owner decisions, independent-review return requirements, and a provider-staging acceptance table. Every decision and external result remains pending until its named owner supplies the required evidence.
 
 ## Reviewer Focus
 

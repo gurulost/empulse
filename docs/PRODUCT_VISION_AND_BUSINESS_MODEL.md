@@ -316,6 +316,8 @@ The application now implements the pre-launch product spine from secure baseline
 
 ## Product-owner decisions still required
 
+Use [`LAUNCH_DECISIONS_AND_EXTERNAL_REVIEW_HANDOFF.md`](LAUNCH_DECISIONS_AND_EXTERNAL_REVIEW_HANDOFF.md) to record the accountable decision, owner, date, downstream changes, independent-review result, and provider evidence for these open items. Its recommended defaults are proposals, not approvals.
+
 | Decision | Why it matters | Current working assumption |
 | --- | --- | --- |
 | Commercial identity | Controls positioning, onboarding, sales, and which workflows remain WorkFit-operated. | Hybrid software plus diagnostic/advisory services. |

@@ -128,6 +128,8 @@ Any code change after a checked validation invalidates the affected validation i
 
 ## Owner decisions
 
+[`LAUNCH_DECISIONS_AND_EXTERNAL_REVIEW_HANDOFF.md`](LAUNCH_DECISIONS_AND_EXTERNAL_REVIEW_HANDOFF.md) is the executable owner/reviewer/provider handoff for these gates. Its recommended defaults do not change any item from pending to approved.
+
 Implementation may use the north-star working defaults, but customer-facing interpretation and commercialization cannot pass their gates until the owner approves:
 
 - respondent confidentiality and individual-answer access;

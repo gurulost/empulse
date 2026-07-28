@@ -16,6 +16,7 @@ class DocumentationContractTest extends TestCase
         $canonicalDocuments = [
             'docs/PRODUCT_VISION_AND_BUSINESS_MODEL.md',
             'docs/ARCHITECTURE.md',
+            'docs/LAUNCH_DECISIONS_AND_EXTERNAL_REVIEW_HANDOFF.md',
             'docs/AUDIT_BACKLOG_TRACEABILITY_2026-07-27.md',
             'docs/EMPULSE_PRODUCTION_READINESS_CHECKLIST.md',
             'docs/PRODUCTION_DEPLOYMENT_RUNBOOK.md',
@@ -98,6 +99,28 @@ class DocumentationContractTest extends TestCase
             $expectedTickets,
             $ticketMatches[1],
             'Traceability tickets must be complete, unique, and in canonical order.'
+        );
+
+        $launchHandoff = $this->read("{$root}/docs/LAUNCH_DECISIONS_AND_EXTERNAL_REVIEW_HANDOFF.md");
+        self::assertStringContainsString('Status: owner decisions and external evidence pending', $launchHandoff);
+        self::assertStringContainsString('Empulse has not been deployed, sold, or approved for customer use.', $launchHandoff);
+        self::assertStringContainsString('Automated axe and browser checks are supporting evidence, not this independent human approval.', $launchHandoff);
+        self::assertStringContainsString('Git history was intentionally preserved', $launchHandoff);
+        self::assertStringContainsString('remains visible in old commits', $launchHandoff);
+        self::assertStringContainsString('Do not mark provider, reviewer, commercial, or deployment gates complete from repository tests alone.', $launchHandoff);
+        self::assertStringContainsString('Build/image digest | Pending provider/build selection', $launchHandoff);
+        self::assertStringContainsString('No design-partner employee data is admitted to staging.', $launchHandoff);
+        self::assertStringContainsString('Execute production as a separate approved change record', $launchHandoff);
+
+        $decisionLedger = explode('### Decision detail', explode('### Decision ledger', $launchHandoff, 2)[1], 2)[0];
+        preg_match_all('/^\| (LD-\d{3}) \|/m', $decisionLedger, $decisionMatches);
+        self::assertSame(
+            array_map(
+                static fn (int $number): string => sprintf('LD-%03d', $number),
+                range(1, 11)
+            ),
+            $decisionMatches[1],
+            'Launch decision ledger must contain LD-001 through LD-011 exactly once and in order.'
         );
     }
 

@@ -33,7 +33,7 @@ The product priority is no longer the original Qualtrics replacement phase. The 
 5. make cohort reliability and sample size visible;
 6. make recurring wave-over-wave learning the center of retention.
 
-The first completed company response is the workflow activation milestone, not a sufficient sample for a company diagnosis. A minimum-sample and cohort-suppression policy still needs to be defined. A credible leadership decision and measurable movement in later waves are the customer-value milestones.
+The first completed company response is the workflow activation milestone, not a sufficient sample for a company diagnosis. The pre-launch engineering policy now requires company N≥5, subgroup N≥7, completion≥40%, and complementary suppression; independent privacy and methodology review must approve or replace those defaults before customer launch. A credible leadership decision and measurable movement in later waves are the customer-value milestones.
 
 ## Documentation Maintenance
 
@@ -372,3 +372,8 @@ Document any new mappings (QID → indicator/series_role/polarity) inside this f
 - `.github/verify-gitleaks-history-policy.sh` runs with the CI-pinned Gitleaks version. It fails unless the unignored baseline is exactly the approved three fingerprints, the fingerprint-scoped full-history scan passes, and a newly generated unrecognized finding still fails.
 - `docs/GIT_HISTORY_SECRET_REMEDIATION_RUNBOOK.md` records the accepted risk. Its force-push rewrite procedure was declined and remains only a future contingency requiring a new explicit owner decision.
 - This decision changes repository risk treatment only. Empulse is still not deployed or customer-launch approved.
+
+### Sub-update – Launch decision and external-review handoff (2026-07-28)
+- Canonical `main` snapshot `3e311fd91142003a62593a51e894df14199c386c` passed GitHub Actions run `30392355036`: PostgreSQL 16 migration/seed, 219 backend tests/1,302 assertions, dependency audits, formatting/static analysis, eight frontend tests, the 200-module build, all 17 real-process browser journeys, proposed-change secret scanning, and the exact three-fingerprint full-history policy.
+- `docs/LAUNCH_DECISIONS_AND_EXTERNAL_REVIEW_HANDOFF.md` now turns the remaining commercial, privacy/legal, methodology, security, accessibility, provider, and release-authority gates into explicit owner decisions and evidence deliverables. Its recommended launch boundary is a narrow design-partner cohort using the implemented WorkFit-owned baseline/action/Pulse loop, manual/governed CSV roster, no trial, and no unimplemented anonymity, validation, causal, benchmark, integration, or enterprise claims.
+- The handoff is not approval or deployment evidence. Prices, launch segment/cohort, contracts, accountable reviewers, provider selection, staging drills, and final sign-off remain pending.

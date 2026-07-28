@@ -213,6 +213,7 @@ The checked-in Docker and Procfile definitions express the same process contract
 
 - [`docs/PRODUCT_VISION_AND_BUSINESS_MODEL.md`](docs/PRODUCT_VISION_AND_BUSINESS_MODEL.md) — authoritative working north star
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — authoritative current-source map
+- [`docs/LAUNCH_DECISIONS_AND_EXTERNAL_REVIEW_HANDOFF.md`](docs/LAUNCH_DECISIONS_AND_EXTERNAL_REVIEW_HANDOFF.md) — recommended launch boundary, pending owner decisions, independent-review packets, and provider staging acceptance evidence
 - [`docs/AUDIT_BACKLOG_TRACEABILITY_2026-07-27.md`](docs/AUDIT_BACKLOG_TRACEABILITY_2026-07-27.md) — disposition and evidence for every owner-supplied audit ticket
 - [`docs/EMPULSE_PRODUCTION_READINESS_CHECKLIST.md`](docs/EMPULSE_PRODUCTION_READINESS_CHECKLIST.md) — current release gates, evidence, and accountable residual risks
 - [`docs/ONBOARDING_FLUENCY_AUDIT_2026-03-06.md`](docs/ONBOARDING_FLUENCY_AUDIT_2026-03-06.md) — activation-path reasoning
