@@ -145,5 +145,5 @@ jobs:
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   GITLEAKS_VERSION: 8.24.3
-            - name: Scan full repository history for secrets
-              run: /tmp/gitleaks-8.24.3/gitleaks git --redact --log-opts="--all"
+            - name: Verify full-history secret policy
+              run: bash .github/verify-gitleaks-history-policy.sh /tmp/gitleaks-8.24.3/gitleaks

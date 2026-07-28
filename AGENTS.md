@@ -364,3 +364,11 @@ Document any new mappings (QID → indicator/series_role/polarity) inside this f
 - Dispatch completion is not response completion. Full and one-time manual Pulse waves become `active` after invitations queue, remain respondent-accessible, are not redispatched, and become `completed` only after every frozen assignment completes or the due date passes. Wave activity logs must be eager-loaded because production-style lazy loading is disabled.
 - Final local evidence: 200 backend tests / 1,121 assertions pass independently on SQLite and PostgreSQL 14; two frontend test files / six tests pass; the 182-module Vite build passes; all 17 PostgreSQL/queue-backed Playwright journeys pass together, including the full finding → owned action → governed Pulse → five completions → comparable non-causal outcome → admin value-report path.
 - Do not call this deployed or launch-approved. Historical credential rotation/history remediation, final committed-SHA CI, provider staging and drills, approved-scale load, independent security/privacy/methodology/legal/accessibility review, and owner commercial decisions remain external gates.
+
+### Sub-update – Historical-secret accepted risk (2026-07-28)
+- The repository owner and WorkFit mail administrator confirmed that the historical Sendinblue/Brevo credential was revoked and deactivated.
+- The owner explicitly declined a Git-history rewrite and chose to preserve existing commits. The dead credential remains visible in old commits, existing clones, and potentially cached historical views; do not describe it as removed.
+- The root `.gitleaksignore` may contain only the three owner-approved exact fingerprints. Do not add rule-wide, path-wide, regex, commit-wide, or blanket secret exceptions.
+- `.github/verify-gitleaks-history-policy.sh` runs with the CI-pinned Gitleaks version. It fails unless the unignored baseline is exactly the approved three fingerprints, the fingerprint-scoped full-history scan passes, and a newly generated unrecognized finding still fails.
+- `docs/GIT_HISTORY_SECRET_REMEDIATION_RUNBOOK.md` records the accepted risk. Its force-push rewrite procedure was declined and remains only a future contingency requiring a new explicit owner decision.
+- This decision changes repository risk treatment only. Empulse is still not deployed or customer-launch approved.

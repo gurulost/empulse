@@ -186,7 +186,7 @@ npm audit --audit-level=high
 npm run test:e2e
 ```
 
-CI runs migrations and the backend suite against PostgreSQL 16, checklist-structure validation, formatting, scoped critical-path static analysis, dependency audits, a full-history secret scan, frontend lint/unit/build gates, readiness, and Playwright role/failure/respondent/accessibility journeys with real web and worker processes. Immediately before an accountable release sign-off, run `php artisan readiness:checklist --require-signoff`; it fails unless every checklist item is either verified or explicitly accepted with an owner and rationale.
+CI runs migrations and the backend suite against PostgreSQL 16, checklist-structure validation, formatting, scoped critical-path static analysis, dependency audits, a full-history secret-policy check, frontend lint/unit/build gates, readiness, and Playwright role/failure/respondent/accessibility journeys with real web and worker processes. The history policy requires the unignored baseline to equal the three exact owner-approved revoked-credential fingerprints, then proves that the fingerprint-scoped scan passes and an unrecognized synthetic finding fails. Current-source and proposed-change scans remain strict. Immediately before an accountable release sign-off, run `php artisan readiness:checklist --require-signoff`; it fails unless every checklist item is either verified or explicitly accepted with an owner and rationale.
 
 Analytics query changes also require the EXPLAIN workflow in [`docs/ANALYTICS_EXPLAIN_CHECKLIST.md`](docs/ANALYTICS_EXPLAIN_CHECKLIST.md).
 
@@ -216,7 +216,7 @@ The checked-in Docker and Procfile definitions express the same process contract
 - [`docs/OBSERVABILITY_AND_SERVICE_LEVELS.md`](docs/OBSERVABILITY_AND_SERVICE_LEVELS.md) — launch SLOs, signals, alerts, and incident minimum
 - [`docs/BACKUP_RESTORE_AND_DISASTER_RECOVERY.md`](docs/BACKUP_RESTORE_AND_DISASTER_RECOVERY.md) — RPO/RTO and restore drill
 - [`docs/RELEASE_AND_ROLLBACK_POLICY.md`](docs/RELEASE_AND_ROLLBACK_POLICY.md) — evidence packet, canary rollout, and rollback policy
-- [`docs/GIT_HISTORY_SECRET_REMEDIATION_RUNBOOK.md`](docs/GIT_HISTORY_SECRET_REMEDIATION_RUNBOOK.md) — rehearsed credential-rotation and history-cleanup procedure
+- [`docs/GIT_HISTORY_SECRET_REMEDIATION_RUNBOOK.md`](docs/GIT_HISTORY_SECRET_REMEDIATION_RUNBOOK.md) — owner-approved preserved-history accepted risk and future rewrite contingency
 - [`docs/CAPACITY_AND_PERFORMANCE_TEST_PLAN.md`](docs/CAPACITY_AND_PERFORMANCE_TEST_PLAN.md) — staging data profiles, workloads, and budgets
 - [`docs/METHODOLOGY_AND_CLAIMS_DOSSIER.md`](docs/METHODOLOGY_AND_CLAIMS_DOSSIER.md) — metric intent, interpretation, and claim limits
 - [`docs/RESPONDENT_DATA_PROMISE.md`](docs/RESPONDENT_DATA_PROMISE.md) — working privacy promise and owner decisions

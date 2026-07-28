@@ -1,25 +1,42 @@
 # Git History Secret Remediation Runbook
 
-Status: rehearsed, not authorized, not executed against GitHub
+Status: history rewrite declined; accepted-risk exception approved; rewrite retained only as a future contingency
 
 Last rehearsal: 2026-07-27
 
+Owner decision: 2026-07-28
+
 Repository: `gurulost/empulse`
+
+## Current Owner Decision
+
+The repository owner and WorkFit mail administrator confirmed that the historical Sendinblue/Brevo credential was revoked and deactivated. The owner explicitly declined a Git-history rewrite and instructed the project to preserve all existing commits.
+
+The three historical detections are therefore an explicit accepted risk:
+
+- the revoked credential and two generic-key detections remain visible in old commits, existing clones, and any cached historical views;
+- the root `.gitleaksignore` contains exactly the three approved fingerprints and no rule-wide, path-wide, regular-expression, commit-wide, or blanket exception;
+- current-source and proposed-change scanning remain strict;
+- `.github/verify-gitleaks-history-policy.sh` uses the CI-pinned Gitleaks version to prove that the unignored baseline is exactly those three fingerprints, the approved full-history scan passes, and a new unrecognized finding still fails.
+
+This decision does not claim that the credential was removed from history. It records that the credential is dead, preserves historical integrity, and accepts its continued visibility.
 
 ## Purpose
 
-This runbook removes three known historical secret detections without changing the release-candidate source tree. It is intentionally separate from application deployment. No production environment exists, and completing this procedure does not deploy Empulse.
+This runbook records the accepted-risk decision and preserves the previously rehearsed rewrite procedure only as a future contingency. It is intentionally separate from application deployment. No production environment exists, and neither accepting this risk nor executing the contingency deploys Empulse.
 
 The affected historical paths are:
 
 - `attached_assets/Pasted-STACK-CONTEXT-FLARE-SHARE-Share-with-Flare-Docs-STACK-C_1764950893439.txt`
 - `app/Http/Controllers/ContuctUsController.php`
 
-Both paths are absent from the release-candidate tree. Removing them from all history therefore preserves the candidate tree exactly and avoids copying a credential into a replacement file.
+Both paths are absent from the release-candidate tree but remain reachable in historical commits.
 
 ## Stop Rules
 
-Do not rewrite or force-push unless all of the following are true:
+Do not rewrite or force-push under the current owner decision. The repository owner declined that action. The remaining phases are contingency documentation, not authorization.
+
+A future rewrite may be reconsidered only after a new explicit owner decision and only if all of the following are true:
 
 1. The historical Sendinblue/Brevo credential has been revoked or rotated by the mail administrator.
 2. The repository owner explicitly authorizes a coordinated history rewrite and force push.
@@ -28,9 +45,9 @@ Do not rewrite or force-push unless all of the following are true:
 5. Branch protections and ruleset changes needed for the maintenance window have an owner and restoration checklist.
 6. A release owner and rollback owner are present.
 
-Never make a real credential pass by silently allowlisting it.
+Never make an active or uncertain credential pass through an exception. The present exception is permitted only because the mail administrator confirmed revocation/deactivation and each finding is identified by its exact fingerprint.
 
-Suggested explicit authorization:
+Minimum future authorization if the owner reverses the current decision:
 
 > I confirm the historical Sendinblue/Brevo credential has been revoked or rotated. I authorize the coordinated `git-filter-repo` rewrite and force-mirror push of `gurulost/empulse`, including `main` and `codex/production-readiness`, followed by pull-request reference cleanup with GitHub Support.
 
@@ -54,9 +71,13 @@ The rehearsal used a fresh disposable mirror of the actual GitHub remote and `gi
 | Gitleaks full-history result | 169 relevant commits scanned, no leaks found |
 | GitHub refs after rehearsal | Unchanged |
 
-The current `main` tree still contains the obsolete attached asset, so its tree changes when that path is purged. The release-candidate tree does not change.
+The current `main` tree does not contain either obsolete path. Historical commits still do, and the accepted-risk decision preserves them.
 
-## Phase 1: Rotate and Freeze
+## Future Contingency Only
+
+The following phases must not be executed under the 2026-07-28 decision. They remain available only if the owner later withdraws the accepted risk and explicitly authorizes a coordinated rewrite.
+
+## Contingency Phase 1: Rotate and Freeze
 
 1. Revoke or rotate the historical mail credential. Record the provider-side confirmation without storing the credential value.
 2. Pause repository writes and queued merge automation.
@@ -71,7 +92,7 @@ The current `main` tree still contains the obsolete attached asset, so its tree 
 
 6. If a pre-rewrite bundle is required by the rollback owner, treat it as toxic data: encrypt it, restrict access, keep it offline, and destroy it after GitHub confirms server-side cleanup.
 
-## Phase 2: Fresh Mirror and Rewrite
+## Contingency Phase 2: Fresh Mirror and Rewrite
 
 Use a new directory. Do not run this in a developer’s normal checkout.
 
@@ -112,7 +133,7 @@ Use a new directory. Do not run this in a developer’s normal checkout.
 
 Stop if the changed refs, first changed commit, or current-tree effect differs materially from the rehearsal.
 
-## Phase 3: Verify Before Any Push
+## Contingency Phase 3: Verify Before Any Push
 
 All checks must pass in the rewritten mirror:
 
@@ -135,9 +156,9 @@ Expected results:
 
 Compare the current remote ref list with the maintenance-window snapshot. Stop if an unplanned remote write occurred.
 
-## Phase 4: Authorized Push
+## Contingency Phase 4: Authorized Push
 
-This phase is destructive. It requires the explicit authorization above.
+This phase is destructive, is currently declined, and requires a new explicit authorization before execution.
 
 1. Temporarily adjust branch protections only as narrowly as necessary.
 2. Force-push the rewritten mirror:
@@ -150,7 +171,7 @@ This phase is destructive. It requires the explicit authorization above.
 4. Immediately restore branch protections and repository rulesets.
 5. Confirm remote branch and tag tips match the rewritten mirror.
 
-## Phase 5: GitHub and Collaborator Cleanup
+## Contingency Phase 5: GitHub and Collaborator Cleanup
 
 Open a GitHub Support request containing:
 
@@ -164,7 +185,7 @@ Ask GitHub Support to dereference affected pull-request refs, remove cached view
 
 Collaborators should delete and reclone. If a clone must be retained, follow the `git-filter-repo` sensitive-data cleanup instructions. Old branches must be rebased onto rewritten history, never merged.
 
-## Phase 6: Release Reverification
+## Contingency Phase 6: Release Reverification
 
 1. Run a fresh remote full-history Gitleaks scan.
 2. Run the complete GitHub product CI job on the rewritten candidate SHA.

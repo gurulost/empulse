@@ -50,11 +50,12 @@ The unsafe legacy roster importer remains removed. Its replacement uses encrypte
 - `npm run build`: passed with 182 modules transformed.
 - Laravel configuration, route, and Blade view caches build and clear successfully.
 - Gitleaks current-source scan: no findings after removal of the legacy attachment directory.
-- Gitleaks full-history scan: three pre-existing findings remain—two generic-key matches in the removed attachment history and one old Sendinblue/Brevo token in a historical controller commit. The mail key must be revoked/rotated; shared-history rewriting requires explicit owner approval and is not represented as complete.
+- Gitleaks unignored full-history baseline: exactly three pre-existing findings remain—two generic-key matches in removed attachment history and one old Sendinblue/Brevo token in a historical controller commit. The repository owner and WorkFit mail administrator confirmed that the credential was revoked and deactivated.
+- The owner declined a Git-history rewrite and accepted the residual visibility of the dead credential in old commits. The root `.gitleaksignore` contains only the three exact finding fingerprints. CI-pinned Gitleaks 8.24.3 proves that the unignored baseline is exactly that set, the approved full-history scan passes, and a newly generated unrecognized finding still fails.
 - The first committed-SHA GitHub run exposed an npm lock inconsistency before tests began. The lock was regenerated from a clean dependency graph and then passed `npm ci` with the exact npm 10.9.8 version used by that runner.
 - The initial GitHub secret job fetched full history but the action’s push-event command scanned only `-1` commit. The workflow now retains the proposed-change scan and adds an explicit fail-closed `gitleaks git --log-opts="--all"` history scan; a one-commit green result is not accepted as full-history evidence.
 - GitHub Actions run `30377166138` on the product candidate promoted to `main`, `96985c01728197781471aae84d8367a58e753609`, passed the complete product job: PostgreSQL 16 migration/seed, 200 tests/1,121 assertions, Composer/npm audits, cache construction, Pint, static analysis, frontend lint and six component tests, the 182-module production build, real web/worker readiness, and all 17 Playwright role/failure/respondent/accessibility/governance/product-loop journeys. The proposed-change secret scan also passed. The overall workflow is red only because the explicit full-history job correctly detects the three historical findings.
-- A disposable mirror rehearsal removed the two obsolete affected paths across all 366 commits and four affected refs. After rewriting, the old tainted commits/blobs were unreachable, `git fsck` passed, and Gitleaks scanned the rewritten history with no findings. The release-candidate tree remained exactly `cf4a3a028e652770c81bf4c5ec1050f2af84906c`, with a matching recursive tree-listing SHA-256 of `a493d9cff743dff816962ce60c54ea46872428c34788ba1785396f7f3f8a5387`. No remote ref was changed. The owner-safe procedure is documented in `docs/GIT_HISTORY_SECRET_REMEDIATION_RUNBOOK.md`.
+- A disposable mirror rehearsal previously removed the two obsolete affected paths across all 366 commits and four affected refs. After rewriting, the old tainted commits/blobs were unreachable, `git fsck` passed, and Gitleaks scanned the rewritten history with no findings. The release-candidate tree remained exactly `cf4a3a028e652770c81bf4c5ec1050f2af84906c`, with a matching recursive tree-listing SHA-256 of `a493d9cff743dff816962ce60c54ea46872428c34788ba1785396f7f3f8a5387`. No remote ref was changed. The owner has now declined this rewrite; `docs/GIT_HISTORY_SECRET_REMEDIATION_RUNBOOK.md` retains it only as a future contingency.
 
 ### Fresh-review blocker closure
 
@@ -139,17 +140,22 @@ The checked-in k6 readiness/login profile ran for three minutes against the loca
 
 This does not replace the 500-respondent provider-staging, queue-age, analytics, mail-sandbox, worker-recovery, or shared-cache/session exercises in the capacity plan.
 
+## Accepted Risk: Preserved Git History
+
+On 2026-07-28, the repository owner and WorkFit mail administrator confirmed that the historical Sendinblue/Brevo credential was revoked and deactivated. The owner chose to preserve Git history and explicitly declined the rehearsed force-push rewrite.
+
+This accepted risk does not claim that the credential was removed. The dead value remains visible in historical commits, existing clones, and potentially cached historical views. The exception is restricted to the three exact fingerprints in `.gitleaksignore`; no rule, path, regular expression, commit, or general secret class is allowlisted. Current-source and proposed-change scans remain strict, and any unrecognized historical finding still fails the policy check.
+
 ## Evidence Boundaries
 
 The repository is a strong release candidate, but customer launch is not yet approved. These gates require external state or accountable owner decisions:
 
-1. The historical Sendinblue/Brevo credential must be revoked/rotated and the owner must explicitly authorize the rehearsed coordinated Git-history purge in `docs/GIT_HISTORY_SECRET_REMEDIATION_RUNBOOK.md`. GitHub CI must then pass on the rewritten committed SHA, including PostgreSQL 16, full-history Gitleaks, and all browser/accessibility specs.
-2. A hosting, mail, observability, and backup provider must be selected and configured; staging must prove web, worker, scheduler, HTTPS, canonical URL, delivery webhooks, readiness, alerts, and rollback.
-3. Stripe test mode must prove checkout, webhook replay/out-of-order handling, dunning, grace, cancellation, reactivation, and portal behavior with the approved catalog and prices.
-4. Brevo or the selected provider must prove domain authentication, invitation/reminder delivery, bounce/complaint handling, suppression, and recovery.
-5. Load and concurrency testing must run at the approved design-partner cohort and SLO targets.
-6. Independent security/privacy, methodology, legal, and human accessibility reviews must approve the promise, retention, sample/suppression rules, claims, keyboard/screen-reader behavior, and customer-facing language.
-7. The owner must approve the initial buyer, segment, pricing, trial/advisory packaging, contract terms, and whether governed CSV plus manual roster management is sufficient for the first cohort or a contracted integration is required.
+1. A hosting, mail, observability, and backup provider must be selected and configured; staging must prove web, worker, scheduler, HTTPS, canonical URL, delivery webhooks, readiness, alerts, and rollback.
+2. Stripe test mode must prove checkout, webhook replay/out-of-order handling, dunning, grace, cancellation, reactivation, and portal behavior with the approved catalog and prices.
+3. Brevo or the selected provider must prove domain authentication, invitation/reminder delivery, bounce/complaint handling, suppression, and recovery.
+4. Load and concurrency testing must run at the approved design-partner cohort and SLO targets.
+5. Independent security/privacy, methodology, legal, and human accessibility reviews must approve the promise, retention, sample/suppression rules, claims, keyboard/screen-reader behavior, and customer-facing language.
+6. The owner must approve the initial buyer, segment, pricing, trial/advisory packaging, contract terms, and whether governed CSV plus manual roster management is sufficient for the first cohort or a contracted integration is required.
 
 No item above should be represented as complete based only on source code or local tests.
 
