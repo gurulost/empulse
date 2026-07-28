@@ -41,16 +41,28 @@ class CapacityRehearsalTest extends TestCase
                 ],
             ]);
 
-        $report = (new CapacityRehearsalService($analytics))->run(
-            $company->id,
-            $wave->id,
-            iterations: 2,
-            minimumInvited: 2,
-            analyticsP95BudgetMs: 3000
-        );
+        $previousGithubSha = getenv('GITHUB_SHA');
+        putenv('GITHUB_SHA='.str_repeat('a', 40));
+        try {
+            $report = (new CapacityRehearsalService($analytics))->run(
+                $company->id,
+                $wave->id,
+                iterations: 2,
+                minimumInvited: 2,
+                analyticsP95BudgetMs: 3000
+            );
+        } finally {
+            if ($previousGithubSha === false) {
+                putenv('GITHUB_SHA');
+            } else {
+                putenv('GITHUB_SHA='.$previousGithubSha);
+            }
+        }
 
         $this->assertSame('repository_capacity_rehearsal', $report['scope']);
         $this->assertFalse($report['production_signoff']);
+        $this->assertNotSame(str_repeat('a', 40), $report['release_sha']);
+        $this->assertFalse($report['source_clean']);
         $this->assertSame(2, $report['counts']['invited_users']);
         $this->assertSame(2, $report['counts']['submitted_responses']);
         $this->assertSame(2, $report['counts']['answers']);

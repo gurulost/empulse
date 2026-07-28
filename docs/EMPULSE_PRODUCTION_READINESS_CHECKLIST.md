@@ -4,9 +4,9 @@ Source of truth for the full pre-deployment production-readiness program. Update
 
 ## Metadata
 - Created: 2026-07-27T12:30:02
-- Last Updated: 2026-07-28T12:44:06-04:00
+- Last Updated: 2026-07-28T13:42:00-04:00
 - Canonical GitHub Branch: `main`
-- Validated Product Candidate: `96985c01728197781471aae84d8367a58e753609`
+- Validated Implementation Candidate: `363346d8901e890c35686d01d69fc28a5d092276`
 - Implementation Branch: `codex/production-readiness`
 - Checklist Doc: `docs/EMPULSE_PRODUCTION_READINESS_CHECKLIST.md`
 
@@ -62,7 +62,7 @@ Source of truth for the full pre-deployment production-readiness program. Update
 - [x] Q-202 [status:verified] EMP-205–206 and EMP-209–214: respondent-level scoring, missingness, suppression, reliability, comparability, interpretation, and privacy-safe outputs.
   - Evidence: company N≥5, subgroup N≥7, completion≥40%, complementary suppression, paired metric-valid N/missingness, exact immutable-cycle selection, frozen-definition computation, hierarchy-scoped rows, provisional reliability, and hash-bound longitudinal comparability are tested.
 - [ ] Q-203 [status:in_progress] EMP-112 and EMP-215: accessible respondent UX and production-scale analytics.
-  - Evidence: untouched sliders, labels, error/progress live regions, focus handling, mobile autosave state, and component tests are implemented. Staging-scale query/load proof and independent accessibility review remain.
+  - Evidence: untouched sliders, labels, error/progress live regions, focus handling, mobile autosave state, and component tests are implemented. A clean-source PostgreSQL 14 rehearsal measured eligible analytics for 411 valid responses from 508 invitations at p95 1,088.99 ms, with the selected-wave EXPLAIN query at 2.230 ms and the companion unfiltered latest-answer query at 7.666 ms. Provider staging-scale proof and independent accessibility review remain.
 
 ### Gate C
 - [x] Q-300 [status:verified] EMP-301–306: finding, action, communication, follow-up measurement, and outcome evaluation.
@@ -83,7 +83,7 @@ Source of truth for the full pre-deployment production-readiness program. Update
 - [x] Q-500 [status:verified] EMP-501–504: PostgreSQL/process CI, static/security gates, Vue tests, and full browser journeys.
   - Evidence: product candidate `96985c01728197781471aae84d8367a58e753609` was fast-forwarded to canonical `main`; subsequent main run `30378104990` passed its PostgreSQL 16 product job with 200 tests/1,121 assertions, dependency audits, caches, formatting/static analysis, six frontend tests, the 182-module build, and all 17 real-process browser/accessibility/governance/product-loop journeys. The proposed-change secret scan remains strict. CI-pinned Gitleaks 8.24.3 locally proves that the unignored full-history baseline is exactly the three owner-approved fingerprints, the exact-fingerprint policy passes, and an unrecognized synthetic finding fails.
 - [ ] Q-501 [status:in_progress] EMP-505–507: load/capacity, observability/SLOs, backup/restore and integrity drills.
-  - Evidence: health and heartbeat checks, SLO/capacity runbooks, k6 scenario, and PostgreSQL restore/audit-chain drill exist; approved-scale load and provider alert drills remain.
+  - Evidence: health and heartbeat checks, SLO/capacity runbooks, k6 scenario, and PostgreSQL restore/audit-chain drill exist. The source-bound Pulse rehearsal records PostgreSQL/version/cohort/timing/privacy/integrity evidence and passed at 508 invitations, 411 completions, 25,482 answers, p95 1,088.99 ms, and zero bounded duplicate/cross-tenant/mapping findings. Dispatch, queue-age, concurrent submission, provider topology/load, alert, backup, and recovery drills remain.
 - [ ] Q-502 [status:in_progress] EMP-508–510: independent assurance, release/rollback controls, and living runbooks/contracts.
   - Evidence: living product/architecture/privacy/methodology/release/rollback/DR documents and automated axe gate exist. Obsolete checklists and the old deploy handoff are explicitly archived and removed from the current documentation map; current roster/onboarding copy no longer promises a disabled importer; repository documentation contains no machine-specific absolute home-directory links. Independent reviews and provider staging evidence remain.
 
@@ -168,7 +168,7 @@ Source of truth for the full pre-deployment production-readiness program. Update
   - Evidence: organization entitlements, billing continuity, usage, recurring variants, frozen audiences, reminders, fatigue controls, and lifecycle tests pass.
 - [ ] P-009 [status:in_progress] Establish the complete permanent production assurance system.
   - Addresses: F-013
-  - Evidence: permanent CI, checklist validation, current release/rollback/DR/observability/capacity runbooks, historical-document isolation, and automated browser/accessibility coverage are implemented. Historical-secret remediation, provider drills, and independent human review remain.
+  - Evidence: permanent CI, checklist validation, current release/rollback/DR/observability/capacity runbooks, historical-document isolation, automated browser/accessibility coverage, and a source-bound PostgreSQL Pulse analytics/integrity rehearsal are implemented. Provider drills and independent human review remain.
 
 ## Validation Log
 - [x] V-000 [status:verified] Baseline `composer test`
@@ -190,7 +190,7 @@ Source of truth for the full pre-deployment production-readiness program. Update
 - [ ] V-008 [status:in_progress] Accessibility component/browser and manual review.
   - Evidence: axe reports no serious/critical WCAG A/AA violations on public, login, manager, action, employee, and respondent-promise pages; independent keyboard/screen-reader review remains.
 - [ ] V-009 [status:in_progress] Load, concurrency, queue, scheduler, mail, and Stripe test-mode evidence.
-  - Evidence: local PostgreSQL k6 smoke passes 7,504 iterations/22,512 requests with zero failures, p95 182.82 ms, and p99 191.15 ms at 20 VUs. Provider-backed 500-respondent, queue-age, mail, Stripe, and worker-failure drills remain.
+  - Evidence: local PostgreSQL k6 smoke passes 7,504 iterations/22,512 requests with zero failures, p95 182.82 ms, and p99 191.15 ms at 20 VUs. Clean commit `363346d8901e890c35686d01d69fc28a5d092276` also passes the checked-in 508-invite/411-valid-response analytics and integrity rehearsal at p95 1,088.99 ms with no bounded duplicate/cross-tenant/mapping findings. Provider-backed roster/dispatch, queue-age, concurrent-submission, mail, Stripe, shared-service, alert, and worker-failure drills remain.
 - [ ] V-010 [status:in_progress] Backup/restore, migration rollback, readiness, and incident drills.
   - Evidence: final-state PostgreSQL custom backup restored into a new database; six critical row counts match (1 company, 9 users, 10 assignments, 8 responses, 496 answers, 17 audit events) and restored platform/company audit chains verify. The governed-roster migration and the final four evidence/advisor/publication/billing-history migrations roll back and reapply cleanly. Provider backup/PITR, full application rollback, and alert drills remain.
 - [x] V-011 [status:verified] Fresh-context adversarial review against product, privacy, methodology, security, accessibility, and commercial invariants.

@@ -253,25 +253,25 @@ class CapacityRehearsalService
     protected function sourceTruth(): array
     {
         $environmentSha = trim((string) (getenv('GITHUB_SHA') ?: getenv('RELEASE_SHA') ?: ''));
-        if (preg_match('/^[a-f0-9]{40}$/i', $environmentSha)) {
-            return [
-                'sha' => strtolower($environmentSha),
-                'clean' => true,
-            ];
-        }
+        $hasEnvironmentSha = preg_match('/^[a-f0-9]{40}$/i', $environmentSha) === 1;
 
         $shaProcess = new Process(['git', 'rev-parse', 'HEAD'], base_path());
         $shaProcess->run();
-        $sha = trim($shaProcess->getOutput());
+        $sha = strtolower(trim($shaProcess->getOutput()));
+        $hasGitSha = $shaProcess->isSuccessful()
+            && preg_match('/^[a-f0-9]{40}$/i', $sha) === 1;
 
         $statusProcess = new Process(['git', 'status', '--porcelain'], base_path());
         $statusProcess->run();
+        $environmentMatches = ! $hasEnvironmentSha
+            || ($hasGitSha && hash_equals(strtolower($environmentSha), $sha));
 
         return [
-            'sha' => $shaProcess->isSuccessful() && preg_match('/^[a-f0-9]{40}$/i', $sha)
-                ? strtolower($sha)
-                : 'unknown',
-            'clean' => $statusProcess->isSuccessful() && trim($statusProcess->getOutput()) === '',
+            'sha' => $hasGitSha ? $sha : 'unknown',
+            'clean' => $hasGitSha
+                && $environmentMatches
+                && $statusProcess->isSuccessful()
+                && trim($statusProcess->getOutput()) === '',
         ];
     }
 

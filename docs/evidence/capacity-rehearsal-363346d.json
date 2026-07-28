@@ -1,0 +1,144 @@
+{
+    "schema_version": 1,
+    "scope": "repository_capacity_rehearsal",
+    "generated_at_utc": "2026-07-28T17:40:45+00:00",
+    "release_sha": "363346d8901e890c35686d01d69fc28a5d092276",
+    "source_clean": true,
+    "production_signoff": false,
+    "environment": {
+        "app_environment": "testing",
+        "php_version": "8.2.29",
+        "laravel_version": "12.64.0",
+        "database_driver": "pgsql",
+        "database_version": "PostgreSQL 14.21 (Homebrew) on aarch64-apple-darwin25.2.0, compiled by Apple clang version 17.0.0 (clang-1700.6.3.2), 64-bit"
+    },
+    "profile": {
+        "company_id": 1,
+        "wave_id": 11,
+        "wave_label": "Jun 2026 Pulse",
+        "minimum_invited": 500,
+        "iterations": 10,
+        "analytics_p95_budget_ms": 3000
+    },
+    "counts": {
+        "invited_users": 508,
+        "assignments": 508,
+        "submitted_responses": 411,
+        "answers": 25482
+    },
+    "analytics": {
+        "durations_ms": [
+            1033.45,
+            1034.84,
+            1039.48,
+            1047.44,
+            1052.76,
+            1053.29,
+            1061.19,
+            1070.24,
+            1073.73,
+            1088.99
+        ],
+        "minimum_ms": 1033.45,
+        "median_ms": 1052.76,
+        "p95_ms": 1088.99,
+        "maximum_ms": 1088.99,
+        "availability": [
+            "eligible"
+        ],
+        "sample": {
+            "status": "eligible",
+            "reason": null,
+            "invited_n": 508,
+            "submitted_n": 411,
+            "valid_n": 411,
+            "minimum_n": 5,
+            "completion_rate": 0.8091,
+            "minimum_completion_rate": 0.4,
+            "is_subgroup": false,
+            "complementary_suppression": true
+        },
+        "peak_process_memory_bytes": 85983232
+    },
+    "integrity_findings": {
+        "duplicate_assignment_groups": 0,
+        "duplicate_response_groups": 0,
+        "duplicate_answer_groups": 0,
+        "cross_tenant_assignments": 0,
+        "cross_tenant_responses": 0,
+        "response_assignment_mismatches": 0
+    },
+    "checks": {
+        "source_checkout": {
+            "expected": {
+                "recognized_commit": true,
+                "clean": true
+            },
+            "actual": {
+                "recognized_commit": true,
+                "clean": true
+            },
+            "passed": true
+        },
+        "database_engine": {
+            "expected": "pgsql",
+            "actual": "pgsql",
+            "passed": true
+        },
+        "minimum_invited_cohort": {
+            "expected": ">=500",
+            "actual": 508,
+            "passed": true
+        },
+        "eligible_privacy_result": {
+            "expected": [
+                "eligible"
+            ],
+            "actual": [
+                "eligible"
+            ],
+            "passed": true
+        },
+        "analytics_p95_budget_ms": {
+            "expected": "<=3000",
+            "actual": 1088.99,
+            "passed": true
+        },
+        "duplicate_assignment_groups": {
+            "expected": 0,
+            "actual": 0,
+            "passed": true
+        },
+        "duplicate_response_groups": {
+            "expected": 0,
+            "actual": 0,
+            "passed": true
+        },
+        "duplicate_answer_groups": {
+            "expected": 0,
+            "actual": 0,
+            "passed": true
+        },
+        "cross_tenant_assignments": {
+            "expected": 0,
+            "actual": 0,
+            "passed": true
+        },
+        "cross_tenant_responses": {
+            "expected": 0,
+            "actual": 0,
+            "passed": true
+        },
+        "response_assignment_mismatches": {
+            "expected": 0,
+            "actual": 0,
+            "passed": true
+        }
+    },
+    "passed": true,
+    "limitations": [
+        "This rehearsal does not prove provider staging or production capacity.",
+        "It does not exercise shared cache/session services, a mail provider sandbox, Stripe test mode, queue age, worker recovery, provider alerts, backup/PITR, or a deployed application.",
+        "It does not replace independent accessibility, security, privacy, methodology, legal, or commercial approval."
+    ]
+}
