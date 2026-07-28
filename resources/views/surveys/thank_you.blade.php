@@ -4,11 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Thank you - Empulse</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Outfit:wght@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
+    @vite(['resources/sass/app.scss', 'resources/js/app.js'])
 </head>
 <body style="background: linear-gradient(145deg, #0c1222 0%, #1a1f3a 50%, #1e293b 100%); min-height: 100vh; font-family: 'DM Sans', sans-serif;">
     <div class="d-flex align-items-center justify-content-center min-vh-100 p-4">
@@ -40,6 +36,11 @@
         @keyframes scaleIn {
             from { opacity: 0; transform: scale(0.96); }
             to { opacity: 1; transform: scale(1); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .card {
+                animation: none !important;
+            }
         }
     </style>
 </body>

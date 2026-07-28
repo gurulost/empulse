@@ -1,8 +1,8 @@
 <template>
     <div class="mb-4" :data-qid="item.qid">
         <label :id="labelId" :for="inputId" class="form-label text-dark fw-bold mb-2 d-block">{{ item.question }}</label>
-        <p class="text-muted small mb-3" v-if="item.metadata?.note">
-            <i class="bi bi-info-circle me-1"></i> {{ item.metadata.note }}
+        <p :id="noteId" class="text-muted small mb-3" v-if="item.metadata?.note">
+            <i class="bi bi-info-circle me-1" aria-hidden="true"></i> {{ item.metadata.note }}
         </p>
 
         <template v-if="item.type === 'slider'">
@@ -23,8 +23,14 @@
                        :aria-labelledby="labelId"
                        :aria-describedby="descriptionIds"
                        :aria-invalid="Boolean(error)"
+                       :aria-errormessage="error ? errorId : undefined"
+                       :aria-valuetext="sliderAriaValueText"
+                       :data-error-focus="Boolean(error)"
                        @input="onSliderInput"
                 />
+                <span :id="scaleDescriptionId" class="visually-hidden">
+                    Scale from {{ scale.min }} ({{ scaleLabels.left }}) to {{ scale.max }} ({{ scaleLabels.right }}).
+                </span>
                 <div class="d-flex justify-content-center mt-3">
                     <span v-if="sliderTouched" class="badge bg-primary rounded-pill px-3 py-2 fs-6 shadow-sm" aria-live="polite">
                         Selected: {{ sliderValue }}
@@ -37,19 +43,19 @@
         </template>
 
         <template v-else-if="item.type === 'text_short' || item.type === 'text'">
-            <input :id="inputId" :type="textInputType" class="form-control form-control-lg shadow-sm" :value="textValue" :disabled="disabled" :aria-invalid="Boolean(error)" :aria-describedby="error ? errorId : undefined" @input="updateText($event.target.value)" placeholder="Type your answer here..." />
+            <input :id="inputId" :type="textInputType" class="form-control form-control-lg shadow-sm" :value="textValue" :disabled="disabled" :aria-invalid="Boolean(error)" :aria-describedby="descriptionIds" :aria-errormessage="error ? errorId : undefined" :data-error-focus="Boolean(error)" @input="updateText($event.target.value)" placeholder="Type your answer here..." />
         </template>
 
         <template v-else-if="item.type === 'text_long'">
-            <textarea :id="inputId" class="form-control form-control-lg shadow-sm" rows="4" :value="textValue" :disabled="disabled" :aria-invalid="Boolean(error)" :aria-describedby="error ? errorId : undefined" @input="updateText($event.target.value)" placeholder="Type your answer here..."></textarea>
+            <textarea :id="inputId" class="form-control form-control-lg shadow-sm" rows="4" :value="textValue" :disabled="disabled" :aria-invalid="Boolean(error)" :aria-describedby="descriptionIds" :aria-errormessage="error ? errorId : undefined" :data-error-focus="Boolean(error)" @input="updateText($event.target.value)" placeholder="Type your answer here..."></textarea>
         </template>
 
         <template v-else-if="item.type === 'number_integer'">
-            <input :id="inputId" type="number" class="form-control form-control-lg shadow-sm" :value="numberValue" :disabled="disabled" :min="numberMin" step="1" :aria-invalid="Boolean(error)" :aria-describedby="error ? errorId : undefined" @input="updateNumber($event.target.value)" placeholder="0" />
+            <input :id="inputId" type="number" class="form-control form-control-lg shadow-sm" :value="numberValue" :disabled="disabled" :min="numberMin" step="1" :aria-invalid="Boolean(error)" :aria-describedby="descriptionIds" :aria-errormessage="error ? errorId : undefined" :data-error-focus="Boolean(error)" @input="updateNumber($event.target.value)" placeholder="0" />
         </template>
 
         <template v-else-if="item.type === 'dropdown' || item.type === 'single_select' || item.type === 'single_select_text'">
-            <select :id="inputId" class="form-select form-select-lg shadow-sm" :value="selectValue" :disabled="disabled" :aria-invalid="Boolean(error)" :aria-describedby="error ? errorId : undefined" @change="onSelectChange($event.target.value)">
+            <select :id="inputId" class="form-select form-select-lg shadow-sm" :value="selectValue" :disabled="disabled" :aria-invalid="Boolean(error) && !showFreeText" :aria-describedby="descriptionIds" :aria-errormessage="error ? errorId : undefined" :data-error-focus="Boolean(error) && !showFreeText" @change="onSelectChange($event.target.value)">
                 <option value="" disabled>Select an option</option>
                 <option v-for="option in options" :key="option.value" :value="option.value">
                     {{ option.label }}
@@ -57,19 +63,20 @@
             </select>
             <div v-if="showFreeText" class="mt-3">
                 <label :for="freeTextId" class="form-label">Please specify</label>
-                <input :id="freeTextId" type="text" class="form-control form-control-lg shadow-sm" :placeholder="freeTextPlaceholder" :value="freeText" :disabled="disabled" :aria-invalid="Boolean(error)" :aria-describedby="error ? errorId : undefined" @input="onFreeTextChange($event.target.value)" />
+                <input :id="freeTextId" type="text" class="form-control form-control-lg shadow-sm" :placeholder="freeTextPlaceholder" :value="freeText" :disabled="disabled" :aria-invalid="Boolean(error)" :aria-describedby="descriptionIds" :aria-errormessage="error ? errorId : undefined" :data-error-focus="Boolean(error)" @input="onFreeTextChange($event.target.value)" />
             </div>
         </template>
 
         <template v-else-if="item.type === 'multi_select'">
-            <div class="d-flex flex-column gap-2" role="group" :aria-labelledby="labelId" :aria-describedby="error ? errorId : undefined">
-                <div v-for="option in options" :key="option.value" class="form-check custom-checkbox p-3 border rounded-3 bg-white shadow-sm hover-bg transition-all">
+            <div class="d-flex flex-column gap-2" role="group" :aria-labelledby="labelId" :aria-describedby="descriptionIds" :aria-invalid="Boolean(error)" :aria-errormessage="error ? errorId : undefined">
+                <div v-for="(option, optionIndex) in options" :key="option.value" class="form-check custom-checkbox p-3 border rounded-3 bg-white shadow-sm hover-bg transition-all">
                     <input class="form-check-input me-2"
                            type="checkbox"
                            :id="item.qid + '-' + option.value"
                            :value="option.value"
                            :checked="multiSelectValues.includes(option.value)"
                            :disabled="disabled"
+                           :data-error-focus="Boolean(error) && optionIndex === 0"
                            @change="onMultiSelectToggle(option)"
                            style="transform: scale(1.2);"
                     >
@@ -81,7 +88,7 @@
         </template>
 
         <template v-else>
-            <input :id="inputId" type="text" class="form-control form-control-lg shadow-sm" :value="textValue" :disabled="disabled" :aria-invalid="Boolean(error)" :aria-describedby="error ? errorId : undefined" @input="updateText($event.target.value)" />
+            <input :id="inputId" type="text" class="form-control form-control-lg shadow-sm" :value="textValue" :disabled="disabled" :aria-invalid="Boolean(error)" :aria-describedby="descriptionIds" :aria-errormessage="error ? errorId : undefined" :data-error-focus="Boolean(error)" @input="updateText($event.target.value)" />
         </template>
 
         <div v-if="error" :id="errorId" role="alert" class="alert alert-danger border-0 bg-danger bg-opacity-10 text-danger d-flex align-items-center mt-2 py-2 px-3 rounded-3">
@@ -108,9 +115,13 @@ const inputId = computed(() => `survey-${safeQid.value}`);
 const labelId = computed(() => `${inputId.value}-label`);
 const errorId = computed(() => `${inputId.value}-error`);
 const hintId = computed(() => `${inputId.value}-hint`);
+const noteId = computed(() => `${inputId.value}-note`);
+const scaleDescriptionId = computed(() => `${inputId.value}-scale-description`);
 const freeTextId = computed(() => `${inputId.value}-free-text`);
 const descriptionIds = computed(() => [
-    !sliderTouched.value ? hintId.value : null,
+    props.item.metadata?.note ? noteId.value : null,
+    props.item.type === 'slider' ? scaleDescriptionId.value : null,
+    props.item.type === 'slider' && !sliderTouched.value ? hintId.value : null,
     props.error ? errorId.value : null,
 ].filter(Boolean).join(' ') || undefined);
 
@@ -132,6 +143,11 @@ const sliderValue = ref(getInitialSliderValue());
 const sliderTouched = ref(
     props.modelValue !== undefined && props.modelValue !== null && props.modelValue !== ''
 );
+const sliderAriaValueText = computed(() => (
+    sliderTouched.value
+        ? `Selected ${sliderValue.value}`
+        : `Not answered; current starting position ${sliderValue.value}`
+));
 watch(
     () => props.modelValue,
     (val) => {
@@ -266,5 +282,8 @@ const onMultiSelectToggle = (option) => {
 .form-check-input:focus-visible {
     outline: 3px solid #0b5ed7;
     outline-offset: 3px;
+}
+.form-range {
+    min-height: 44px;
 }
 </style>

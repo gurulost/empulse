@@ -3,7 +3,6 @@
     Update Avatar
 @endsection
 @section('content')
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.css" />
     <link rel="stylesheet" type="text/css" href="/css/profile.css?v={{date('His')}}">
 
     <main  class="avatar-main">
@@ -18,12 +17,17 @@
                         @csrf
 
                         @if ($errors->any())
-                            <div class="alert alert-danger">
+                            <div class="alert alert-danger" role="alert">
                                 <ul>
                                     @foreach ($errors->all() as $error)
                                         <li>{{ $error }}</li>
                                     @endforeach
                                 </ul>
+                            </div>
+                        @endif
+                        @if(Session::has('error-upload-avatar'))
+                            <div class="alert alert-danger" role="alert">
+                                {{ Session::get('error-upload-avatar') }}
                             </div>
                         @endif
 
@@ -51,32 +55,5 @@
         </div>
     </main>
     <!-- end content -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    <script>
-        @if(Session::has('error-upload-avatar'))
-            toastr.options = {
-                "closeButton": false,
-                "debug": false,
-                "newestOnTop": false,
-                "progressBar": false,
-                "positionClass": "toast-top-center",
-                "preventDuplicates": false,
-                "onclick": null,
-                "showDuration": "300",
-                "hideDuration": "1000",
-                "timeOut": "5000",
-                "extendedTimeOut": "1000",
-                "showEasing": "swing",
-                "hideEasing": "linear",
-                "showMethod": "fadeIn",
-                "hideMethod": "fadeOut"
-            }
-            toastr["error"]("{{Session::get('error-upload-avatar')}}", "ERROR!!!")
-
-            {{ Session::forget('error-upload-avatar') }}
-        @endif
-    </script>
-
-    <script scr='{{asset('/js/profile_add_avatar.js')}}'></script>
+    <script src="{{ asset('/js/profile_add_avatar.js') }}"></script>
 @endsection
-

@@ -3,7 +3,15 @@
     Departments
 @endsection
 @section("content")
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.css" />
+    @if(Session::has('addDepartment_error'))
+        <div class="alert alert-danger" role="alert">
+            {{ Session::get('addDepartment_error') }}
+        </div>
+    @elseif(Session::has('deleteDepartment_error_user_exist'))
+        <div class="alert alert-danger" role="alert">
+            {{ Session::get('deleteDepartment_error_user_exist') }}
+        </div>
+    @endif
     <div class="departmentsMainBlock" style="">
         <button type="button" class="btn btn-primary addNewDepartment" data-bs-toggle="modal" data-bs-target="#exampleModal" style="margin-top: 100px; margin-left: 100px;">Add new department</button><hr />
 
@@ -38,33 +46,5 @@
 @endsection
 
 @section('script')
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <script src='{{asset('/js/roles/departments.js')}}' type="module"></script>
-    <script>
-        toastr.options = {
-            "closeButton": false,
-            "debug": true,
-            "newestOnTop": false,
-            "progressBar": false,
-            "positionClass": "toast-top-center",
-            "preventDuplicates": false,
-            "onclick": null,
-            "showDuration": "300",
-            "hideDuration": "1000",
-            "timeOut": "5000",
-            "extendedTimeOut": "1000",
-            "showEasing": "swing",
-            "hideEasing": "linear",
-            "showMethod": "fadeIn",
-            "hideMethod": "fadeOut"
-        }
-
-        @if(Session::has('addDepartment_error'))
-            toastr["error"](" {{Session::get('addDepartment_error')}} ")
-            {{Session::forget('addDepartment_error')}}
-        @elseif(Session::has('deleteDepartment_error_user_exist'))
-            toastr["error"](" {{Session::get('deleteDepartment_error_user_exist')}} ")
-            {{Session::forget('deleteDepartment_error_user_exist')}}
-        @endif
-    </script>
 @endsection

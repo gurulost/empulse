@@ -1,4 +1,4 @@
-<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css">
+@vite(['resources/sass/app.scss', 'resources/js/app.js'])
 
 <div class="container" style="width: 90%; margin-top: 60px;">
     <form method="POST">
