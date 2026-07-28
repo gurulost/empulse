@@ -305,6 +305,8 @@ Empulse is not a single-page application. Blade owns routing, layout, server-pro
 
 Generated Vite assets belong in `public/build` at deployment time. Source changes belong in `resources`.
 
+Empulse self-hosts Bootstrap Icons and the DM Sans, Outfit, and Inter font families through Vite. Active templates do not load CDN styles, fonts, or general-purpose scripts at runtime; Chart.js is imported only through the application bundle where a chart component needs it. This keeps the response CSP narrow and avoids a page being partly unstyled when an external asset host is blocked or unavailable. `FrontendAssetContractTest` prevents current Blade templates from reintroducing the removed CDN hosts.
+
 ## Operational data safety
 
 Application logs and customer-visible errors contain only generic failure language, stable record IDs, provider request IDs when safe, and exception class names. They do not retain provider response bodies, recipient/message content, SQL text, credentials, or stack traces. Login throttling fails closed through Laravel’s rate limiter; no database-backed login-debug cache exists.

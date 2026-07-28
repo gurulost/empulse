@@ -10,7 +10,7 @@ Current product, architecture, and release truth are separated from historical i
 
 Canonical repository: `gurulost/empulse`
 
-Validated implementation candidate: `3dcf75a8bb702d05c28ad855a6a28aec6ab1f71a`
+Validated implementation candidate: `070447da2ec42379da52509b9b6b9d860fbbb7f0`
 
 Implementation branch: `codex/production-readiness`
 
@@ -46,7 +46,7 @@ The unsafe legacy roster importer remains removed. Its replacement uses encrypte
 - `composer analyse`: passed for the release-critical authorization, audit, billing, survey-access, validation, and sample-policy paths with no baseline or ignored errors.
 - `composer audit --no-interaction`: no security advisories.
 - `npm audit --audit-level=high`: zero vulnerabilities.
-- Dependency-license inventory: all PHP packages are permissive or usable under an available permissive license; the unused direct PHPMailer dependency was removed. Direct JavaScript dependencies are MIT/Apache-2.0, except the development-only axe Playwright adapter under MPL-2.0. No direct dependency has an unknown license.
+- Dependency-license inventory: all PHP packages are permissive or usable under an available permissive license; the unused direct PHPMailer dependency was removed. Direct JavaScript dependencies are MIT/Apache-2.0, the development-only axe Playwright adapter is MPL-2.0, and the self-hosted DM Sans, Outfit, and Inter font packages are OFL-1.1. Bootstrap Icons is MIT. No direct dependency has an unknown license.
 - `npm run lint`: passed.
 - `npm run test:unit`: 2 files / 6 tests passed, including untouched slider, exclusive multiselect, and analytics state coverage.
 - `npm run build`: passed with 182 modules transformed.
@@ -108,8 +108,11 @@ The process-backed north-star journey found three defects that narrower tests ha
   - public home and login;
   - manager operating loop and action workspace;
   - employee dashboard;
-  - respondent data-promise entry.
+  - respondent data-promise entry and the actual survey state.
 - The gate found and drove remediation of global footer, page subtitle, table header, status badge, and public dashboard contrast failures.
+- Clean implementation `070447da2ec42379da52509b9b6b9d860fbbb7f0` adds a Tier 2 original-design respondent experience brief and proves keyboard privacy entry, validation-to-first-error focus, arrow-key slider operation, page-heading focus, reduced-motion behavior, saved-state visibility, 44px primary controls, and no horizontal overflow or clipped navigation at 375, 390, 768, 1440, and 1920 pixels. The focused real PostgreSQL/web/worker Chromium gate passed all three accessibility journeys in 11.9 seconds with no browser console or page errors.
+- Console review exposed that current layouts referenced CDN fonts/icons/scripts forbidden by their own CSP. The active layouts now use Vite-bundled Bootstrap, MIT Bootstrap Icons, and OFL-1.1 fonts; unused global Chart CDN scripts and legacy Toastr CDN paths were removed. CSP font/style sources are restricted to self/data/inline styles, and a permanent source test rejects those runtime CDN hosts.
+- This remains automated implementation evidence. Independent keyboard and screen-reader review by an accountable accessibility reviewer is still required before customer launch.
 
 ### Backup and integrity drill
 
