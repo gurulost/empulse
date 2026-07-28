@@ -4,8 +4,10 @@ Source of truth for the full pre-deployment production-readiness program. Update
 
 ## Metadata
 - Created: 2026-07-27T12:30:02
-- Last Updated: 2026-07-27T19:13:39-04:00
-- Branch: `codex/production-readiness`
+- Last Updated: 2026-07-28T12:17:59-04:00
+- Canonical GitHub Branch: `main`
+- Validated Product Candidate: `96985c01728197781471aae84d8367a58e753609`
+- Implementation Branch: `codex/production-readiness`
 - Checklist Doc: `docs/EMPULSE_PRODUCTION_READINESS_CHECKLIST.md`
 
 ## Scope
@@ -79,7 +81,7 @@ Source of truth for the full pre-deployment production-readiness program. Update
 
 ### Gate E
 - [ ] Q-500 [status:in_progress] EMP-501–504: PostgreSQL/process CI, static/security gates, Vue tests, and full browser journeys.
-  - Evidence: the current local candidate passes 200 tests/1,121 assertions on both SQLite and PostgreSQL 14, six frontend unit assertions across two files, the 182-module production build, and all 17 browser/accessibility/product journeys with real PostgreSQL web and queue processes. Prior GitHub run `30303624681` on candidate `d9725de` passed the then-current PostgreSQL 16 product job. Final committed-SHA CI still must rerun, and its honest `--all` history scan remains gated by the three known historical detections.
+  - Evidence: product candidate `96985c01728197781471aae84d8367a58e753609` was fast-forwarded to canonical `main`. GitHub run `30377166138` passed its PostgreSQL 16 product job: 200 tests/1,121 assertions, dependency audits, caches, formatting/static analysis, six frontend tests, the 182-module build, and all 17 real-process browser/accessibility/governance/product-loop journeys. Its proposed-change secret scan passed; the overall workflow remains red only because the honest `--all` history scan finds the three known historical detections.
 - [ ] Q-501 [status:in_progress] EMP-505–507: load/capacity, observability/SLOs, backup/restore and integrity drills.
   - Evidence: health and heartbeat checks, SLO/capacity runbooks, k6 scenario, and PostgreSQL restore/audit-chain drill exist; approved-scale load and provider alert drills remain.
 - [ ] Q-502 [status:in_progress] EMP-508–510: independent assurance, release/rollback controls, and living runbooks/contracts.
@@ -180,7 +182,7 @@ Source of truth for the full pre-deployment production-readiness program. Update
 - [x] V-004 [status:verified] `npm run build`
   - Evidence: Vite 8.1.5 production build passes with 182 transformed modules.
 - [x] V-005 [status:verified] PostgreSQL clean-install, migration, and integration journey.
-  - Evidence: clean PostgreSQL 14 migration/canonical 62-item seed and full 200-test/1,121-assertion suite pass; the four newest evidence/advisor/publication/billing-history migrations roll back and reapply cleanly. PostgreSQL 16 committed-SHA CI passed on the prior candidate and must rerun on the final pushed SHA.
+  - Evidence: clean PostgreSQL 14 migration/canonical 62-item seed and full 200-test/1,121-assertion suite pass; the four newest evidence/advisor/publication/billing-history migrations roll back and reapply cleanly. PostgreSQL 16 committed-SHA CI passed on `main` candidate `96985c0` in GitHub run `30377166138`.
 - [x] V-006 [status:verified] `npm run test:e2e`
   - Evidence: all 17 role, failure, respondent-completion, accessibility, admin-governance, and north-star action-loop journeys pass together against a fresh PostgreSQL database with real web and queue-worker processes.
 - [ ] V-007 [status:in_progress] Static analysis, dependency, secret, security, and license gates.
@@ -210,7 +212,7 @@ Source of truth for the full pre-deployment production-readiness program. Update
 - [ ] R-004 [status:open] Git history contains an old Sendinblue/Brevo token and two generic-key detections in removed legacy attachments.
   - Rationale: current source scans clean, but deleting a file does not remove it from Git history. The mail credential must be revoked/rotated. Rewriting shared `main` history and force-pushing is destructive and requires explicit owner coordination; a real credential must not be silently allowlisted just to make CI green.
   - Owner: repository owner and WorkFit mail administrator
-  - Follow-up trigger/date: before committed-SHA CI and before any environment receives mail credentials.
+  - Follow-up trigger/date: before accepting a fully green GitHub release gate and before any environment receives mail credentials.
   - Rehearsal: `docs/GIT_HISTORY_SECRET_REMEDIATION_RUNBOOK.md` records a successful non-destructive mirror rewrite, exact tree-preservation proof, affected refs, collaborator cleanup, GitHub Support steps, and rollback controls.
 
 ## Change Log
@@ -233,3 +235,4 @@ Source of truth for the full pre-deployment production-readiness program. Update
 - 2026-07-27T17:37:29-04:00: Added a governed two-phase roster importer with encrypted staging, stable tenant-scoped external identities, row reconciliation, fail-closed validation, explicit short-lived confirmation, stale-preview protection, atomic compatibility/history updates, account-only invitations, sanitized results, legal-hold-aware 30-day row retention, and scheduled idempotent invitation recovery. Full SQLite and PostgreSQL suites pass at 184 tests/928 assertions; clean PostgreSQL migration/seed, static analysis, formatting, lint, unit/build, and 14 browser/accessibility journeys pass.
 - 2026-07-27T17:48:45-04:00: Reconciled every owner-supplied audit ticket into a portable 75-ID traceability register with implementation, external-gate, pre-deployment-reset, or governed-deferred disposition. Added an automated completeness/order contract, corrected stale validation evidence, and verified that only provider, history/credential, independent-review, commercial/legal, and final committed-SHA gates remain non-terminal.
 - 2026-07-27T19:13:39-04:00: Completed the final pre-deployment control pass: governed survey publication, immutable action/measurement/communication/outcome records, evidence-labeled playbooks, advisor notes and queue, privacy-safe value-loop reporting, explicit billing-admin appointment/revocation/history, sanitized provider failures, safe contact/avatar handling, and production seeder refusal. A real PostgreSQL/queue browser journey exposed and fixed missing action-form label associations, lazy-loaded post-dispatch wave logs, and one-time Pulse waves being closed at dispatch. Both backend databases now pass 200 tests/1,121 assertions and all 17 browser journeys pass together. Historical credential remediation, final committed-SHA CI, provider staging/drills, approved-scale load, independent human review, and owner commercial/legal decisions remain open.
+- 2026-07-28T12:17:59-04:00: Fast-forwarded product candidate `96985c01728197781471aae84d8367a58e753609` to canonical `gurulost/empulse` `main`. GitHub run `30377166138` passed the complete PostgreSQL 16 product job, proposed-change secret scan, 200 tests/1,121 assertions, dependency/cache/static/frontend/build gates, and all 17 real-process browser journeys. The workflow remains intentionally red only at the full-history secret gate pending mail-credential revocation/rotation and explicit coordinated rewrite authorization. No deployment provider or live environment exists.

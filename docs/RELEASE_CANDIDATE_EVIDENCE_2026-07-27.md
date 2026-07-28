@@ -8,7 +8,11 @@ Current product, architecture, and release truth are separated from historical i
 
 ## Scope
 
-Branch: `codex/production-readiness`
+Canonical repository: `gurulost/empulse`
+
+Validated product candidate: `96985c01728197781471aae84d8367a58e753609`, promoted by fast-forward to `main` on 2026-07-28
+
+Implementation branch: `codex/production-readiness`
 
 Base commit: `e166a6b9b26ae95584bb34b8fd7fa9410718f320`
 
@@ -49,7 +53,7 @@ The unsafe legacy roster importer remains removed. Its replacement uses encrypte
 - Gitleaks full-history scan: three pre-existing findings remain—two generic-key matches in the removed attachment history and one old Sendinblue/Brevo token in a historical controller commit. The mail key must be revoked/rotated; shared-history rewriting requires explicit owner approval and is not represented as complete.
 - The first committed-SHA GitHub run exposed an npm lock inconsistency before tests began. The lock was regenerated from a clean dependency graph and then passed `npm ci` with the exact npm 10.9.8 version used by that runner.
 - The initial GitHub secret job fetched full history but the action’s push-event command scanned only `-1` commit. The workflow now retains the proposed-change scan and adds an explicit fail-closed `gitleaks git --log-opts="--all"` history scan; a one-commit green result is not accepted as full-history evidence.
-- GitHub Actions run `30303624681` on committed candidate `d9725de151f49792088319871349ef59085ca516` passed the complete product job: PostgreSQL 16 migration/seed, 170 tests/782 assertions, Composer/npm audits, cache construction, Pint, static analysis, frontend lint, two component tests, the 177-module production build, real web/worker readiness, and all 13 Playwright role/failure/respondent/accessibility journeys. The overall workflow is red only because the explicit full-history job correctly detects the three historical findings; its proposed-change scan is green.
+- GitHub Actions run `30377166138` on the product candidate promoted to `main`, `96985c01728197781471aae84d8367a58e753609`, passed the complete product job: PostgreSQL 16 migration/seed, 200 tests/1,121 assertions, Composer/npm audits, cache construction, Pint, static analysis, frontend lint and six component tests, the 182-module production build, real web/worker readiness, and all 17 Playwright role/failure/respondent/accessibility/governance/product-loop journeys. The proposed-change secret scan also passed. The overall workflow is red only because the explicit full-history job correctly detects the three historical findings.
 - A disposable mirror rehearsal removed the two obsolete affected paths across all 366 commits and four affected refs. After rewriting, the old tainted commits/blobs were unreachable, `git fsck` passed, and Gitleaks scanned the rewritten history with no findings. The release-candidate tree remained exactly `cf4a3a028e652770c81bf4c5ec1050f2af84906c`, with a matching recursive tree-listing SHA-256 of `a493d9cff743dff816962ce60c54ea46872428c34788ba1785396f7f3f8a5387`. No remote ref was changed. The owner-safe procedure is documented in `docs/GIT_HISTORY_SECRET_REMEDIATION_RUNBOOK.md`.
 
 ### Fresh-review blocker closure
