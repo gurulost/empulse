@@ -7,10 +7,10 @@ use App\Services\OnboardingTelemetryService;
 use App\Services\PrivacyGovernanceService;
 use App\Services\SurveyAssignmentAccessService;
 use App\Services\SurveyDefinitionService;
+use App\Services\SurveyDraftService;
 use App\Services\SurveyResponseValidationService;
 use App\Services\SurveyService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class SurveyController extends Controller
 {
@@ -22,6 +22,8 @@ class SurveyController extends Controller
 
     protected SurveyAssignmentAccessService $accessService;
 
+    protected SurveyDraftService $drafts;
+
     protected OnboardingTelemetryService $telemetry;
 
     protected PrivacyGovernanceService $privacy;
@@ -31,6 +33,7 @@ class SurveyController extends Controller
         SurveyDefinitionService $definitionService,
         SurveyResponseValidationService $validationService,
         SurveyAssignmentAccessService $accessService,
+        SurveyDraftService $drafts,
         OnboardingTelemetryService $telemetry,
         PrivacyGovernanceService $privacy
     ) {
@@ -38,6 +41,7 @@ class SurveyController extends Controller
         $this->definitionService = $definitionService;
         $this->validationService = $validationService;
         $this->accessService = $accessService;
+        $this->drafts = $drafts;
         $this->telemetry = $telemetry;
         $this->privacy = $privacy;
     }
@@ -84,30 +88,24 @@ class SurveyController extends Controller
             false
         );
 
-        $savedAt = now();
-        $updated = SurveyAssignment::query()
-            ->whereKey($assignment->id)
-            ->where('status', 'pending')
-            ->where('draft_revision', $data['revision'])
-            ->update([
-                'draft_answers' => $responses,
-                'last_autosaved_at' => $savedAt,
-                'draft_revision' => DB::raw('draft_revision + 1'),
-                'updated_at' => $savedAt,
-            ]);
+        $result = $this->drafts->save(
+            $assignment,
+            $responses,
+            (int) $data['revision']
+        );
 
-        if ($updated !== 1) {
+        if (! $result['saved']) {
             return response()->json([
                 'status' => 'conflict',
                 'message' => 'A newer draft exists. Reload before saving again.',
-                'revision' => (int) $assignment->fresh()->draft_revision,
+                'revision' => $result['revision'],
             ], 409);
         }
 
         return response()->json([
             'status' => 'ok',
-            'last_autosaved_at' => $savedAt->toIso8601String(),
-            'revision' => (int) $data['revision'] + 1,
+            'last_autosaved_at' => $result['last_autosaved_at']?->toIso8601String(),
+            'revision' => $result['revision'],
         ]);
     }
 

@@ -196,7 +196,7 @@ SurveyAssignment
     └── SurveyAnswer
 ```
 
-Autosave is revisioned and rejects stale-tab overwrites. Final submission row-locks the assignment and atomically creates one response plus unique answers before completing the assignment and revoking access. Answers retain the stable `question_key`, normalized numeric value when applicable, and item metadata needed by analytics.
+`SurveyDraftService` owns the revisioned autosave compare-and-swap so HTTP requests and the concurrency rehearsal use the same atomic write. Stale-tab overwrites are rejected without replacing the winning payload. Final submission row-locks the assignment and atomically creates one response plus unique answers before completing the assignment and revoking access. Answers retain the stable `question_key`, normalized numeric value when applicable, and item metadata needed by analytics.
 
 The collection model is identifiable: assignments and responses reference a user. Respondents acknowledge the versioned promise in `docs/RESPONDENT_DATA_PROMISE.md` before submission. Customer-facing analytics never expose individual answers. `PrivacyGovernanceService` implements verified access, correction, erasure/pseudonymization, and legal-hold workflows; `RetentionService` requires a reviewed dry-run hash before execution. Every consequential privacy transition is audit chained.
 
@@ -435,6 +435,10 @@ For analytics query changes, also use:
 ```bash
 php artisan analytics:explain {company_id} [--wave=...] [--no-analyze]
 php artisan readiness:capacity-rehearsal {company_id} --wave=wave:{wave_id}
+php artisan readiness:submission-concurrency \
+  {autosave_assignment_id} {submit_assignment_id} {source_response_id} --execute
 ```
 
 `CapacityRehearsalService` measures the real company/wave analytics path at a declared cohort threshold and checks assignment/response/answer uniqueness, tenant alignment, and response-to-assignment consistency. Its report binds the database engine/version and clean source SHA, fails closed on privacy suppression or a p95 budget miss, and permanently declares that it is not production sign-off. Follow [`CAPACITY_AND_PERFORMANCE_TEST_PLAN.md`](CAPACITY_AND_PERFORMANCE_TEST_PLAN.md) and [`ANALYTICS_EXPLAIN_CHECKLIST.md`](ANALYTICS_EXPLAIN_CHECKLIST.md) before treating a production-scale analytics change as ready.
+
+`readiness:submission-concurrency` is a destructive isolated-data check, not a production command. From a clean PostgreSQL checkout, it validates a same-version synthetic answer set, releases paired PHP processes at one barrier, and proves one autosave winner/one stale conflict plus one final-submission winner/one completed conflict. Its report also checks the final draft revision and payload hash, response/answer cardinality, completed-response usage idempotency, completion state, and token revocation. It refuses production, SQLite, dirty source, missing privacy acknowledgment, previously used assignments, and execution without `--execute`.

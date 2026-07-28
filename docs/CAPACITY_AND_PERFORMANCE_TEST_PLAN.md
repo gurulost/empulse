@@ -72,6 +72,23 @@ Clean implementation commit `6212f48b43d10ae26121a273ca3452cbbc5fd5ce` passed a 
 
 Raw evidence is [`evidence/dispatch-recovery-rehearsal-6212f48.json`](evidence/dispatch-recovery-rehearsal-6212f48.json). It explicitly records `production_signoff: false`: no worker or mail provider ran, the cache was process-local, and the exercise does not satisfy shared-cache/queue, queue-age, provider, worker-supervisor, or alert gates.
 
+## Reproducible submission concurrency rehearsal
+
+Use two unused pending assignments and one completed same-version synthetic response in an isolated PostgreSQL database:
+
+```bash
+php artisan readiness:submission-concurrency \
+  {autosave_assignment_id} \
+  {submit_assignment_id} \
+  {source_response_id} \
+  --execute \
+  --output=/path/to/release-packet/submission-concurrency.json
+```
+
+The command refuses production, non-PostgreSQL databases, dirty/unrecognized source, missing current privacy acknowledgments, reused assignments, or mutation without `--execute`. It starts two separate PHP processes behind a common barrier for each race. Both autosave workers validate the same answer set and expected revision through `SurveyDraftService`; both submission workers validate the same complete answer set and call `SurveyService::recordResponse`.
+
+A passing report requires one autosave success plus one conflict, one revision increment, preservation of the winning payload hash, one final-submission success plus one completed conflict, exactly one response and complete unique answer-key set, one completed-response usage event, assignment completion, and token revocation. The report always records `production_signoff: false`; it does not prove load-balancer, shared-session/cache, provider, queue-age, worker-supervisor, or alert behavior.
+
 ## Local release-candidate smoke — July 27, 2026
 
 The provider-neutral local PostgreSQL/web-process smoke passed the checked-in `public-readiness.js` profile:
@@ -82,4 +99,4 @@ The provider-neutral local PostgreSQL/web-process smoke passed the checked-in `p
 - 0 failed requests;
 - request p95 182.82 ms and p99 191.15 ms.
 
-This proves only the health/readiness/login surfaces in the local topology. The 500-respondent dispatch, authenticated analytics, shared cache/session, mail sandbox, queue-age, worker-failure, and provider-observability exercises above remain staging release gates.
+This proves only the health/readiness/login surfaces in the local topology. Authenticated analytics and 500-person dispatch now have separate local evidence above; shared cache/session, mail sandbox, queue-age, worker-failure, and provider-observability exercises remain staging release gates.

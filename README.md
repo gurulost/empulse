@@ -190,6 +190,7 @@ CI runs migrations and the backend suite against PostgreSQL 16, checklist-struct
 
 Analytics query changes also require the EXPLAIN workflow in [`docs/ANALYTICS_EXPLAIN_CHECKLIST.md`](docs/ANALYTICS_EXPLAIN_CHECKLIST.md).
 For a clean-checkout, PostgreSQL-backed 500-respondent analytics and integrity rehearsal, use `php artisan readiness:capacity-rehearsal {company_id} --wave=wave:{wave_id}` and follow [`docs/CAPACITY_AND_PERFORMANCE_TEST_PLAN.md`](docs/CAPACITY_AND_PERFORMANCE_TEST_PLAN.md). That bounded command is not provider staging or production sign-off.
+The same plan documents `php artisan readiness:submission-concurrency`, a destructive isolated-data rehearsal that starts two real PHP processes on the same autosave revision and two on the same final submission. It requires explicit assignment/response IDs, `--execute`, a clean committed checkout, PostgreSQL, and a non-production environment.
 
 ## Production runtime contract
 
