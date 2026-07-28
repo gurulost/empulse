@@ -30,6 +30,8 @@ Empulse has not been deployed or sold. This runbook is a release contract, not e
   - `APP_DEBUG=false`
   - `APP_URL=https://<production-host>`
   - `APP_KEY=<unique production key>`
+  - `APP_RELEASE_SHA=<exact lowercase 40-character Git SHA in the built artifact>`
+  - `DEPLOYMENT_ENVIRONMENT_ID=<stable non-secret environment identifier>`
   - `TRUSTED_PROXIES=<explicit comma-separated proxy IPs/CIDRs, or empty when direct>`
   - `AUDIT_HASH_KEY=<separate 32+ character audit-chain secret>`
   - `BREVO_WEBHOOK_TOKEN=<32+ character bearer token configured on the Brevo webhook>`
@@ -45,6 +47,8 @@ Empulse has not been deployed or sold. This runbook is a release contract, not e
   - `CACHE_STORE=database` or another durable shared store
   - `SESSION_DRIVER=database` or another durable shared store
   - `SESSION_SECURE_COOKIE=true`
+  - `REQUIRE_PROCESS_HEARTBEATS=true`
+  - `HEARTBEAT_MAX_AGE_SECONDS=180` (allowed production range: 60–600)
 - Storage:
   - `AVATAR_DISK=<persistent/shared Laravel filesystem disk>`
   - if using the local `public` disk in a non-ephemeral environment, run `php artisan storage:link`; do not use an ephemeral release filesystem for customer avatars
@@ -115,10 +119,22 @@ php artisan app:production-check
   - `invoice.payment_failed`
 
 ## Post-Deploy Verification
-- Prove the selected release SHA and run health checks:
-  - `/api/healthz` returns `{"status":"live"}`
-- `/api/readyz` returns `{"status":"ready",...}`
+- From outside the deployed runtime, prove the selected release SHA, environment identity, HTTPS security headers, and health surfaces:
+
+```bash
+php artisan app:verify-deployment \
+  https://<target-host> \
+  <exact-40-character-release-sha> \
+  <deployment-environment-id> \
+  --json
+```
+
+  - `/api/healthz` returns `status=live`, the exact release SHA and environment ID in JSON, and the same SHA in `X-Empulse-Release`
+  - `/api/readyz` returns `status=ready`, the same identities, connected database, available runtime tables, and fresh scheduler and worker heartbeats
+  - `/login` returns the same release header plus HSTS, CSP, content-type, frame, and referrer protections
   - in production this also requires fresh scheduler and worker heartbeats; allow the first scheduled minute after a new environment starts
+  - a redirect, stale process, absent header, wrong SHA/environment, non-HTTPS origin, or unavailable surface fails the verifier
+  - the verifier always reports `production_signoff=false`; it covers served identity and a narrow runtime surface only
   - app loads at `/`
   - login page renders
   - manager can reach `/home`, `/survey-waves`, and `/account/billing`

@@ -4,8 +4,9 @@ Status: pre-launch release contract; no production service history exists yet.
 
 ## Signals
 
-- `/api/healthz` proves only that the web process can answer.
-- `/api/readyz` proves database access, required runtime tables, and—when `REQUIRE_PROCESS_HEARTBEATS=true`—fresh scheduler and worker heartbeats.
+- `/api/healthz` proves only that the web process can answer. It returns the configured immutable release SHA and non-secret deployment-environment identity.
+- `/api/readyz` proves database access, required runtime tables, and fresh scheduler and worker heartbeats in production. Production configuration cannot disable those heartbeat checks.
+- `X-Empulse-Release` binds every HTTP response to the configured Git SHA. `app:verify-deployment` compares the externally served header and health payloads to the release owner’s expected SHA/environment and rejects redirects, stale processes, missing security headers, or identity mismatch.
 - The scheduler writes its heartbeat and queues `RecordWorkerHeartbeat` every minute. A stale worker heartbeat therefore detects both a missing worker and a queue that is not draining.
 - `email_delivery_events`, `survey_wave_logs`, `billing_webhook_events`, `audit_events`, `retention_runs`, and `action_loop_events` are structured operational evidence.
 - Application logs must be shipped off-host with release SHA, environment, request/correlation ID, route, status, duration, job class, attempt, company ID where appropriate, and exception class. Never log assignment tokens, answer values, passwords, payment data, or direct data-subject export content.

@@ -27,6 +27,16 @@ class CheckProductionConfiguration extends Command
                 config('app.key')
             ),
             $this->mustStartWith('APP_URL', config('app.url'), 'https://'),
+            $this->mustMatch(
+                'APP_RELEASE_SHA',
+                config('runtime.release_sha'),
+                '/\A[0-9a-f]{40}\z/',
+                'a lowercase 40-character Git SHA'
+            ),
+            $this->mustBePresent(
+                'DEPLOYMENT_ENVIRONMENT_ID',
+                config('runtime.deployment_environment_id')
+            ),
             $this->mustEqual('DB_CONNECTION', config('database.default'), 'pgsql'),
             $this->mustNotBeOneOf('QUEUE_CONNECTION', config('queue.default'), ['sync', 'null']),
             $this->mustNotBeOneOf('SESSION_DRIVER', config('session.driver'), ['array', 'file', 'cookie']),
@@ -54,6 +64,17 @@ class CheckProductionConfiguration extends Command
                 config('billing.catalog.pulse.price_cents')
             ),
             $this->mustEqual('SESSION_SECURE_COOKIE', config('session.secure'), true),
+            $this->mustEqual(
+                'REQUIRE_PROCESS_HEARTBEATS',
+                config('runtime.require_process_heartbeats'),
+                true
+            ),
+            $this->mustBeIntegerWithinRange(
+                'HEARTBEAT_MAX_AGE_SECONDS',
+                config('runtime.heartbeat_max_age_seconds'),
+                60,
+                600
+            ),
         ]));
 
         if (! (bool) $this->option('skip-connectivity')) {
@@ -106,6 +127,17 @@ class CheckProductionConfiguration extends Command
             : "{$name}: must contain at least {$length} characters.";
     }
 
+    protected function mustMatch(
+        string $name,
+        mixed $actual,
+        string $pattern,
+        string $description
+    ): ?string {
+        return is_string($actual) && preg_match($pattern, $actual) === 1
+            ? null
+            : "{$name}: must be {$description}.";
+    }
+
     protected function mustDiffer(
         string $name,
         mixed $actual,
@@ -129,6 +161,19 @@ class CheckProductionConfiguration extends Command
         return filter_var($actual, FILTER_VALIDATE_INT) !== false && (int) $actual > 0
             ? null
             : "{$name}: a positive integer number of cents is required.";
+    }
+
+    protected function mustBeIntegerWithinRange(
+        string $name,
+        mixed $actual,
+        int $minimum,
+        int $maximum
+    ): ?string {
+        return filter_var($actual, FILTER_VALIDATE_INT) !== false
+            && (int) $actual >= $minimum
+            && (int) $actual <= $maximum
+                ? null
+                : "{$name}: must be an integer from {$minimum} through {$maximum}.";
     }
 
     protected function mustBeConfiguredFilesystemDisk(string $name, mixed $actual, array $disks): ?string

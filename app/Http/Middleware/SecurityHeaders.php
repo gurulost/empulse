@@ -36,6 +36,11 @@ class SecurityHeaders
             ])
         );
 
+        $releaseSha = config('runtime.release_sha');
+        if (is_string($releaseSha) && preg_match('/\A[0-9a-f]{40}\z/', $releaseSha) === 1) {
+            $response->headers->set('X-Empulse-Release', $releaseSha);
+        }
+
         if ($request->isSecure()) {
             $response->headers->set(
                 'Strict-Transport-Security',

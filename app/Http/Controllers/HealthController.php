@@ -12,7 +12,7 @@ class HealthController extends Controller
 {
     public function liveness(): JsonResponse
     {
-        return response()->json(['status' => 'live']);
+        return response()->json($this->identityPayload(['status' => 'live']));
     }
 
     public function readiness(): JsonResponse
@@ -27,13 +27,13 @@ class HealthController extends Controller
             ));
 
             if ($missingTables !== []) {
-                return response()->json([
+                return response()->json($this->identityPayload([
                     'status' => 'not_ready',
                     'checks' => [
                         'database' => 'connected',
                         'runtime_tables' => 'missing',
                     ],
-                ], 503);
+                ]), 503);
             }
 
             $processChecks = [];
@@ -47,33 +47,53 @@ class HealthController extends Controller
                     $processChecks[$process] = $fresh ? 'fresh' : 'stale';
                 }
                 if (in_array('stale', $processChecks, true)) {
-                    return response()->json([
+                    return response()->json($this->identityPayload([
                         'status' => 'not_ready',
                         'checks' => [
                             'database' => 'connected',
                             'runtime_tables' => 'available',
                             ...$processChecks,
                         ],
-                    ], 503);
+                    ]), 503);
                 }
             }
 
-            return response()->json([
+            return response()->json($this->identityPayload([
                 'status' => 'ready',
                 'checks' => [
                     'database' => 'connected',
                     'runtime_tables' => 'available',
                     ...$processChecks,
                 ],
-            ]);
+            ]));
         } catch (Throwable) {
-            return response()->json([
+            return response()->json($this->identityPayload([
                 'status' => 'not_ready',
                 'checks' => [
                     'database' => 'unavailable',
                     'runtime_tables' => 'unknown',
                 ],
-            ], 503);
+            ]), 503);
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    protected function identityPayload(array $payload): array
+    {
+        $releaseSha = config('runtime.release_sha');
+        $environmentId = config('runtime.deployment_environment_id');
+
+        if (is_string($releaseSha) && preg_match('/\A[0-9a-f]{40}\z/', $releaseSha) === 1) {
+            $payload['release_sha'] = $releaseSha;
+        }
+
+        if (is_string($environmentId) && trim($environmentId) !== '') {
+            $payload['environment_id'] = $environmentId;
+        }
+
+        return $payload;
     }
 }

@@ -4,7 +4,7 @@ Empulse has no production deployment yet. This policy defines the evidence requi
 
 ## Release packet
 
-- immutable Git SHA and built artifact identity;
+- immutable Git SHA and built artifact identity, externally matched through `app:verify-deployment`;
 - passing PostgreSQL CI, PHP tests/formatting, frontend lint/unit/build, dependency audits, secret scan, and Playwright journeys;
 - reviewed migration plan, estimated lock/duration, and rollback or forward-fix path;
 - clean staging install plus representative load/concurrency evidence;
@@ -18,7 +18,7 @@ Empulse has no production deployment yet. This policy defines the evidence requi
 1. Deploy the artifact to staging and run the release packet.
 2. Take/confirm a restorable backup.
 3. Apply migrations as a one-time release action.
-4. Deploy to an internal/canary environment and verify `/api/readyz`, login, billing webhook test, queue/scheduler heartbeats, baseline survey, analytics suppression, and action loop.
+4. Deploy to an internal/canary environment and run `app:verify-deployment` against the expected SHA and environment ID before verifying billing webhook test, baseline survey, analytics suppression, and action loop.
 5. Admit only the approved design-partner cohort.
 6. Watch error rate, latency, queue age, delivery, webhook, and integrity signals through the observation window.
 7. Expand only with explicit release-owner approval.

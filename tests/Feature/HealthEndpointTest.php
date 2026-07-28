@@ -18,6 +18,27 @@ class HealthEndpointTest extends TestCase
             ->assertExactJson(['status' => 'live']);
     }
 
+    public function test_health_surfaces_and_headers_expose_configured_release_identity(): void
+    {
+        $sha = str_repeat('a', 40);
+        config([
+            'runtime.release_sha' => $sha,
+            'runtime.deployment_environment_id' => 'empulse-staging-us-east',
+        ]);
+
+        $this->getJson('/api/healthz')
+            ->assertOk()
+            ->assertHeader('X-Empulse-Release', $sha)
+            ->assertJsonPath('release_sha', $sha)
+            ->assertJsonPath('environment_id', 'empulse-staging-us-east');
+
+        $this->getJson('/api/readyz')
+            ->assertOk()
+            ->assertHeader('X-Empulse-Release', $sha)
+            ->assertJsonPath('release_sha', $sha)
+            ->assertJsonPath('environment_id', 'empulse-staging-us-east');
+    }
+
     public function test_readiness_requires_database_runtime_tables(): void
     {
         $this->getJson('/api/readyz')

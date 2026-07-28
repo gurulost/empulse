@@ -16,6 +16,10 @@ class ProductionConfigurationTest extends TestCase
             'app.debug' => false,
             'app.key' => 'base64:production-key',
             'runtime.audit_hash_key' => str_repeat('a', 32),
+            'runtime.release_sha' => str_repeat('b', 40),
+            'runtime.deployment_environment_id' => 'empulse-production-us-east',
+            'runtime.require_process_heartbeats' => true,
+            'runtime.heartbeat_max_age_seconds' => 180,
             'app.url' => 'https://empulse.example.com',
             'database.default' => 'pgsql',
             'queue.default' => 'database',
@@ -49,6 +53,10 @@ class ProductionConfigurationTest extends TestCase
             'app.debug' => true,
             'app.key' => null,
             'runtime.audit_hash_key' => null,
+            'runtime.release_sha' => 'main',
+            'runtime.deployment_environment_id' => null,
+            'runtime.require_process_heartbeats' => false,
+            'runtime.heartbeat_max_age_seconds' => 3600,
             'app.url' => 'http://empulse.example.com',
             'database.default' => 'sqlite',
             'queue.default' => 'sync',
@@ -74,6 +82,10 @@ class ProductionConfigurationTest extends TestCase
             ->expectsOutputToContain('APP_DEBUG')
             ->expectsOutputToContain('DB_CONNECTION')
             ->expectsOutputToContain('AUDIT_HASH_KEY')
+            ->expectsOutputToContain('APP_RELEASE_SHA')
+            ->expectsOutputToContain('DEPLOYMENT_ENVIRONMENT_ID')
+            ->expectsOutputToContain('REQUIRE_PROCESS_HEARTBEATS')
+            ->expectsOutputToContain('HEARTBEAT_MAX_AGE_SECONDS')
             ->expectsOutputToContain('AVATAR_DISK')
             ->expectsOutputToContain('STRIPE_WEBHOOK_SECRET')
             ->assertFailed();

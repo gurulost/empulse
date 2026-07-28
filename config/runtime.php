@@ -2,6 +2,8 @@
 
 return [
     'audit_hash_key' => env('AUDIT_HASH_KEY', env('APP_KEY')),
+    'release_sha' => env('APP_RELEASE_SHA'),
+    'deployment_environment_id' => env('DEPLOYMENT_ENVIRONMENT_ID'),
     'required_tables' => [
         'migrations',
         'jobs',

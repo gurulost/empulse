@@ -201,7 +201,9 @@ No production environment is currently selected or deployed. Repository-level pr
 - `APP_DEBUG=false`, HTTPS, secure session cookies, strict survey validation, durable queue/cache/session drivers, mail, and Stripe secrets are mandatory;
 - migrations run as a one-time release action, never in the image build or web startup;
 - web, worker, and scheduler are distinct processes;
-- `/api/healthz` is liveness and `/api/readyz` checks database/runtime-table readiness;
+- production artifacts declare an exact `APP_RELEASE_SHA` and stable `DEPLOYMENT_ENVIRONMENT_ID`;
+- `/api/healthz` is liveness and `/api/readyz` checks database/runtime-table and process-heartbeat readiness;
+- `php artisan app:verify-deployment https://<host> <sha> <environment-id> --json` fails closed on served-build identity, readiness, or security-header mismatch while explicitly withholding full production sign-off;
 - `AVATAR_DISK` points to persistent/shared storage (or avatar upload is disabled); an ephemeral release filesystem is not durable customer storage;
 - `php artisan app:production-check` fails closed on unsafe configuration.
 
