@@ -1,0 +1,108 @@
+{
+    "schema_version": 1,
+    "scope": "repository_dispatch_recovery_rehearsal",
+    "generated_at_utc": "2026-07-28T18:04:35+00:00",
+    "release_sha": "6212f48b43d10ae26121a273ca3452cbbc5fd5ce",
+    "source_clean": true,
+    "production_signoff": false,
+    "environment": {
+        "app_environment": "testing",
+        "php_version": "8.2.29",
+        "laravel_version": "12.64.0",
+        "database_driver": "pgsql",
+        "database_version": "PostgreSQL 14.21 (Homebrew) on aarch64-apple-darwin25.2.0, compiled by Apple clang version 17.0.0 (clang-1700.6.3.2), 64-bit",
+        "queue_driver": "database",
+        "cache_driver": "array",
+        "mail_driver": "array",
+        "worker_running": false
+    },
+    "profile": {
+        "company_id": 1,
+        "wave_id": 15,
+        "wave_label": "Source-bound 500-person dispatch rehearsal",
+        "target_role": 4,
+        "target_users": 500
+    },
+    "initial_dispatch": {
+        "elapsed_ms": 1685.88,
+        "wave_status": "active",
+        "cycles": 1,
+        "frozen_audience": 500,
+        "assignments": 500,
+        "assignments_with_dispatch_count_1": 500,
+        "queued_jobs": 500,
+        "dispatched_assignment_usage": 500
+    },
+    "same_job_replay": {
+        "elapsed_ms": 24.4,
+        "assignments": 500,
+        "assignments_with_dispatch_count_1": 500,
+        "assignments_with_dispatch_count_over_1": 0,
+        "queued_jobs": 500,
+        "active_respondent_usage_for_month": 500,
+        "dispatched_assignment_usage": 500,
+        "result": "Full wave was already dispatched."
+    },
+    "synthetic_queue_loss_recovery": {
+        "removed_synthetic_queue_rows": 500,
+        "aged_assignment_states_minutes": 20,
+        "report_only_eligible": 500,
+        "report_only_mutated_queue": false,
+        "execute_elapsed_seconds": 0.24,
+        "execute_reported_queued_jobs": 500,
+        "final_queued_jobs": 500,
+        "final_assignments": 500,
+        "final_assignments_with_dispatch_count_over_1": 0,
+        "final_duplicate_assignment_groups": 0
+    },
+    "checks": {
+        "initial_assignment_count": {
+            "expected": 500,
+            "actual": 500,
+            "passed": true
+        },
+        "initial_queue_count": {
+            "expected": 500,
+            "actual": 500,
+            "passed": true
+        },
+        "replay_queue_count_unchanged": {
+            "expected": 500,
+            "actual": 500,
+            "passed": true
+        },
+        "replay_dispatch_counts_unchanged": {
+            "expected_over_1": 0,
+            "actual_over_1": 0,
+            "passed": true
+        },
+        "replay_usage_unchanged": {
+            "expected": 500,
+            "actual": 500,
+            "passed": true
+        },
+        "report_only_recovery": {
+            "expected_mutation": false,
+            "actual_mutation": false,
+            "passed": true
+        },
+        "lost_queue_rows_recovered": {
+            "expected": 500,
+            "actual": 500,
+            "passed": true
+        },
+        "duplicate_assignment_groups": {
+            "expected": 0,
+            "actual": 0,
+            "passed": true
+        }
+    },
+    "passed": true,
+    "limitations": [
+        "This is a local PostgreSQL and database-queue rehearsal, not provider staging or production capacity evidence.",
+        "The worker was intentionally stopped and no mail-provider request was made.",
+        "The array cache does not represent the required durable shared production uniqueness lock; provider staging must repeat the exercise with the selected shared cache and queue.",
+        "The recovery exercise removed only synthetic queue rows in an isolated disposable database.",
+        "This does not prove queue-age SLOs, worker crash recovery under the selected supervisor, provider delivery acceptance, shared-service behavior, alerting, backup/PITR, deployment, or production sign-off."
+    ]
+}

@@ -10,7 +10,7 @@ Current product, architecture, and release truth are separated from historical i
 
 Canonical repository: `gurulost/empulse`
 
-Validated implementation candidate: `2ff15d156f1fc68fa64e0b51c71ece43ffe2ca34`
+Validated implementation candidate: `6212f48b43d10ae26121a273ca3452cbbc5fd5ce`
 
 Implementation branch: `codex/production-readiness`
 
@@ -154,7 +154,19 @@ The new fail-closed `readiness:capacity-rehearsal` command passed from clean com
 
 The checked-in raw report is [`evidence/capacity-rehearsal-2ff15d1.json`](evidence/capacity-rehearsal-2ff15d1.json). Its `production_signoff` field is deliberately `false`. The companion PostgreSQL EXPLAIN ANALYZE profile completed the unfiltered latest-response query in 1.156 ms, selected-wave latest-response query in 2.230 ms, and unfiltered latest-answer query in 7.666 ms. These are local query-shape observations, not provider capacity claims.
 
-Provider-backed roster parsing, 500-person dispatch and queue-age measurement, concurrent submissions, shared cache/session, mail sandbox, Stripe, worker recovery, alerting, backup/PITR, and deployed-topology evidence remain open.
+Provider-backed roster parsing, queue-age measurement, concurrent submissions, shared cache/session, mail sandbox, Stripe, worker recovery, alerting, backup/PITR, and deployed-topology evidence remain open.
+
+### Local full-wave dispatch and recovery rehearsal
+
+Clean implementation commit `6212f48b43d10ae26121a273ca3452cbbc5fd5ce` also passed a 500-employee PostgreSQL/database-queue rehearsal:
+
+- initial full-wave freeze and dispatch created one 500-member cycle, 500 assignments, 500 dispatch-usage records, and 500 queued invitation jobs in 1,685.88 ms;
+- replaying the same `ProcessSurveyWave` payload completed in 24.4 ms and left assignments, per-assignment dispatch counts, queued jobs, and usage totals unchanged;
+- after deliberately removing all 500 synthetic queue rows and aging the assignment delivery state, report-only recovery identified 500 records without mutation;
+- executable recovery restored exactly 500 jobs in 0.24 seconds;
+- no assignment had a dispatch count above one and no wave/user assignment group was duplicated.
+
+The checked-in raw report is [`evidence/dispatch-recovery-rehearsal-6212f48.json`](evidence/dispatch-recovery-rehearsal-6212f48.json). It is intentionally local and non-production: the worker was stopped, no provider request occurred, and the cache was not the durable shared cache required by the production contract. Provider-backed queue age, worker-supervisor failure, mail sandbox, shared-service, and alert evidence remain open.
 
 ## Accepted Risk: Preserved Git History
 

@@ -60,6 +60,18 @@ php artisan analytics:explain {company_id} --wave=wave:{wave_id}
 
 This command exercises the real analytics service and database rows, but it is only one workload in the plan. Its JSON explicitly does not prove roster parsing, dispatch creation, concurrent autosave/submission, shared cache/session, mail acceptance, Stripe, queue age, worker recovery, provider alerts, backup/PITR, or a deployed topology. Those remain separate staging evidence.
 
+## Local dispatch and recovery rehearsal — July 28, 2026
+
+Clean implementation commit `6212f48b43d10ae26121a273ca3452cbbc5fd5ce` passed a synthetic PostgreSQL/database-queue rehearsal:
+
+- one full-wave run froze 500 employees and created 500 assignments plus 500 queued invitation jobs in 1,685.88 ms;
+- replaying the identical wave job left assignments, `dispatch_count`, queued jobs, active-respondent usage, and dispatched-assignment usage unchanged at 500;
+- after all 500 synthetic queue rows were removed and assignment delivery states aged 20 minutes, report-only recovery identified 500 and changed nothing;
+- `survey:invitations:recover --execute` restored exactly 500 jobs in 0.24 seconds;
+- zero assignments had `dispatch_count > 1` and zero duplicate wave/user assignment groups existed.
+
+Raw evidence is [`evidence/dispatch-recovery-rehearsal-6212f48.json`](evidence/dispatch-recovery-rehearsal-6212f48.json). It explicitly records `production_signoff: false`: no worker or mail provider ran, the cache was process-local, and the exercise does not satisfy shared-cache/queue, queue-age, provider, worker-supervisor, or alert gates.
+
 ## Local release-candidate smoke — July 27, 2026
 
 The provider-neutral local PostgreSQL/web-process smoke passed the checked-in `public-readiness.js` profile:
