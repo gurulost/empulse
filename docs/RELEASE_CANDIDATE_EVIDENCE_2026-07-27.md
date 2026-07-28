@@ -10,7 +10,7 @@ Current product, architecture, and release truth are separated from historical i
 
 Canonical repository: `gurulost/empulse`
 
-Validated implementation candidate: `363346d8901e890c35686d01d69fc28a5d092276`
+Validated implementation candidate: `2ff15d156f1fc68fa64e0b51c71ece43ffe2ca34`
 
 Implementation branch: `codex/production-readiness`
 
@@ -142,17 +142,17 @@ This does not replace the 500-respondent provider-staging, queue-age, analytics,
 
 ### Local Pulse analytics rehearsal
 
-The new fail-closed `readiness:capacity-rehearsal` command passed from clean committed source `363346d8901e890c35686d01d69fc28a5d092276` against an isolated PostgreSQL 14 Pulse profile:
+The new fail-closed `readiness:capacity-rehearsal` command passed from clean committed source `2ff15d156f1fc68fa64e0b51c71ece43ffe2ca34` against an isolated PostgreSQL 14 Pulse profile:
 
 - 508 distinct assigned users and 411 submitted, valid responses (80.91% completion);
 - 25,482 answers in the selected completed wave;
 - ten recorded application-service runs after warm-up;
-- analytics p95 1,088.99 ms against the 3,000 ms budget;
+- analytics p95 1,087.80 ms against the 3,000 ms budget;
 - eligible privacy/sample result;
 - zero duplicate assignment, response, or answer groups;
 - zero cross-tenant assignment/response rows or response-to-assignment mismatches.
 
-The checked-in raw report is [`evidence/capacity-rehearsal-363346d.json`](evidence/capacity-rehearsal-363346d.json). Its `production_signoff` field is deliberately `false`. The companion PostgreSQL EXPLAIN ANALYZE profile completed the unfiltered latest-response query in 1.156 ms, selected-wave latest-response query in 2.230 ms, and unfiltered latest-answer query in 7.666 ms. These are local query-shape observations, not provider capacity claims.
+The checked-in raw report is [`evidence/capacity-rehearsal-2ff15d1.json`](evidence/capacity-rehearsal-2ff15d1.json). Its `production_signoff` field is deliberately `false`. The companion PostgreSQL EXPLAIN ANALYZE profile completed the unfiltered latest-response query in 1.156 ms, selected-wave latest-response query in 2.230 ms, and unfiltered latest-answer query in 7.666 ms. These are local query-shape observations, not provider capacity claims.
 
 Provider-backed roster parsing, 500-person dispatch and queue-age measurement, concurrent submissions, shared cache/session, mail sandbox, Stripe, worker recovery, alerting, backup/PITR, and deployed-topology evidence remain open.
 

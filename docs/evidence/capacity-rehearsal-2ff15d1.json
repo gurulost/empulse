@@ -1,8 +1,8 @@
 {
     "schema_version": 1,
     "scope": "repository_capacity_rehearsal",
-    "generated_at_utc": "2026-07-28T17:40:45+00:00",
-    "release_sha": "363346d8901e890c35686d01d69fc28a5d092276",
+    "generated_at_utc": "2026-07-28T17:44:47+00:00",
+    "release_sha": "2ff15d156f1fc68fa64e0b51c71ece43ffe2ca34",
     "source_clean": true,
     "production_signoff": false,
     "environment": {
@@ -28,21 +28,21 @@
     },
     "analytics": {
         "durations_ms": [
-            1033.45,
-            1034.84,
-            1039.48,
-            1047.44,
-            1052.76,
-            1053.29,
-            1061.19,
-            1070.24,
-            1073.73,
-            1088.99
+            1002.4,
+            1021.79,
+            1039.91,
+            1043.96,
+            1043.99,
+            1047.74,
+            1053.18,
+            1076.02,
+            1078.1,
+            1087.8
         ],
-        "minimum_ms": 1033.45,
-        "median_ms": 1052.76,
-        "p95_ms": 1088.99,
-        "maximum_ms": 1088.99,
+        "minimum_ms": 1002.4,
+        "median_ms": 1043.99,
+        "p95_ms": 1087.8,
+        "maximum_ms": 1087.8,
         "availability": [
             "eligible"
         ],
@@ -101,7 +101,7 @@
         },
         "analytics_p95_budget_ms": {
             "expected": "<=3000",
-            "actual": 1088.99,
+            "actual": 1087.8,
             "passed": true
         },
         "duplicate_assignment_groups": {
