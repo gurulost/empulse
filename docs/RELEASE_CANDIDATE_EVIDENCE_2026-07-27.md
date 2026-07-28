@@ -10,7 +10,7 @@ Current product, architecture, and release truth are separated from historical i
 
 Canonical repository: `gurulost/empulse`
 
-Validated implementation candidate: `e9472f0fd218a468a7431eec1a7af078d91d5983`
+Validated implementation candidate: `919d367afe0f2fd789638a235590fc0d386f0dc2`
 
 Implementation branch: `codex/production-readiness`
 
@@ -155,6 +155,18 @@ The new fail-closed `readiness:capacity-rehearsal` command passed from clean com
 The checked-in raw report is [`evidence/capacity-rehearsal-2ff15d1.json`](evidence/capacity-rehearsal-2ff15d1.json). Its `production_signoff` field is deliberately `false`. The companion PostgreSQL EXPLAIN ANALYZE profile completed the unfiltered latest-response query in 1.156 ms, selected-wave latest-response query in 2.230 ms, and unfiltered latest-answer query in 7.666 ms. These are local query-shape observations, not provider capacity claims.
 
 Provider-backed roster parsing, queue-age measurement, concurrent submissions, shared cache/session, mail sandbox, Stripe, worker recovery, alerting, backup/PITR, and deployed-topology evidence remain open.
+
+### Local governed-roster capacity and idempotency rehearsal
+
+Clean implementation commit `919d367afe0f2fd789638a235590fc0d386f0dc2` passed the isolated 500-row PostgreSQL/database-queue path:
+
+- staging stored encrypted source, queued exactly one parse job in 12.21 ms, and did not expose the synthetic email prefix in the stored value;
+- direct parse produced an error-free 500-row create preview in 150.3 ms and cleared the encrypted source;
+- identical preview upload reused the same import;
+- atomic commit created exactly 500 users, compatibility roster rows, stable external identities, account invitations, and invitation jobs in 4,820.07 ms;
+- commit replay added no jobs or invitations, repeated upload after commit remained read-only, one commit audit event existed, and no synthetic user crossed tenants.
+
+The checked-in raw report is [`evidence/roster-rehearsal-919d367.json`](evidence/roster-rehearsal-919d367.json). Its `production_signoff` field is `false`: the parse job was executed directly after queue proof, the worker was stopped, queued invitations were not processed, and no provider request occurred.
 
 ### Local full-wave dispatch and recovery rehearsal
 

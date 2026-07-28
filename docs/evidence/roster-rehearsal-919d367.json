@@ -1,0 +1,178 @@
+{
+    "schema_version": 1,
+    "scope": "repository_roster_capacity_rehearsal",
+    "generated_at_utc": "2026-07-28T18:41:50+00:00",
+    "release_sha": "919d367afe0f2fd789638a235590fc0d386f0dc2",
+    "source_clean": true,
+    "production_signoff": false,
+    "environment": {
+        "app_environment": "testing",
+        "php_version": "8.2.29",
+        "laravel_version": "12.64.0",
+        "database_driver": "pgsql",
+        "database_version": "PostgreSQL 14.21 (Homebrew) on aarch64-apple-darwin25.2.0, compiled by Apple clang version 17.0.0 (clang-1700.6.3.2), 64-bit",
+        "queue_driver": "database",
+        "worker_running": false,
+        "mail_provider_called": false
+    },
+    "profile": {
+        "company_id": 2,
+        "actor_id": 510,
+        "rows": 500,
+        "run_key": "919d367afe0f"
+    },
+    "stage": {
+        "elapsed_ms": 12.21,
+        "queued": true,
+        "job_delta": 1,
+        "ciphertext_bytes": 96256,
+        "plaintext_bytes": 54035,
+        "ciphertext_protected": true
+    },
+    "parse_and_preview": {
+        "elapsed_ms": 150.3,
+        "status": "preview_ready",
+        "rows": 500,
+        "create": 500,
+        "errors": 0,
+        "preview_json_bytes": 265330,
+        "encrypted_source_cleared": true
+    },
+    "same_file_preview": {
+        "elapsed_ms": 4.06,
+        "duplicate": true,
+        "same_import": true
+    },
+    "commit": {
+        "elapsed_ms": 4820.07,
+        "users_created": 500,
+        "workers_created": 500,
+        "external_identities_created": 500,
+        "account_invitations_created": 500,
+        "invitation_jobs_queued": 500
+    },
+    "commit_replay": {
+        "elapsed_ms": 6.3,
+        "jobs_unchanged": true,
+        "invitations_unchanged": true
+    },
+    "checks": {
+        "source_checkout": {
+            "expected": {
+                "recognized_commit": true,
+                "clean": true
+            },
+            "actual": {
+                "recognized_commit": true,
+                "clean": true
+            },
+            "passed": true
+        },
+        "database_engine": {
+            "expected": "pgsql",
+            "actual": "pgsql",
+            "passed": true
+        },
+        "initial_stage_queued_once": {
+            "expected": {
+                "queued": true,
+                "duplicate": false,
+                "job_delta": 1
+            },
+            "actual": {
+                "queued": true,
+                "duplicate": false,
+                "job_delta": 1
+            },
+            "passed": true
+        },
+        "encrypted_staging_cleared_after_parse": {
+            "expected": true,
+            "actual": true,
+            "passed": true
+        },
+        "preview_row_contract": {
+            "expected": {
+                "status": "preview_ready",
+                "rows": 500,
+                "create": 500,
+                "errors": 0
+            },
+            "actual": {
+                "status": "preview_ready",
+                "rows": 500,
+                "create": 500,
+                "errors": 0
+            },
+            "passed": true
+        },
+        "same_file_preview_idempotency": {
+            "expected": {
+                "duplicate": true,
+                "same_import": true,
+                "import_count": 1
+            },
+            "actual": {
+                "duplicate": true,
+                "same_import": true,
+                "import_count": 1
+            },
+            "passed": true
+        },
+        "atomic_commit_counts": {
+            "expected": {
+                "users": 500,
+                "workers": 500,
+                "external_identities": 500,
+                "invitations": 500,
+                "invitation_job_delta": 500
+            },
+            "actual": {
+                "users": 500,
+                "workers": 500,
+                "external_identities": 500,
+                "invitations": 500,
+                "invitation_job_delta": 500
+            },
+            "passed": true
+        },
+        "commit_replay_idempotency": {
+            "expected": {
+                "jobs_unchanged": true,
+                "invitations_unchanged": true,
+                "commit_audit_events": 1
+            },
+            "actual": {
+                "jobs_unchanged": true,
+                "invitations_unchanged": true,
+                "commit_audit_events": 1
+            },
+            "passed": true
+        },
+        "same_file_after_commit_is_read_only": {
+            "expected": {
+                "duplicate": true,
+                "status": "committed",
+                "confirmation_token": null
+            },
+            "actual": {
+                "duplicate": true,
+                "status": "committed",
+                "confirmation_token": null
+            },
+            "passed": true
+        },
+        "tenant_alignment": {
+            "expected_cross_tenant_users": 0,
+            "actual_cross_tenant_users": 0,
+            "passed": true
+        }
+    },
+    "passed": true,
+    "limitations": [
+        "This is an isolated local PostgreSQL/database-queue rehearsal, not provider staging or production evidence.",
+        "The parse job was executed directly after proving it was queued; no worker supervisor was running.",
+        "Account invitation jobs were queued but not processed, and no mail-provider request was made.",
+        "This does not prove queue-age SLOs, shared cache/queue behavior, worker crash recovery under the selected supervisor, provider delivery acceptance, alerting, deployment, or production sign-off."
+    ]
+}

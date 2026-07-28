@@ -51,6 +51,19 @@ The command refuses production, non-PostgreSQL databases, dirty/unrecognized sou
 
 The parse job is intentionally executed directly after its queue insertion is measured, and invitation jobs remain unprocessed. This proves repository staging/parse/commit/idempotency behavior but not queue age, worker-supervisor recovery, shared cache/queue behavior, provider delivery, or production capacity.
 
+### Local result — July 28, 2026
+
+Clean implementation commit `919d367afe0f2fd789638a235590fc0d386f0dc2` passed the 500-row rehearsal:
+
+- encrypted staging queued one parse job in 12.21 ms and exposed no plaintext in the stored value;
+- direct parsing produced an error-free 500-create preview in 150.3 ms, then cleared the encrypted source;
+- repeated-file preview reused the same import in 4.06 ms;
+- atomic commit created exactly 500 users, roster rows, external identities, account invitations, and queued invitation jobs in 4,820.07 ms;
+- commit replay completed in 6.3 ms without adding jobs or invitations, and the import retained one commit audit event;
+- no synthetic user crossed the selected company boundary.
+
+Raw evidence is [`evidence/roster-rehearsal-919d367.json`](evidence/roster-rehearsal-919d367.json). The worker remained stopped and no invitation job or mail-provider request ran, so `production_signoff` remains `false`.
+
 ## Bounded analytics rehearsal
 
 The repository includes a fail-closed rehearsal for the Pulse analytics slice. Run it only from a clean committed checkout against an isolated PostgreSQL database. A disposable local profile can be created with:
