@@ -89,6 +89,17 @@ The command refuses production, non-PostgreSQL databases, dirty/unrecognized sou
 
 A passing report requires one autosave success plus one conflict, one revision increment, preservation of the winning payload hash, one final-submission success plus one completed conflict, exactly one response and complete unique answer-key set, one completed-response usage event, assignment completion, and token revocation. The report always records `production_signoff: false`; it does not prove load-balancer, shared-session/cache, provider, queue-age, worker-supervisor, or alert behavior.
 
+### Local result — July 28, 2026
+
+Clean implementation commit `e9472f0fd218a468a7431eec1a7af078d91d5983` passed the paired-process rehearsal with a 62-answer canonical response:
+
+- the autosave race completed in 153.24 ms with one save and one conflict, advanced the revision exactly once, and preserved the expected 62-answer payload hash;
+- the final-submission race completed in 203.44 ms with one submit and one completed conflict;
+- exactly one response, 62 unique answers, and one completed-response usage event committed;
+- the assignment completed and its access token was revoked.
+
+Raw evidence is [`evidence/submission-concurrency-e9472f0.json`](evidence/submission-concurrency-e9472f0.json). It remains local-only with `production_signoff: false`; shared/deployed service behavior and provider gates remain open.
+
 ## Local release-candidate smoke — July 27, 2026
 
 The provider-neutral local PostgreSQL/web-process smoke passed the checked-in `public-readiness.js` profile:

@@ -1,0 +1,151 @@
+{
+    "schema_version": 1,
+    "scope": "repository_submission_concurrency_rehearsal",
+    "generated_at_utc": "2026-07-28T18:26:21+00:00",
+    "release_sha": "e9472f0fd218a468a7431eec1a7af078d91d5983",
+    "source_clean": true,
+    "production_signoff": false,
+    "environment": {
+        "app_environment": "testing",
+        "php_version": "8.2.29",
+        "laravel_version": "12.64.0",
+        "database_driver": "pgsql",
+        "database_version": "PostgreSQL 14.21 (Homebrew) on aarch64-apple-darwin25.2.0, compiled by Apple clang version 17.0.0 (clang-1700.6.3.2), 64-bit",
+        "processes_per_race": 2
+    },
+    "profile": {
+        "autosave_assignment_id": 7097,
+        "submit_assignment_id": 7098,
+        "source_response_id": 1,
+        "survey_version_id": 1,
+        "autosave_answer_count": 62,
+        "submission_answer_count": 62
+    },
+    "autosave_race": {
+        "elapsed_ms": 153.24,
+        "worker_results": [
+            {
+                "worker_id": "one",
+                "status": "conflict",
+                "revision": 1,
+                "payload_sha256": "91c2dea3daee8a12bedd384f1dda79d7aa56aa032b3b27b9a5fddb45258c8d08",
+                "elapsed_ms": 1.53
+            },
+            {
+                "worker_id": "two",
+                "status": "saved",
+                "revision": 1,
+                "payload_sha256": "91c2dea3daee8a12bedd384f1dda79d7aa56aa032b3b27b9a5fddb45258c8d08",
+                "elapsed_ms": 1.21
+            }
+        ],
+        "final_revision": 1,
+        "final_answer_count": 62,
+        "final_payload_sha256": "91c2dea3daee8a12bedd384f1dda79d7aa56aa032b3b27b9a5fddb45258c8d08"
+    },
+    "submission_race": {
+        "elapsed_ms": 203.44,
+        "worker_results": [
+            {
+                "worker_id": "one",
+                "status": "submitted",
+                "response_id": 4613,
+                "payload_sha256": "91c2dea3daee8a12bedd384f1dda79d7aa56aa032b3b27b9a5fddb45258c8d08",
+                "elapsed_ms": 53.45
+            },
+            {
+                "worker_id": "two",
+                "status": "conflict",
+                "conflict": "This survey has already been completed.",
+                "payload_sha256": "91c2dea3daee8a12bedd384f1dda79d7aa56aa032b3b27b9a5fddb45258c8d08",
+                "elapsed_ms": 51.57
+            }
+        ],
+        "response_count": 1,
+        "answer_count": 62,
+        "usage_event_count": 1,
+        "assignment_status": "completed",
+        "token_revoked": true
+    },
+    "checks": {
+        "source_checkout": {
+            "expected": {
+                "recognized_commit": true,
+                "clean": true
+            },
+            "actual": {
+                "recognized_commit": true,
+                "clean": true
+            },
+            "passed": true
+        },
+        "database_engine": {
+            "expected": "pgsql",
+            "actual": "pgsql",
+            "passed": true
+        },
+        "autosave_one_winner_one_conflict": {
+            "expected": {
+                "saved": 1,
+                "conflict": 1,
+                "error": 0
+            },
+            "actual": {
+                "saved": 1,
+                "conflict": 1,
+                "error": 0
+            },
+            "passed": true
+        },
+        "autosave_revision_advanced_once": {
+            "expected": 1,
+            "actual": 1,
+            "passed": true
+        },
+        "autosave_payload_preserved": {
+            "expected_sha256": "91c2dea3daee8a12bedd384f1dda79d7aa56aa032b3b27b9a5fddb45258c8d08",
+            "actual_sha256": "91c2dea3daee8a12bedd384f1dda79d7aa56aa032b3b27b9a5fddb45258c8d08",
+            "passed": true
+        },
+        "submission_one_winner_one_conflict": {
+            "expected": {
+                "submitted": 1,
+                "conflict": 1,
+                "error": 0
+            },
+            "actual": {
+                "submitted": 1,
+                "conflict": 1,
+                "error": 0
+            },
+            "passed": true
+        },
+        "single_response": {
+            "expected": 1,
+            "actual": 1,
+            "passed": true
+        },
+        "single_complete_answer_set": {
+            "expected_count": 62,
+            "actual_count": 62,
+            "keys_match": true,
+            "passed": true
+        },
+        "single_completed_response_usage_event": {
+            "expected": 1,
+            "actual": 1,
+            "passed": true
+        },
+        "assignment_completed_and_token_revoked": {
+            "expected": true,
+            "actual": true,
+            "passed": true
+        }
+    },
+    "passed": true,
+    "limitations": [
+        "This is an isolated local PostgreSQL process race, not provider staging or production evidence.",
+        "It does not exercise a deployed load balancer, shared session/cache service, mail provider, Stripe, queue-age SLO, worker supervisor, or alert routing.",
+        "It mutates only the two explicitly selected pending assignments and must never be run in production."
+    ]
+}

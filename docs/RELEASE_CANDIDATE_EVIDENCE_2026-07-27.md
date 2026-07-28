@@ -10,7 +10,7 @@ Current product, architecture, and release truth are separated from historical i
 
 Canonical repository: `gurulost/empulse`
 
-Validated implementation candidate: `6212f48b43d10ae26121a273ca3452cbbc5fd5ce`
+Validated implementation candidate: `e9472f0fd218a468a7431eec1a7af078d91d5983`
 
 Implementation branch: `codex/production-readiness`
 
@@ -167,6 +167,16 @@ Clean implementation commit `6212f48b43d10ae26121a273ca3452cbbc5fd5ce` also pass
 - no assignment had a dispatch count above one and no wave/user assignment group was duplicated.
 
 The checked-in raw report is [`evidence/dispatch-recovery-rehearsal-6212f48.json`](evidence/dispatch-recovery-rehearsal-6212f48.json). It is intentionally local and non-production: the worker was stopped, no provider request occurred, and the cache was not the durable shared cache required by the production contract. Provider-backed queue age, worker-supervisor failure, mail sandbox, shared-service, and alert evidence remain open.
+
+### Local autosave and final-submission concurrency rehearsal
+
+Clean implementation commit `e9472f0fd218a468a7431eec1a7af078d91d5983` passed a real paired-process PostgreSQL race against unused synthetic assignments:
+
+- both autosave processes validated the same 62-answer payload and expected revision; one saved, one returned a conflict, the revision advanced once, and the stored payload hash matched;
+- both final-submission processes validated the same complete payload before release; one committed and one returned “already completed” after the assignment row lock;
+- the durable result was exactly one response, 62 answers, one completed-response usage event, a completed assignment, and a revoked access token.
+
+The checked-in raw report is [`evidence/submission-concurrency-e9472f0.json`](evidence/submission-concurrency-e9472f0.json). It explicitly records `production_signoff: false`: this was an isolated local PostgreSQL race, not a deployed load-balancer/shared-session test or a provider-backed exercise.
 
 ## Accepted Risk: Preserved Git History
 
