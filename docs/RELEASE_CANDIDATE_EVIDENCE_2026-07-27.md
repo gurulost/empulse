@@ -10,7 +10,7 @@ Current product, architecture, and release truth are separated from historical i
 
 Canonical repository: `gurulost/empulse`
 
-Validated implementation candidate: `919d367afe0f2fd789638a235590fc0d386f0dc2`
+Validated implementation candidate: `3dcf75a8bb702d05c28ad855a6a28aec6ab1f71a`
 
 Implementation branch: `codex/production-readiness`
 
@@ -37,6 +37,8 @@ The unsafe legacy roster importer remains removed. Its replacement uses encrypte
 - `composer test` on PostgreSQL 14: 200 tests, 1,121 assertions passed.
 - Browser gate: all 17 role, roster-import authorization, route-failure, privacy-acknowledgment, required-answer, submission, completed-state, automated accessibility, admin-governance, and north-star action-loop journeys passed together against a fresh seeded PostgreSQL application with real web and queue processes. The baseline respondent journey answered all 62 canonical items and persisted exactly 62 answers. The north-star journey captured evidence, created an owned dated action and measurement plan, dispatched a governed three-item Pulse, collected five completions, evaluated a comparable non-causal outcome, and verified the WorkFit-admin value report through the UI.
 - CI is configured to repeat the database and process journey on PostgreSQL 16 with real web and worker processes.
+- Clean implementation `3dcf75a8bb702d05c28ad855a6a28aec6ab1f71a` binds a future artifact to an exact `APP_RELEASE_SHA` and stable `DEPLOYMENT_ENVIRONMENT_ID`. Production configuration rejects absent/malformed identity, disabled process-heartbeat enforcement, or a heartbeat-age policy outside 60–600 seconds. Health JSON and `X-Empulse-Release` expose the configured non-secret identity consistently.
+- `app:verify-deployment` is an external fail-closed surface check for the canonical HTTPS origin, exact served SHA/environment, liveness/readiness, database/runtime-table status, fresh scheduler/worker heartbeats, and login security headers. Its machine-readable report always sets `production_signoff=false` and names the mail, Stripe, load, backup, rollback, alert, accessibility, privacy, methodology, legal, and commercial gates it does not prove. No deployed target has been exercised.
 
 ### Code and dependencies
 
