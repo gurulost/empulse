@@ -413,6 +413,7 @@ Do not remove a seam merely because it looks old. First identify its current rou
 | Roster or hierarchy | `TeamController`, `RosterImportController`, `UserService`, `RosterImportService`, team Vue components, tenant/import tests |
 | Survey experience | `SurveyDefinitionService`, `SurveyController`, survey Vue components, validation tests |
 | WorkFit operations | `OnboardingReportService`, WorkFit admin components, admin feature tests |
+| Capacity evidence | `CapacityRehearsalService`, `readiness:capacity-rehearsal`, capacity and EXPLAIN runbooks |
 
 ## Verification
 
@@ -432,6 +433,7 @@ For analytics query changes, also use:
 
 ```bash
 php artisan analytics:explain {company_id} [--wave=...] [--no-analyze]
+php artisan readiness:capacity-rehearsal {company_id} --wave=wave:{wave_id}
 ```
 
-Follow [`ANALYTICS_EXPLAIN_CHECKLIST.md`](ANALYTICS_EXPLAIN_CHECKLIST.md) before treating a production-scale analytics change as ready.
+`CapacityRehearsalService` measures the real company/wave analytics path at a declared cohort threshold and checks assignment/response/answer uniqueness, tenant alignment, and response-to-assignment consistency. Its report binds the database engine/version and clean source SHA, fails closed on privacy suppression or a p95 budget miss, and permanently declares that it is not production sign-off. Follow [`CAPACITY_AND_PERFORMANCE_TEST_PLAN.md`](CAPACITY_AND_PERFORMANCE_TEST_PLAN.md) and [`ANALYTICS_EXPLAIN_CHECKLIST.md`](ANALYTICS_EXPLAIN_CHECKLIST.md) before treating a production-scale analytics change as ready.

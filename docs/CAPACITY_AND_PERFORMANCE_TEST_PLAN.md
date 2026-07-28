@@ -32,6 +32,32 @@ Each profile needs frozen cohorts, realistic completion/missingness, delivery ev
 
 Attach raw k6 output, database metrics, EXPLAIN plans, queue measurements, release SHA, environment shape, and deviations to the release packet.
 
+## Bounded analytics rehearsal
+
+The repository includes a fail-closed rehearsal for the Pulse analytics slice. Run it only from a clean committed checkout against an isolated PostgreSQL database. A disposable local profile can be created with:
+
+```bash
+php artisan migrate:fresh --force
+php artisan demo:seed --import-instrument --employees=500 --months=11 --force
+```
+
+Select a completed wave with at least 500 assignments, then run:
+
+```bash
+php artisan readiness:capacity-rehearsal {company_id} \
+  --wave=wave:{wave_id} \
+  --iterations=10 \
+  --minimum-invited=500 \
+  --analytics-p95-ms=3000 \
+  --output=/path/to/release-packet/capacity-rehearsal.json
+
+php artisan analytics:explain {company_id} --wave=wave:{wave_id}
+```
+
+`readiness:capacity-rehearsal` records the exact source SHA, source cleanliness, database engine/version, cohort and answer counts, repeated analytics timings, privacy availability, and duplicate/cross-tenant/response-assignment findings. It fails on an uncommitted or unidentified checkout, a non-PostgreSQL database, fewer than 500 assigned users, suppressed/ineligible analytics, a p95 budget miss, or any bounded integrity finding. It never sets `production_signoff` to true.
+
+This command exercises the real analytics service and database rows, but it is only one workload in the plan. Its JSON explicitly does not prove roster parsing, dispatch creation, concurrent autosave/submission, shared cache/session, mail acceptance, Stripe, queue age, worker recovery, provider alerts, backup/PITR, or a deployed topology. Those remain separate staging evidence.
+
 ## Local release-candidate smoke — July 27, 2026
 
 The provider-neutral local PostgreSQL/web-process smoke passed the checked-in `public-readiness.js` profile:

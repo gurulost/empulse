@@ -189,6 +189,7 @@ npm run test:e2e
 CI runs migrations and the backend suite against PostgreSQL 16, checklist-structure validation, formatting, scoped critical-path static analysis, dependency audits, a full-history secret-policy check, frontend lint/unit/build gates, readiness, and Playwright role/failure/respondent/accessibility journeys with real web and worker processes. The history policy requires the unignored baseline to equal the three exact owner-approved revoked-credential fingerprints, then proves that the fingerprint-scoped scan passes and an unrecognized synthetic finding fails. Current-source and proposed-change scans remain strict. Immediately before an accountable release sign-off, run `php artisan readiness:checklist --require-signoff`; it fails unless every checklist item is either verified or explicitly accepted with an owner and rationale.
 
 Analytics query changes also require the EXPLAIN workflow in [`docs/ANALYTICS_EXPLAIN_CHECKLIST.md`](docs/ANALYTICS_EXPLAIN_CHECKLIST.md).
+For a clean-checkout, PostgreSQL-backed 500-respondent analytics and integrity rehearsal, use `php artisan readiness:capacity-rehearsal {company_id} --wave=wave:{wave_id}` and follow [`docs/CAPACITY_AND_PERFORMANCE_TEST_PLAN.md`](docs/CAPACITY_AND_PERFORMANCE_TEST_PLAN.md). That bounded command is not provider staging or production sign-off.
 
 ## Production runtime contract
 
