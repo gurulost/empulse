@@ -20,6 +20,8 @@ class ParseRosterImport implements ShouldBeUnique, ShouldQueue
 
     public array $backoff = [30, 120, 300];
 
+    public int $uniqueFor = 900;
+
     public function __construct(public int $rosterImportId) {}
 
     public function uniqueId(): string
@@ -34,6 +36,7 @@ class ParseRosterImport implements ShouldBeUnique, ShouldQueue
             return;
         }
 
+        $import->touch();
         $service->parse($import);
     }
 

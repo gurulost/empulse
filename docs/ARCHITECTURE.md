@@ -108,7 +108,7 @@ Registration transactionally creates a company, owner identity, roster projectio
 
 Managers can add members individually or use the governed CSV importer. Import source is encrypted while queued and discarded after parsing. `roster_external_identities` provides stable company-scoped identity matching. Every row is classified as create, update, reactivate, deactivate, unchanged, or invalid before mutation; unknown departments, unresolved or ineligible supervisors, duplicate identities, and cross-company email reuse fail closed. Deactivation must be explicit—absence from a file has no effect—and manager deactivation stays in the billing/owner-transfer workflow.
 
-An error-free preview receives a short-lived one-time confirmation token. Commit locks the preview, verifies that target fingerprints, departments, supervisors, and emails have not changed, and applies all compatibility and effective-dated organization changes in one transaction. New and reactivated identities receive account-only invitations through the queue using a stable provider idempotency key. Queue submission cannot roll back an already committed roster; the scheduled `account:invitations:recover --execute` command finds eligible pending, failed, or interrupted deliveries and safely requeues them.
+An error-free preview receives a short-lived one-time confirmation token. Commit locks the preview, verifies that target fingerprints, departments, supervisors, and emails have not changed, and applies all compatibility and effective-dated organization changes in one transaction. New and reactivated identities receive account-only invitations through the queue using a stable provider idempotency key. Parse jobs are unique for a bounded 15-minute recovery window; `roster:imports:recover` reports or requeues only stale encrypted parsing work, and an identical re-upload can rehydrate an unexpectedly failed import without creating a second import record. Queue submission cannot roll back an already committed roster; the scheduled `account:invitations:recover --execute` command finds eligible pending, failed, or interrupted deliveries and safely requeues them.
 
 Preview and commit events enter the tamper-evident company audit stream; sanitized row results are downloadable as CSV. Detailed import rows and staged source expire after 30 days through the same hash-confirmed, legal-hold-aware retention workflow used for other privacy data. The durable import summary and audit evidence remain, but purged previews cannot be confirmed or downloaded.
 
@@ -319,7 +319,7 @@ A complete production runtime requires:
 2. queue worker;
 3. scheduler.
 
-Without the worker, survey/account invitations and wave jobs stall. Without the scheduler, recurring waves do not become jobs and interrupted account- or survey-invitation deliveries are not recovered.
+Without the worker, roster parsing, survey/account invitations, and wave jobs stall. Without the scheduler, recurring waves do not become jobs and interrupted roster parsing or account/survey invitation deliveries are not recovered.
 
 Operational commands:
 
@@ -327,11 +327,12 @@ Operational commands:
 php artisan queue:work --tries=3 --backoff=10 --timeout=120
 php artisan schedule:run
 php artisan survey:waves:schedule
+php artisan roster:imports:recover
 php artisan account:invitations:recover
 php artisan survey:invitations:recover
 ```
 
-The scheduler should normally invoke wave scheduling and both recovery commands through [`routes/console.php`](../routes/console.php), not through a second external cadence. A frozen assignment is marked dispatched and counted under the organization entitlement once; replaying the same wave job does not increment its dispatch count or queue another invitation. Survey invitation delivery jobs are unique per assignment for the 15-minute recovery interval. The scheduled recovery command finds stale queued, sending, or failed work, remains report-only without `--execute`, and reuses the existing assignment/delivery idempotency contract.
+The scheduler should normally invoke wave scheduling and all three recovery commands through [`routes/console.php`](../routes/console.php), not through a second external cadence. A frozen assignment is marked dispatched and counted under the organization entitlement once; replaying the same wave job does not increment its dispatch count or queue another invitation. Survey invitation delivery jobs are unique per assignment for the 15-minute recovery interval. The scheduled recovery commands find stale eligible work, remain report-only without `--execute`, and reuse the relevant uniqueness or delivery-idempotency contract.
 
 PostgreSQL is the production database authority. The image build does not run migrations. A release process runs `app:production-check`, then applies migrations once, then starts independently supervised web, worker, and scheduler processes. `/api/healthz` is process liveness; `/api/readyz` checks database and required runtime tables without exposing credentials or exception detail.
 
@@ -435,10 +436,13 @@ For analytics query changes, also use:
 ```bash
 php artisan analytics:explain {company_id} [--wave=...] [--no-analyze]
 php artisan readiness:capacity-rehearsal {company_id} --wave=wave:{wave_id}
+php artisan readiness:roster-rehearsal {company_id} {actor_id} --rows=500 --execute
 php artisan readiness:submission-concurrency \
   {autosave_assignment_id} {submit_assignment_id} {source_response_id} --execute
 ```
 
 `CapacityRehearsalService` measures the real company/wave analytics path at a declared cohort threshold and checks assignment/response/answer uniqueness, tenant alignment, and response-to-assignment consistency. Its report binds the database engine/version and clean source SHA, fails closed on privacy suppression or a p95 budget miss, and permanently declares that it is not production sign-off. Follow [`CAPACITY_AND_PERFORMANCE_TEST_PLAN.md`](CAPACITY_AND_PERFORMANCE_TEST_PLAN.md) and [`ANALYTICS_EXPLAIN_CHECKLIST.md`](ANALYTICS_EXPLAIN_CHECKLIST.md) before treating a production-scale analytics change as ready.
+
+`readiness:roster-rehearsal` creates a synthetic roster only in an otherwise empty isolated company. It binds evidence to clean source and PostgreSQL, measures the encrypted stage, direct parse/preview, same-file reuse, atomic commit, and replay, and requires exact user/worker/external-identity/invitation/job/audit cardinality with no cross-tenant rows. It deliberately leaves queued account invitations unprocessed and cannot establish mail-provider or worker-supervisor evidence.
 
 `readiness:submission-concurrency` is a destructive isolated-data check, not a production command. From a clean PostgreSQL checkout, it validates a same-version synthetic answer set, releases paired PHP processes at one barrier, and proves one autosave winner/one stale conflict plus one final-submission winner/one completed conflict. Its report also checks the final draft revision and payload hash, response/answer cardinality, completed-response usage idempotency, completion state, and token revocation. It refuses production, SQLite, dirty source, missing privacy acknowledgment, previously used assignments, and execution without `--execute`.

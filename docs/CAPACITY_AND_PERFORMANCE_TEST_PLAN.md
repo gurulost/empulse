@@ -34,6 +34,23 @@ Each profile needs frozen cohorts, realistic completion/missingness, delivery ev
 
 Attach raw k6 output, database metrics, EXPLAIN plans, queue measurements, release SHA, environment shape, and deviations to the release packet.
 
+## Reproducible governed-roster rehearsal
+
+Use an otherwise empty isolated company with one active manager:
+
+```bash
+php artisan readiness:roster-rehearsal \
+  {company_id} \
+  {actor_id} \
+  --rows=500 \
+  --execute \
+  --output=/path/to/release-packet/roster-rehearsal.json
+```
+
+The command refuses production, non-PostgreSQL databases, dirty/unrecognized source, non-manager actors, non-empty target companies, or mutation without `--execute`. It generates only `example.invalid` synthetic identities. A passing report requires one encrypted queued stage, source cleanup after parse, an error-free 500-row preview, one import record under repeated-file upload, exact transactional user/worker/external-identity/invitation/job counts, idempotent commit replay, one commit audit event, and zero cross-tenant synthetic users.
+
+The parse job is intentionally executed directly after its queue insertion is measured, and invitation jobs remain unprocessed. This proves repository staging/parse/commit/idempotency behavior but not queue age, worker-supervisor recovery, shared cache/queue behavior, provider delivery, or production capacity.
+
 ## Bounded analytics rehearsal
 
 The repository includes a fail-closed rehearsal for the Pulse analytics slice. Run it only from a clean committed checkout against an isolated PostgreSQL database. A disposable local profile can be created with:

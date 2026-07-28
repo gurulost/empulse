@@ -145,6 +145,8 @@ php artisan app:production-check
   - commit a staged roster preview and confirm account-invitation jobs leave the queue
   - run `php artisan account:invitations:recover` and confirm it is report-only
   - simulate an eligible failed or interrupted delivery, run `php artisan account:invitations:recover --execute`, and confirm one idempotent recovery job is queued
+  - run `php artisan roster:imports:recover` and confirm it is report-only
+  - simulate a stale encrypted `parsing` import, run `php artisan roster:imports:recover --execute`, and confirm one unique parse job is queued
 - Verify roster-import retention in a disposable staging fixture:
   - run the retention command in dry-run mode and review the target list and hash
   - execute only with the exact reviewed hash

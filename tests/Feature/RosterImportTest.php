@@ -13,10 +13,12 @@ use App\Services\AccountInvitationService;
 use App\Services\OrganizationService;
 use App\Services\RetentionService;
 use App\Services\RosterImportService;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class RosterImportTest extends TestCase
@@ -297,6 +299,88 @@ class RosterImportTest extends TestCase
                 ->whereType('confirmation_token', 'string')
                 ->etc());
         $this->assertNull($import->fresh()->source_csv);
+    }
+
+    public function test_same_file_rehydrates_and_requeues_an_unexpected_failed_import(): void
+    {
+        Queue::fake();
+        $rows = ['external_id,name,email,role'];
+        foreach (range(1, 101) as $index) {
+            $rows[] = "RETRY-{$index},Retry Employee {$index},retry{$index}@import.test,employee";
+        }
+        $csv = implode("\n", $rows);
+
+        $this->actingAs($this->manager)
+            ->post('/team/api/roster-imports', ['file' => $this->csv($csv)])
+            ->assertAccepted();
+
+        $import = RosterImport::firstOrFail();
+        $import->update([
+            'status' => 'failed',
+            'source_csv' => null,
+            'failed_at' => now(),
+            'failure_summary' => 'Synthetic worker failure.',
+        ]);
+
+        $retry = $this->actingAs($this->manager)
+            ->post('/team/api/roster-imports', ['file' => $this->csv($csv)]);
+
+        $retry->assertAccepted()
+            ->assertJsonPath('duplicate', true)
+            ->assertJsonPath('queued', true)
+            ->assertJsonPath('data.status', 'parsing');
+        $this->assertDatabaseCount('roster_imports', 1);
+        $this->assertNotNull($import->fresh()->source_csv);
+        $this->assertNull($import->fresh()->failed_at);
+        $this->assertNull($import->fresh()->failure_summary);
+        Queue::assertPushed(
+            ParseRosterImport::class,
+            fn (ParseRosterImport $job): bool => $job->rosterImportId === $import->id
+        );
+    }
+
+    public function test_stale_roster_parse_recovery_is_report_only_then_queues_one_unique_job(): void
+    {
+        Queue::fake();
+        $import = RosterImport::create([
+            'public_id' => (string) Str::uuid(),
+            'company_id' => $this->company->id,
+            'created_by' => $this->manager->id,
+            'original_filename' => 'stale.csv',
+            'source_sha256' => hash('sha256', 'stale roster'),
+            'source_csv' => "external_id,name,email,role\nSTALE-1,Stale Person,stale@import.test,employee\n",
+            'status' => 'parsing',
+        ]);
+        $import->timestamps = false;
+        $import->updated_at = now()->subMinutes(16);
+        $import->save();
+
+        $this->artisan('roster:imports:recover')
+            ->expectsOutputToContain('"eligible":1')
+            ->expectsOutputToContain('Report only')
+            ->assertSuccessful();
+        Queue::assertNotPushed(ParseRosterImport::class);
+
+        $this->artisan('roster:imports:recover', ['--execute' => true])
+            ->expectsOutputToContain('Queued 1 roster import parse job')
+            ->assertSuccessful();
+        Queue::assertPushed(
+            ParseRosterImport::class,
+            fn (ParseRosterImport $job): bool => $job->rosterImportId === $import->id
+        );
+        $this->assertTrue($import->fresh()->updated_at->isAfter(now()->subMinute()));
+
+        $commands = collect(app(Schedule::class)->events())
+            ->map(fn ($event) => $event->command ?? '')
+            ->filter();
+        $this->assertTrue(
+            $commands->contains(
+                fn (string $command): bool => str_contains(
+                    $command,
+                    'roster:imports:recover --execute'
+                )
+            )
+        );
     }
 
     public function test_review_rows_are_purged_by_the_hash_gated_retention_workflow(): void

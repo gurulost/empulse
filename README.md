@@ -114,7 +114,7 @@ The workflow is deliberately two-phase:
 
 Invalid headers, duplicate identities, cross-company email conflicts, unresolved supervisors, unknown departments, self-deactivation, and manager deactivation fail closed before any roster mutation. A changed roster invalidates the preview. Successful commits update the compatibility roster and effective-dated organization history in one transaction, audit the import, and queue account-only invitations. Large files are parsed by the worker; the maximum is 1 MB and 1,000 rows.
 
-Detailed preview/result rows expire after 30 days through the hash-confirmed retention workflow; the import summary and audit evidence remain. Failed or interrupted account-invitation deliveries are found by the scheduled `account:invitations:recover --execute` command and requeued with the original idempotency key.
+Detailed preview/result rows expire after 30 days through the hash-confirmed retention workflow; the import summary and audit evidence remain. Stale encrypted parsing work is found by the report-first `roster:imports:recover` command, while a same-file re-upload can safely rehydrate an unexpectedly failed import. Failed or interrupted account-invitation deliveries are found by `account:invitations:recover --execute` and requeued with the original idempotency key.
 
 ## Demo data
 
@@ -157,7 +157,7 @@ php artisan queue:work --tries=3 --backoff=10 --timeout=120
 php artisan schedule:run
 ```
 
-The production scheduler should invoke `php artisan schedule:run` every minute. It runs wave scheduling plus account- and survey-invitation recovery. Both recovery commands are report-only unless the scheduler supplies `--execute`; they requeue only stale eligible records and rely on stable delivery idempotency. Without a worker and scheduler, recurring measurement and queued account setup or survey delivery can stall.
+The production scheduler should invoke `php artisan schedule:run` every minute. It runs wave scheduling plus roster-parse, account-invitation, and survey-invitation recovery. All three recovery commands are report-only unless the scheduler supplies `--execute`; they requeue only stale eligible records and rely on bounded uniqueness or stable delivery idempotency. Without a worker and scheduler, roster parsing, recurring measurement, and queued account setup or survey delivery can stall.
 
 Full waves use manual cadence. Recurring and action-linked follow-up waves require the company-level `recurring_waves` entitlement. Governed Pulse variants limit questions to the predeclared metric, freeze their audience, cap reminders, and enforce respondent rest/rolling-frequency rules.
 
@@ -191,6 +191,7 @@ CI runs migrations and the backend suite against PostgreSQL 16, checklist-struct
 Analytics query changes also require the EXPLAIN workflow in [`docs/ANALYTICS_EXPLAIN_CHECKLIST.md`](docs/ANALYTICS_EXPLAIN_CHECKLIST.md).
 For a clean-checkout, PostgreSQL-backed 500-respondent analytics and integrity rehearsal, use `php artisan readiness:capacity-rehearsal {company_id} --wave=wave:{wave_id}` and follow [`docs/CAPACITY_AND_PERFORMANCE_TEST_PLAN.md`](docs/CAPACITY_AND_PERFORMANCE_TEST_PLAN.md). That bounded command is not provider staging or production sign-off.
 The same plan documents `php artisan readiness:submission-concurrency`, a destructive isolated-data rehearsal that starts two real PHP processes on the same autosave revision and two on the same final submission. It requires explicit assignment/response IDs, `--execute`, a clean committed checkout, PostgreSQL, and a non-production environment.
+For the governed 500-row roster path, use `php artisan readiness:roster-rehearsal {company_id} {actor_id} --rows=500 --execute` only against an otherwise empty isolated company. It measures encrypted staging, parse/preview, same-file and commit replay idempotency, transactional roster creation, and invitation queueing without processing mail.
 
 ## Production runtime contract
 

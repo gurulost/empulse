@@ -64,11 +64,42 @@ class RosterImportService
         }
 
         $sourceHash = hash('sha256', $content);
+        $estimatedRows = max(0, substr_count(str_replace("\r\n", "\n", $content), "\n") - 1);
         $existing = RosterImport::query()
             ->where('company_id', $company->id)
             ->where('source_sha256', $sourceHash)
             ->first();
         if ($existing) {
+            if ($existing->status === 'failed') {
+                $existing->update([
+                    'created_by' => $actor->id,
+                    'original_filename' => mb_substr($file->getClientOriginalName(), 0, 255),
+                    'source_csv' => $content,
+                    'status' => 'parsing',
+                    'total_rows' => 0,
+                    'create_count' => 0,
+                    'update_count' => 0,
+                    'reactivate_count' => 0,
+                    'deactivate_count' => 0,
+                    'unchanged_count' => 0,
+                    'error_count' => 0,
+                    'confirmation_token_hash' => null,
+                    'confirmation_expires_at' => null,
+                    'parsed_at' => null,
+                    'failed_at' => null,
+                    'failure_summary' => null,
+                ]);
+            }
+
+            if ($existing->status === 'parsing') {
+                if ($estimatedRows > self::ASYNC_ROW_THRESHOLD) {
+                    ParseRosterImport::dispatch($existing->id);
+                } else {
+                    $this->parse($existing);
+                }
+                $existing->refresh();
+            }
+
             $token = $existing->status === 'preview_ready'
                 ? $this->issueConfirmationToken($existing, $actor)
                 : null;
@@ -91,7 +122,6 @@ class RosterImportService
             'status' => 'parsing',
         ]);
 
-        $estimatedRows = max(0, substr_count(str_replace("\r\n", "\n", $content), "\n") - 1);
         if ($estimatedRows > self::ASYNC_ROW_THRESHOLD) {
             ParseRosterImport::dispatch($import->id);
 
