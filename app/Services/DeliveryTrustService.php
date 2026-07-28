@@ -44,7 +44,17 @@ class DeliveryTrustService
             $surveyUrlFactory,
             $contact
         ): ?EmailDeliveryEvent {
-            SurveyAssignment::query()->whereKey($assignment->id)->lockForUpdate()->firstOrFail();
+            $lockedAssignment = SurveyAssignment::query()
+                ->whereKey($assignment->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+            if ($messageKind === 'invitation'
+                && $lockedAssignment->invite_status === 'sending'
+                && $lockedAssignment->updated_at
+                && $lockedAssignment->updated_at->greaterThan(now()->subMinutes(15))) {
+                return null;
+            }
+
             $existing = EmailDeliveryEvent::where('idempotency_key', $idempotencyKey)->first();
             if ($existing) {
                 $terminalExists = EmailDeliveryEvent::query()
@@ -55,31 +65,42 @@ class DeliveryTrustService
                     return null;
                 }
 
-                return in_array($existing->status, ['queued', 'failed'], true) ? $existing : null;
+                $attempt = in_array($existing->status, ['queued', 'failed'], true)
+                    ? $existing
+                    : null;
+            } else {
+                $metadata = [
+                    'provider_idempotency_key' => Uuid::uuid5(
+                        Uuid::NAMESPACE_URL,
+                        'https://empulse.workfitdx.com/email/'.$idempotencyKey
+                    )->toString(),
+                    'automatic_retry_until' => now()
+                        ->addMinutes((int) config('services.brevo.idempotency_retry_minutes', 25))
+                        ->toISOString(),
+                ];
+                if ($surveyUrlFactory) {
+                    $metadata['survey_url_ciphertext'] = Crypt::encryptString((string) $surveyUrlFactory());
+                }
+
+                $attempt = EmailDeliveryEvent::create([
+                    'delivery_contact_id' => $contact->id,
+                    'survey_assignment_id' => $assignment->id,
+                    'idempotency_key' => $idempotencyKey,
+                    'message_kind' => $messageKind,
+                    'status' => 'queued',
+                    'occurred_at' => now(),
+                    'metadata' => $metadata,
+                ]);
             }
 
-            $metadata = [
-                'provider_idempotency_key' => Uuid::uuid5(
-                    Uuid::NAMESPACE_URL,
-                    'https://empulse.workfitdx.com/email/'.$idempotencyKey
-                )->toString(),
-                'automatic_retry_until' => now()
-                    ->addMinutes((int) config('services.brevo.idempotency_retry_minutes', 25))
-                    ->toISOString(),
-            ];
-            if ($surveyUrlFactory) {
-                $metadata['survey_url_ciphertext'] = Crypt::encryptString((string) $surveyUrlFactory());
+            if ($attempt && $messageKind === 'invitation') {
+                $lockedAssignment->update([
+                    'invite_status' => 'sending',
+                    'invite_error' => null,
+                ]);
             }
 
-            return EmailDeliveryEvent::create([
-                'delivery_contact_id' => $contact->id,
-                'survey_assignment_id' => $assignment->id,
-                'idempotency_key' => $idempotencyKey,
-                'message_kind' => $messageKind,
-                'status' => 'queued',
-                'occurred_at' => now(),
-                'metadata' => $metadata,
-            ]);
+            return $attempt;
         }, 3);
     }
 

@@ -319,7 +319,7 @@ A complete production runtime requires:
 2. queue worker;
 3. scheduler.
 
-Without the worker, survey/account invitations and wave jobs stall. Without the scheduler, recurring waves do not become jobs and interrupted account-invitation deliveries are not recovered.
+Without the worker, survey/account invitations and wave jobs stall. Without the scheduler, recurring waves do not become jobs and interrupted account- or survey-invitation deliveries are not recovered.
 
 Operational commands:
 
@@ -328,9 +328,10 @@ php artisan queue:work --tries=3 --backoff=10 --timeout=120
 php artisan schedule:run
 php artisan survey:waves:schedule
 php artisan account:invitations:recover
+php artisan survey:invitations:recover
 ```
 
-The scheduler should normally invoke the wave command through [`routes/console.php`](../routes/console.php), not through a second external cadence.
+The scheduler should normally invoke wave scheduling and both recovery commands through [`routes/console.php`](../routes/console.php), not through a second external cadence. A frozen assignment is marked dispatched and counted under the organization entitlement once; replaying the same wave job does not increment its dispatch count or queue another invitation. Survey invitation delivery jobs are unique per assignment for the 15-minute recovery interval. The scheduled recovery command finds stale queued, sending, or failed work, remains report-only without `--execute`, and reuses the existing assignment/delivery idempotency contract.
 
 PostgreSQL is the production database authority. The image build does not run migrations. A release process runs `app:production-check`, then applies migrations once, then starts independently supervised web, worker, and scheduler processes. `/api/healthz` is process liveness; `/api/readyz` checks database and required runtime tables without exposing credentials or exception detail.
 

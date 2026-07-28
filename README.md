@@ -157,11 +157,11 @@ php artisan queue:work --tries=3 --backoff=10 --timeout=120
 php artisan schedule:run
 ```
 
-The production scheduler should invoke `php artisan schedule:run` every minute. It runs wave scheduling, account-invitation recovery, and other declared maintenance tasks. Without a worker and scheduler, recurring measurement and queued account setup stall.
+The production scheduler should invoke `php artisan schedule:run` every minute. It runs wave scheduling plus account- and survey-invitation recovery. Both recovery commands are report-only unless the scheduler supplies `--execute`; they requeue only stale eligible records and rely on stable delivery idempotency. Without a worker and scheduler, recurring measurement and queued account setup or survey delivery can stall.
 
 Full waves use manual cadence. Recurring and action-linked follow-up waves require the company-level `recurring_waves` entitlement. Governed Pulse variants limit questions to the predeclared metric, freeze their audience, cap reminders, and enforce respondent rest/rolling-frequency rules.
 
-Invitation/reminder retries reuse one encrypted survey URL and one provider idempotency UUID. Automatic resend stops before the provider deduplication window expires and requires manual provider review afterward.
+Each frozen wave assignment is queued once even if `ProcessSurveyWave` is replayed. Invitation/reminder retries reuse one encrypted survey URL and one provider idempotency UUID. `SendSurveyAssignmentInvitation` is unique per assignment during the 15-minute interruption window, and `survey:invitations:recover --execute` safely requeues stale queued/sending/failed delivery work. Automatic resend stops before the provider deduplication window expires and requires manual provider review afterward.
 
 ## Billing
 

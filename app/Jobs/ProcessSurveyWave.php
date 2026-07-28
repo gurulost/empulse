@@ -63,6 +63,14 @@ class ProcessSurveyWave implements ShouldBeUnique, ShouldQueue
             return;
         }
 
+        if ($wave->kind === 'full'
+            && $wave->status === 'active'
+            && $wave->assignments()->exists()) {
+            $this->logEvent($wave, null, 'skipped', 'Full wave was already dispatched.');
+
+            return;
+        }
+
         $manager = CompanyBilling::manager($wave->company_id);
         if (! CompanyBilling::allowsScheduling((int) $wave->company_id)) {
             $wave->update(['status' => 'paused']);
@@ -126,7 +134,7 @@ class ProcessSurveyWave implements ShouldBeUnique, ShouldQueue
                     continue;
                 }
 
-                if ($message = $this->shouldSkipAssignment($wave, $assignment)) {
+                if ($message = $this->shouldSkipAssignment($assignment)) {
                     $stats['skipped']++;
                     $this->logEvent($wave, $user, 'skipped', $message);
 
@@ -215,31 +223,14 @@ class ProcessSurveyWave implements ShouldBeUnique, ShouldQueue
         ]);
     }
 
-    protected function shouldSkipAssignment(SurveyWave $wave, SurveyAssignment $assignment): ?string
+    protected function shouldSkipAssignment(SurveyAssignment $assignment): ?string
     {
         if ($assignment->status === 'completed') {
             return 'Assignment already completed.';
         }
 
-        if ($wave->kind !== 'drip') {
-            return null;
-        }
-
-        if ($wave->cadence === 'manual' && SurveyWaveAutomation::manualIsOneShot()) {
-            if ($assignment->last_dispatched_at) {
-                return 'Manual cadence already delivered for this user.';
-            }
-
-            return null;
-        }
-
-        $threshold = SurveyWaveAutomation::cadenceThreshold($wave->cadence);
-        if (! $threshold) {
-            return null;
-        }
-
-        if ($assignment->last_dispatched_at && $assignment->last_dispatched_at->greaterThan($threshold)) {
-            return 'Cadence window not elapsed.';
+        if ($assignment->last_dispatched_at || (int) $assignment->dispatch_count > 0) {
+            return 'Assignment was already queued for this frozen wave occurrence.';
         }
 
         return null;

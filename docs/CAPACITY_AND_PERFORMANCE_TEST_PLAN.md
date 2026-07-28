@@ -15,6 +15,8 @@ Each profile needs frozen cohorts, realistic completion/missingness, delivery ev
 1. Run `tests/load/public-readiness.js` with k6 for web/readiness stability.
 2. Upload and parse a 500-person governed roster CSV; record parse time, queue age, encrypted-staging cleanup, preview response size, commit time, invitation queue burst, and repeated-file idempotency.
 3. Dispatch one full 500-person wave and record assignment creation time, queue peak/age, provider-sandbox acceptance, retries, duplicates, and database load.
+   - Replay the same `ProcessSurveyWave` payload after the first pass. Assignment count, per-assignment `dispatch_count`, queued invitation count, active-respondent usage, and dispatched-assignment usage must remain unchanged.
+   - Remove or fail a bounded set of synthetic invitation jobs, age their assignment delivery state past the configured recovery interval, and prove `survey:invitations:recover` is report-only while `--execute` queues exactly one unique recovery job per eligible assignment.
 4. Submit concurrent autosaves against the same assignment revision and prove stale writes fail without loss.
 5. Submit each assignment twice concurrently and prove exactly one response/answer set.
 6. Exercise manager analytics, trends, comparisons, action capture, and governed follow-up creation at each data profile.

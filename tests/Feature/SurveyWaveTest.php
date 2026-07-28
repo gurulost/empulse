@@ -596,6 +596,109 @@ class SurveyWaveTest extends TestCase
         Queue::assertPushed(SendSurveyAssignmentInvitation::class, 1);
     }
 
+    public function test_process_wave_retry_does_not_duplicate_an_already_queued_invitation(): void
+    {
+        [$company, $survey, $version] = $this->createSurveyArtifacts();
+
+        $employee = User::factory()->create([
+            'role' => 4,
+            'company_id' => $company->id,
+        ]);
+
+        $wave = SurveyWave::create([
+            'company_id' => $company->id,
+            'survey_id' => $survey->id,
+            'survey_version_id' => $version->id,
+            'kind' => 'full',
+            'label' => 'Retry-safe baseline',
+            'target_roles' => [4],
+            'status' => 'processing',
+            'cadence' => 'manual',
+            'due_at' => now()->addWeek(),
+        ]);
+
+        Queue::fake();
+        $job = new ProcessSurveyWave($wave->id);
+        $job->handle(app(SurveyService::class));
+        $job->handle(app(SurveyService::class));
+
+        $assignment = SurveyAssignment::where('survey_wave_id', $wave->id)
+            ->where('user_id', $employee->id)
+            ->firstOrFail();
+
+        $this->assertSame(1, $assignment->dispatch_count);
+        Queue::assertPushed(SendSurveyAssignmentInvitation::class, 1);
+        $this->assertDatabaseCount('survey_assignments', 1);
+        $this->assertSame(
+            1,
+            DB::table('organization_usage_events')
+                ->where('company_id', $company->id)
+                ->where('metric', 'active_respondents')
+                ->count()
+        );
+        $this->assertSame(
+            1,
+            DB::table('organization_usage_events')
+                ->where('company_id', $company->id)
+                ->where('metric', 'dispatched_assignments')
+                ->count()
+        );
+    }
+
+    public function test_interrupted_survey_invitation_recovery_is_report_only_then_queues_one_unique_job(): void
+    {
+        [$company, $survey, $version] = $this->createSurveyArtifacts();
+
+        $employee = User::factory()->create([
+            'role' => 4,
+            'company_id' => $company->id,
+        ]);
+        $wave = SurveyWave::create([
+            'company_id' => $company->id,
+            'survey_id' => $survey->id,
+            'survey_version_id' => $version->id,
+            'kind' => 'full',
+            'label' => 'Recoverable baseline',
+            'target_roles' => [4],
+            'status' => 'active',
+            'cadence' => 'manual',
+            'due_at' => now()->addWeek(),
+        ]);
+        $assignment = SurveyAssignment::create([
+            'survey_id' => $survey->id,
+            'survey_version_id' => $version->id,
+            'survey_wave_id' => $wave->id,
+            'user_id' => $employee->id,
+            'status' => 'pending',
+            'wave_label' => $wave->label,
+            'last_dispatched_at' => now()->subMinutes(20),
+            'dispatch_count' => 1,
+            'invite_status' => 'queued',
+            'due_at' => $wave->due_at,
+        ]);
+        DB::table('survey_assignments')->where('id', $assignment->id)->update([
+            'updated_at' => now()->subMinutes(20),
+        ]);
+
+        Queue::fake();
+        $this->artisan('survey:invitations:recover')
+            ->expectsOutputToContain('"eligible": 1')
+            ->expectsOutputToContain('Report only')
+            ->assertSuccessful();
+        Queue::assertNothingPushed();
+
+        Queue::fake();
+        $this->artisan('survey:invitations:recover', ['--execute' => true])
+            ->expectsOutputToContain('Queued 1 survey invitation recovery jobs.')
+            ->assertSuccessful();
+        Queue::assertPushed(SendSurveyAssignmentInvitation::class, 1);
+
+        $deliveryJob = new SendSurveyAssignmentInvitation($assignment->id);
+        $this->assertSame((string) $assignment->id, $deliveryJob->uniqueId());
+        $this->assertSame(900, $deliveryJob->uniqueFor);
+        $this->assertSame(1, $assignment->fresh()->dispatch_count);
+    }
+
     public function test_invitation_job_marks_assignment_as_provider_accepted_in_testing(): void
     {
         [$company, $survey, $version] = $this->createSurveyArtifacts();
@@ -634,6 +737,45 @@ class SurveyWaveTest extends TestCase
         $this->assertSame('accepted', $assignment->invite_status);
         $this->assertNotNull($assignment->invited_at);
         $this->assertNull($assignment->invite_error);
+    }
+
+    public function test_invitation_job_skips_assignment_when_wave_was_paused_after_queueing(): void
+    {
+        [$company, $survey, $version] = $this->createSurveyArtifacts();
+
+        $employee = User::factory()->create([
+            'role' => 4,
+            'company_id' => $company->id,
+            'company_title' => $company->title,
+        ]);
+        $wave = SurveyWave::create([
+            'company_id' => $company->id,
+            'survey_id' => $survey->id,
+            'survey_version_id' => $version->id,
+            'kind' => 'full',
+            'label' => 'Paused after queue',
+            'status' => 'paused',
+            'cadence' => 'manual',
+        ]);
+        $assignment = SurveyAssignment::create([
+            'survey_id' => $survey->id,
+            'survey_version_id' => $version->id,
+            'survey_wave_id' => $wave->id,
+            'user_id' => $employee->id,
+            'status' => 'pending',
+            'wave_label' => $wave->label,
+            'invite_status' => 'queued',
+        ]);
+        $email = \Mockery::mock(EmailService::class);
+        $email->shouldNotReceive('sendSurveyInvitation');
+
+        (new SendSurveyAssignmentInvitation($assignment->id))->handle($email);
+
+        $this->assertSame('skipped', $assignment->fresh()->invite_status);
+        $this->assertStringContainsString(
+            'no longer eligible',
+            $assignment->fresh()->invite_error
+        );
     }
 
     public function test_invitation_job_marks_assignment_as_failed_when_delivery_is_unavailable(): void
@@ -1126,6 +1268,10 @@ class SurveyWaveTest extends TestCase
             ->map(fn ($event) => $event->command);
 
         $this->assertFalse($commands->contains(fn ($command) => is_string($command) && str_contains($command, 'email:link')));
+        $this->assertTrue($commands->contains(
+            fn ($command) => is_string($command)
+                && str_contains($command, 'survey:invitations:recover --execute')
+        ));
     }
 
     public function test_legacy_email_command_is_disabled(): void

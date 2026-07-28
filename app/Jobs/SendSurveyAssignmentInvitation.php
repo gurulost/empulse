@@ -7,6 +7,7 @@ use App\Models\SurveyAssignment;
 use App\Services\DeliveryTrustService;
 use App\Services\EmailService;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -15,7 +16,7 @@ use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
-class SendSurveyAssignmentInvitation implements ShouldQueue
+class SendSurveyAssignmentInvitation implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -23,7 +24,14 @@ class SendSurveyAssignmentInvitation implements ShouldQueue
 
     public array $backoff = [60, 300, 900];
 
+    public int $uniqueFor = 900;
+
     public function __construct(protected int $assignmentId) {}
+
+    public function uniqueId(): string
+    {
+        return (string) $this->assignmentId;
+    }
 
     public function handle(
         EmailService $emailService,
@@ -35,10 +43,14 @@ class SendSurveyAssignmentInvitation implements ShouldQueue
             return;
         }
 
-        if ($assignment->status === 'completed') {
+        if ($assignment->status !== 'pending'
+            || $assignment->token_revoked_at
+            || ($assignment->due_at && $assignment->due_at->isPast())
+            || ($assignment->surveyWave
+                && ! in_array($assignment->surveyWave->status, ['scheduled', 'processing', 'active'], true))) {
             $assignment->update([
                 'invite_status' => 'skipped',
-                'invite_error' => 'Assignment was already completed before the invitation was sent.',
+                'invite_error' => 'Assignment was no longer eligible when the invitation job ran.',
             ]);
 
             return;
@@ -88,11 +100,6 @@ class SendSurveyAssignmentInvitation implements ShouldQueue
 
             return;
         }
-
-        $assignment->update([
-            'invite_status' => 'sending',
-            'invite_error' => null,
-        ]);
 
         $response = $emailService->sendSurveyInvitation(
             $assignment->user->email,

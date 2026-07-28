@@ -138,6 +138,9 @@ php artisan app:production-check
   - confirm invitation jobs leave the queue and `invite_status` updates
   - force one transient provider retry and confirm the same encrypted survey URL and Brevo idempotency UUID are reused within the automatic retry window
   - confirm automatic resend stops for manual provider review after 25 minutes
+  - replay the completed `ProcessSurveyWave` job and confirm assignment dispatch counts and queued invitation totals do not increase
+  - run `php artisan survey:invitations:recover` and confirm it is report-only
+  - simulate stale queued, sending, and failed survey delivery states; run `php artisan survey:invitations:recover --execute` and confirm one unique recovery job per eligible assignment
 - Verify roster account invitations:
   - commit a staged roster preview and confirm account-invitation jobs leave the queue
   - run `php artisan account:invitations:recover` and confirm it is report-only

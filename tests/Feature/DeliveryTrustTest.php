@@ -157,6 +157,28 @@ class DeliveryTrustTest extends TestCase
         $this->assertSame('accepted', $assignment->fresh()->invite_status);
     }
 
+    public function test_recent_in_flight_invitation_cannot_start_a_second_provider_attempt(): void
+    {
+        $assignment = $this->assignment();
+        $delivery = app(DeliveryTrustService::class);
+        $key = "assignment:{$assignment->id}:invitation:1";
+        $urlFactory = fn (): string => 'https://example.test/survey/token';
+
+        $first = $delivery->begin($assignment, 'invitation', $key, $urlFactory);
+        $second = $delivery->begin($assignment->fresh(), 'invitation', $key, $urlFactory);
+
+        $this->assertNotNull($first);
+        $this->assertNull($second);
+        $this->assertSame('sending', $assignment->fresh()->invite_status);
+        $this->assertSame(1, EmailDeliveryEvent::where('idempotency_key', $key)->count());
+
+        SurveyAssignment::whereKey($assignment->id)->update([
+            'updated_at' => now()->subMinutes(16),
+        ]);
+        $recovered = $delivery->begin($assignment->fresh(), 'invitation', $key, $urlFactory);
+        $this->assertSame($first->id, $recovered?->id);
+    }
+
     public function test_brevo_duplicate_response_is_treated_as_the_same_accepted_send(): void
     {
         config(['services.brevo.key' => 'test-key']);
