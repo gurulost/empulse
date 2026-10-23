@@ -113,7 +113,8 @@ start_web
 [[ "$(http --silent -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/storage/untrusted.php)" == 404 ]]
 canary="ci-sensitive-route-${fixture_id}"
 http --silent -o /dev/null "http://127.0.0.1:8080/survey/${canary}?token=${canary}"
-if docker logs "$web" 2>&1 | grep -Fq "$canary"; then
+docker logs "$web" > "${fixture_dir}/web-output.log" 2>&1
+if grep -Fq "$canary" "${fixture_dir}/web-output.log"; then
     echo 'Request token canary appeared in server logs.' >&2
     exit 1
 fi
@@ -121,6 +122,12 @@ echo 'PHP/dotfile routing and request-log privacy checks passed.'
 
 # A child exiting must terminate the whole container, not leave half a server.
 docker exec "$web" nginx -e stderr -s quit
+exit_status="$(timeout 20 docker wait "$web")"
+[[ "$exit_status" != 0 ]]
+docker rm -v "$web" >/dev/null
+
+start_web
+docker exec "$web" sh -c 'read php_pid < /tmp/php-fpm.pid; kill -TERM "$php_pid"'
 exit_status="$(timeout 20 docker wait "$web")"
 [[ "$exit_status" != 0 ]]
 docker rm -v "$web" >/dev/null

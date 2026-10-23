@@ -20,7 +20,8 @@ class ContainerRuntimeContractTest extends TestCase
             strpos($entrypoint, 'php artisan app:production-check')
         );
         $this->assertStringNotContainsString('APP_ENV', $entrypoint);
-        $this->assertStringContainsString('wait -n "$php_pid" "$nginx_pid"', $entrypoint);
+        $this->assertStringContainsString("\nwait -n\n", $entrypoint);
+        $this->assertStringNotContainsString('wait -n "$php_pid"', $entrypoint);
         $this->assertStringContainsString('kill -QUIT', $entrypoint);
     }
 

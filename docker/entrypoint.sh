@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-php scripts/check-php-runtime.php
+php scripts/check-php-runtime.php >&2
 
 if [ "${1:-web}" != web ]; then
     exec "$@"
@@ -26,10 +26,11 @@ stop_web() {
 }
 trap 'stop_web; exit 0' INT TERM
 
-# BusyBox ash supports wait -n. Either child exiting makes the web container
-# unhealthy as a whole, even if the child exited with status zero.
+# BusyBox 1.37 applies -n only without PID operands. Supplying the two PIDs
+# waits for them sequentially and masks nginx failure while FPM stays alive.
+# These are the only two background jobs in this supervisor.
 set +e
-wait -n "$php_pid" "$nginx_pid"
+wait -n
 child_status=$?
 stop_web
 if [ "$child_status" -eq 0 ]; then
