@@ -209,7 +209,7 @@ No production environment is currently selected or deployed. Repository-level pr
 - `AVATAR_DISK` points to persistent/shared storage (or avatar upload is disabled); an ephemeral release filesystem is not durable customer storage;
 - `php artisan app:production-check` fails closed on unsafe configuration.
 
-The checked-in Docker and Procfile definitions express the same process contract. Replit configuration is development-only and intentionally has no production deployment block.
+The checked-in Docker and Procfile definitions express the same process contract. The owner-authorized replacement Docker stack uses rootless nginx/PHP 8.5.12 FPM on Alpine, internal port 8080, and a non-root PostgreSQL image; actual qualification belongs to the linked CI follow-up, not to the image tag. Replit configuration is development-only and intentionally has no production deployment block.
 
 ## Documentation map
 

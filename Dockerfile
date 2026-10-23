@@ -1,14 +1,21 @@
-FROM php:8.2.35-apache@sha256:fa8966fbaaa06981e549e7a33eb8a68f4cf677d6a82e1d6350adc5d85fe8f740 AS php-base
+FROM php:8.5.12-fpm-alpine3.24@sha256:f09d9172dd28b8696aef729ca2c2081a132c1f8d581218c99497d552c82a92df AS php-base
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates curl git unzip libfreetype6-dev libicu-dev libjpeg62-turbo-dev \
-    libpng-dev libpq-dev libzip-dev \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install bcmath gd intl opcache pcntl pdo_pgsql zip \
-    && a2enmod rewrite \
-    && rm -rf /var/lib/apt/lists/*
+RUN set -eux; \
+    apk add --no-cache ca-certificates curl; \
+    apk add --no-cache --virtual .build-deps \
+      $PHPIZE_DEPS pax-utils freetype-dev icu-dev libjpeg-turbo-dev libpng-dev libpq-dev libzip-dev; \
+    docker-php-ext-configure gd --with-freetype --with-jpeg; \
+    docker-php-ext-install bcmath gd intl pcntl pdo_pgsql zip; \
+    run_deps="$(scanelf --needed --nobanner --format '%n#p' --recursive /usr/local \
+      | tr ',' '\n' | sort -u \
+      | awk 'system("[ -e /usr/local/lib/" $1 " ]") == 0 { next } { print "so:" $1 }')"; \
+    apk add --no-cache $run_deps; \
+    apk del --no-network .build-deps; \
+    php -r 'foreach (["bcmath", "curl", "dom", "fileinfo", "gd", "intl", "mbstring", "openssl", "pcntl", "pdo_pgsql", "zip"] as $extension) { if (!extension_loaded($extension)) throw new RuntimeException("Missing extension: ".$extension); }'
 
 FROM php-base AS vendor
+
+RUN apk add --no-cache git unzip
 
 # Copy only Composer's executable; dependency resolution uses patched PHP and
 # the refreshed OS trust store, not the Composer image's runtime.
@@ -30,7 +37,7 @@ RUN mkdir -p storage/framework/cache/data storage/framework/sessions \
     storage/framework/views storage/logs bootstrap/cache \
     && composer dump-autoload --no-dev --optimize
 
-FROM node:22.23.4-bookworm-slim@sha256:de170b39439eb0e5a3444ad7d60b015614a381e10fecae2e30ec9e735122f38d AS frontend
+FROM node:22.23.4-alpine3.24@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS frontend
 
 WORKDIR /app
 
@@ -48,40 +55,19 @@ COPY public ./public
 COPY vite.config.js ./
 RUN npm run build
 
-FROM php-base AS php-runtime
+FROM php-base
 
-# Keep Composer's git/unzip and extension compilers in build stages only.
-# PHP is not managed by dpkg: retain its linked libraries explicitly before
-# apt removes development dependencies (same approach as the official image).
-RUN set -eux; \
-    find /usr/local -type f -executable -exec ldd '{}' ';' 2>/dev/null \
-      | awk '/=>/ { so = $(NF-1); if (index(so, "/usr/local/") == 1) { next }; gsub("^/(usr/)?", "", so); printf "*%s\n", so }' \
-      | sort -u \
-      | xargs -rt dpkg-query --search \
-      | awk 'sub(":$", "", $1) { print $1 }' \
-      | sort -u \
-      | xargs -r apt-mark manual; \
-    apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
-      $PHPIZE_DEPS libc6-dev linux-libc-dev git unzip libfreetype6-dev libicu-dev libjpeg62-turbo-dev \
-      libpng-dev libpq-dev libzip-dev; \
-    rm -rf /var/lib/apt/lists/*; \
-    if command -v cc >/dev/null || dpkg-query -s linux-libc-dev >/dev/null 2>&1; then \
-      echo 'Build-only compiler/kernel headers remain in the runtime image.' >&2; exit 1; \
-    fi; \
-    php -r 'foreach (["bcmath", "curl", "dom", "fileinfo", "gd", "intl", "mbstring", "openssl", "pcntl", "pdo_pgsql", "zip"] as $extension) { if (!extension_loaded($extension)) { throw new RuntimeException("Missing required extension: ".$extension); } }'
-
-FROM php-runtime
+RUN apk add --no-cache nginx tini
 
 WORKDIR /var/www/html
 
 ENV APP_ENV=production
 ENV APP_DEBUG=false
-ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
-
-RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
-    && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
 COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/99-empulse-opcache.ini
+COPY docker/php/fpm.conf /usr/local/etc/php-fpm.d/zzz-empulse.conf
+COPY docker/nginx/nginx.conf /etc/nginx/nginx.conf
+COPY docker/entrypoint.sh /usr/local/bin/empulse-entrypoint
 COPY . .
 COPY --from=vendor /app/vendor ./vendor
 COPY --from=frontend /app/public/build ./public/build
@@ -89,12 +75,16 @@ COPY --from=frontend /app/public/build ./public/build
 RUN mkdir -p storage/app/public storage/app/private storage/framework/cache/data \
     storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
     && ln -s ../storage/app/public public/storage \
-    && chown -R www-data:www-data storage bootstrap/cache
+    && chown -R www-data:www-data storage bootstrap/cache \
+    && chmod 755 /usr/local/bin/empulse-entrypoint
 
-EXPOSE 80
+USER www-data
+
+EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD curl --fail --silent --header "Host: $(php -r 'echo parse_url(getenv("APP_URL"), PHP_URL_HOST);')" \
-        http://127.0.0.1/api/healthz > /dev/null || exit 1
+        http://127.0.0.1:8080/api/healthz > /dev/null || exit 1
 
-CMD ["sh", "-lc", "php scripts/check-php-runtime.php && php artisan app:production-check && exec apache2-foreground"]
+ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/empulse-entrypoint"]
+CMD ["web"]

@@ -1,6 +1,9 @@
 services:
   postgres:
-    image: postgres:16.15-alpine@sha256:deb28ee471183cb0c303113dac9b2433c51eeeeb678def7af9a9ec5820367815
+    build:
+      context: .
+      dockerfile: docker/postgres/Dockerfile
+    image: empulse-postgres:local
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_DATABASE}
@@ -17,9 +20,10 @@ services:
   web:
     build: .
     restart: unless-stopped
+    stop_grace_period: 35s
     env_file: ${ENV_FILE:-.env.production}
     ports:
-      - "127.0.0.1:${APP_PORT:-8080}:80"
+      - "127.0.0.1:${APP_PORT:-8080}:8080"
     volumes:
       - uploads:/var/www/html/storage/app/public
     depends_on:
@@ -30,6 +34,7 @@ services:
     build: .
     user: www-data
     restart: unless-stopped
+    stop_grace_period: 135s
     env_file: ${ENV_FILE:-.env.production}
     command: >
       sh -lc "php scripts/check-php-runtime.php && php artisan app:production-check &&
@@ -43,6 +48,7 @@ services:
     build: .
     user: www-data
     restart: unless-stopped
+    stop_grace_period: 35s
     env_file: ${ENV_FILE:-.env.production}
     command: sh -lc "php scripts/check-php-runtime.php && php artisan app:production-check && php artisan schedule:work"
     depends_on:

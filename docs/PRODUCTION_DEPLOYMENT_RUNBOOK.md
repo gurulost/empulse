@@ -17,7 +17,7 @@ Empulse has not been deployed or sold. This runbook is a release contract, not e
 - Persistent/shared avatar storage configured through a Laravel filesystem disk, or avatar upload intentionally disabled until that storage exists.
 
 ## Critical Release Notes
-- Read the [October 22 security refresh](SECURITY_AUDIT_2026-10-22.md) first: native-container findings, host/service identity, and current-revision CI are unresolved release gates. A digest pin is identity evidence, not a clean vulnerability assessment.
+- Read the [October 22 security refresh](SECURITY_AUDIT_2026-10-22.md) and [subsequent CI/runtime qualification](SECURITY_CI_FOLLOWUP_2026-10-22.md) first. A digest pin is identity evidence, not a clean vulnerability assessment. Original Debian native findings led to an owner-authorized Alpine/nginx/FPM replacement; require actual replacement-image scan and journey evidence before promotion.
 - Builds use SHA-512-verified npm 11.21.1 in an empty build-specific prefix (`node scripts/install-build-npm.mjs <absolute-empty-prefix>`), not the base image's older bundled npm or a global workstation upgrade. Node security floors run before asset/test scripts. Build and scan both frontend toolchain and final runtime images; the application lockfile audit does not cover global build-tool dependencies.
 - Use `PLAYWRIGHT_CHANNEL=chrome npm run test:e2e` with the approved current stable Chrome for the browser gate, recording the actual browser version. Updating Playwright alone does not refresh every browser security patch.
 - Run `php scripts/check-php-runtime.php` before application bootstrap. Inspect the actual Apache/FPM executable/version as well; a patched CLI does not prove the serving SAPI or old workers were replaced.
@@ -103,12 +103,14 @@ php artisan app:production-check
    - scheduler
 
 ## Process Requirements
-- The Compose web port is loopback-only. Put an approved HTTPS reverse proxy on the same host, or explicitly configure the selected provider's private ingress; do not expose the HTTP origin/database directly. Trust only that proxy's exact addresses.
+- The replacement Compose web port maps loopback `${APP_PORT:-8080}` to container port 8080, not 80. The image's default `web` command starts non-root nginx and PHP-FPM under Tini after fail-closed production validation. Put an approved HTTPS reverse proxy on the same host, or explicitly configure the selected provider's private ingress; do not expose the HTTP origin/database directly. Trust only that proxy's exact addresses. FPM port 9000 is loopback-only inside the web container and must not be published.
+- Build the project PostgreSQL image through Compose (or `docker build -f docker/postgres/Dockerfile -t empulse-postgres:local .`). It retains PostgreSQL 16.15 but starts as `postgres` and removes unused gosu. For an existing volume, confirm compatible UID/ownership and backup/restore first; this entrypoint intentionally cannot chown arbitrary data as root. Do not point PostgreSQL 16 at PostgreSQL 14 data.
+- nginx/FPM logs omit URI/query/header/address values; startup/process errors, redacted application errors, and HTTP status/timing remain available. Apply the same bearer-URL policy to the selected edge/proxy/CDN; repository logging alone cannot protect provider logs.
 - The Compose `uploads` volume now backs `storage/app/public`, matching Laravel's public disk. Before using an existing volume, inspect its layout and plan a non-destructive data migration; do not blindly mount a legacy `public/upload` volume and assume avatars moved. Run `php artisan storage:link` for this disk. New installs have no existing customer data to migrate.
 - Roster staging persists the CSV encrypted in the database (`roster_imports.source_csv`), then clears it after parsing; workers need the same database and `APP_KEY`, not a shared plaintext upload volume. Verify synthetic cross-process parsing and retention. Keep temporary uploads/private application storage out of public mounts.
 - Web:
   - If deploying with the checked-in `Procfile`, run the Apache/PHP buildpack runtime: `heroku-php-apache2 public/`
-  - If your platform does not provide that command, deploy with the checked-in Docker image or the platform's native Apache/nginx + PHP runtime.
+  - If your platform does not provide that command, use the checked-in rootless nginx/PHP-FPM Docker image (`web`, internal port 8080), or separately qualify its native server equivalent. The legacy buildpack Procfile is not proof that a provider supplies patched PHP/native libraries.
 - Queue worker:
   - In Compose, this process runs as `www-data`; verify shared storage permissions rather than granting root.
   - `php artisan queue:work --tries=3 --backoff=10 --sleep=1 --timeout=120 --max-time=3600`

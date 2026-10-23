@@ -32,7 +32,7 @@ jobs:
             - name: Setup PHP
               uses: shivammathur/setup-php@d52fc211a0436f8839a587b3b5b8efddab4744ea # v2
               with:
-                  php-version: '8.2.35'
+                  php-version: '8.5.12'
                   extensions: bcmath, ctype, dom, fileinfo, mbstring, pdo_pgsql
                   coverage: none
 
@@ -48,7 +48,9 @@ jobs:
                   {
                     echo "APP_ENV=testing"
                     echo "APP_DEBUG=true"
-                    echo "APP_URL=http://127.0.0.1:8000"
+                    echo "APP_URL=http://127.0.0.1:8080"
+                    echo "APP_RELEASE_SHA=$GITHUB_SHA"
+                    echo "DEPLOYMENT_ENVIRONMENT_ID=ci-$GITHUB_RUN_ID"
                     echo "DB_CONNECTION=pgsql"
                     echo "DB_HOST=127.0.0.1"
                     echo "DB_PORT=5432"
@@ -115,27 +117,55 @@ jobs:
               run: npm run build
 
             - name: Install Playwright browser
-              timeout-minutes: 5
+              timeout-minutes: 10
               run: npx playwright install --with-deps chrome
 
             - name: Prepare browser journey database
               run: php artisan migrate:fresh --seed --force
 
-            - name: Start real web and worker processes
+            - name: Build the actual browser-journey image
+              run: docker build --pull -t empulse:journey .
+
+            - name: Start containerized web and worker processes
               run: |
-                  php artisan queue:work --tries=1 --sleep=1 --timeout=120 > storage/logs/ci-worker.log 2>&1 &
-                  php artisan serve --host=127.0.0.1 --port=8000 > storage/logs/ci-server.log 2>&1 &
+                  php -r '
+                    require "vendor/autoload.php";
+                    $output = "";
+                    foreach (Dotenv\Dotenv::parse(file_get_contents(".env")) as $key => $value) {
+                      if (str_contains((string) $value, "\n")) throw new RuntimeException("Multiline CI environment value.");
+                      $output .= $key."=".$value."\n";
+                    }
+                    $path = getenv("RUNNER_TEMP")."/empulse-journey.env";
+                    file_put_contents($path, $output);
+                    chmod($path, 0600);
+                  '
+                  docker run -d --name empulse-ci-worker --add-host host.docker.internal:host-gateway \
+                    --env-file "$RUNNER_TEMP/empulse-journey.env" -e DB_HOST=host.docker.internal \
+                    empulse:journey php artisan queue:work --tries=1 --sleep=1 --timeout=120
+                  # Synthetic-only test configuration cannot satisfy the default
+                  # production guard. Override the command, not the guard; the
+                  # container job separately qualifies the real guarded startup.
+                  docker run -d --name empulse-ci-web --add-host host.docker.internal:host-gateway \
+                    --env-file "$RUNNER_TEMP/empulse-journey.env" -e DB_HOST=host.docker.internal \
+                    -p 127.0.0.1:8080:8080 empulse:journey \
+                    sh -c 'php-fpm -F & exec nginx -g "daemon off;"'
                   for attempt in {1..30}; do
-                    curl --fail --silent http://127.0.0.1:8000/api/readyz && break
+                    curl --fail --silent http://127.0.0.1:8080/api/readyz && break
                     sleep 1
                   done
-                  curl --fail http://127.0.0.1:8000/api/readyz
+                  curl --fail http://127.0.0.1:8080/api/readyz
 
             - name: Run Playwright role and failure journeys
               env:
-                  PLAYWRIGHT_BASE_URL: http://127.0.0.1:8000
+                  PLAYWRIGHT_BASE_URL: http://127.0.0.1:8080
                   PLAYWRIGHT_CHANNEL: chrome
               run: npm run test:e2e
+
+            - name: Capture failed container process logs
+              if: failure()
+              run: |
+                  docker logs empulse-ci-web > storage/logs/ci-container-web.log 2>&1 || true
+                  docker logs empulse-ci-worker > storage/logs/ci-container-worker.log 2>&1 || true
 
             - name: Upload failure evidence
               if: failure()
@@ -146,6 +176,10 @@ jobs:
                       storage/logs/*.log
                       test-results/
                       playwright-report/
+
+            - name: Stop disposable browser-journey containers
+              if: always()
+              run: docker rm -fv empulse-ci-web empulse-ci-worker 2>/dev/null || true
 
     secret-scan:
         runs-on: ubuntu-latest
@@ -177,7 +211,11 @@ jobs:
               run: |
                   docker build --pull --no-cache --target frontend -t empulse-frontend:audit .
                   docker build --pull --no-cache -t empulse:audit .
-            - name: Smoke-test the actual production PHP and Apache image
+                  # Export the vendor stage freshly built by the preceding
+                  # no-cache runtime build; no external build cache is used.
+                  docker build --target vendor -t empulse-vendor:audit .
+                  docker build --pull --no-cache -f docker/postgres/Dockerfile -t empulse-postgres:audit .
+            - name: Smoke-test the actual production PHP-FPM and nginx image
               run: |
                   docker run --rm --entrypoint php empulse:audit scripts/check-php-runtime.php
                   docker run --rm --entrypoint php empulse:audit -r '
@@ -187,11 +225,14 @@ jobs:
                     }
                     echo "Production autoloader and required extensions passed.\n";
                   '
-                  docker run --rm --entrypoint apache2ctl empulse:audit -t
+                  docker run --rm --entrypoint php-fpm empulse:audit -t
+                  docker run --rm --entrypoint nginx empulse:audit -t
+            - name: Qualify guarded rootless startup, routing, privacy and process lifecycle
+              run: bash .github/tests/container-runtime.sh
             - name: Scan actual built images and export SBOMs
               run: |
                   status=0
-                  for image in empulse empulse-frontend; do
+                  for image in empulse empulse-frontend empulse-vendor empulse-postgres; do
                     "$RUNNER_TEMP/trivy" image --scanners vuln --format json \
                       --severity HIGH,CRITICAL --exit-code 1 \
                       --output "$image-vulnerabilities.json" "$image:audit" || status=$?
@@ -207,3 +248,4 @@ jobs:
                   path: |
                       *-vulnerabilities.json
                       *-sbom.cdx.json
+                      ${{ runner.temp }}/empulse-runtime-*.log
