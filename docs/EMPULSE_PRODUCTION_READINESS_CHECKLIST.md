@@ -4,10 +4,10 @@ Source of truth for the full pre-deployment production-readiness program. Update
 
 ## Metadata
 - Created: 2026-07-27T12:30:02
-- Last Updated: 2026-07-28T15:41:00-04:00
+- Last Updated: 2026-10-22
 - Canonical GitHub Branch: `main`
 - Last Fully Validated Canonical Main Snapshot: `3e311fd91142003a62593a51e894df14199c386c`
-- Implementation Branch: `codex/production-readiness`
+- Implementation Branch: `codex/security-audit-2026-10-21` (October security refresh; July evidence remains historical)
 - Checklist Doc: `docs/EMPULSE_PRODUCTION_READINESS_CHECKLIST.md`
 
 ## Scope
@@ -17,7 +17,8 @@ Source of truth for the full pre-deployment production-readiness program. Update
 ## Sign-off Gate
 - [ ] G-001 [status:open] All queued work, findings, fixes, and validations are complete.
 - [ ] G-002 [status:open] All findings are resolved or marked `accepted_risk` with rationale and owner.
-- [x] G-003 [status:verified] Required local validation suite has been rerun on the final code state.
+- [ ] G-003 [status:in_progress] Required local validation suite has been rerun on the final code state.
+  - Evidence: October SQLite/backend, frontend, source-secret and dependency checks pass; patched PostgreSQL/browser/current-SHA CI qualification remains pending. July evidence cannot qualify October dependencies.
 - [x] G-004 [status:verified] Residual risks and follow-ups are documented.
 - [x] G-005 [status:verified] Gate A direct foundational reset is verified in source and local evidence.
 - [x] G-006 [status:verified] Gate B trustworthy diagnosis and respondent experience is verified in source and local evidence.
@@ -26,8 +27,8 @@ Source of truth for the full pre-deployment production-readiness program. Update
 - [ ] G-009 [status:open] Gate E production assurance and fresh review are verified.
 
 ## Rerun Matrix
-- [x] G-010 [status:verified] No checked validation item relies on evidence invalidated by a later code change.
-- [x] G-011 [status:verified] The complete repository validation pass was rerun after the last implementation edit; later documentation-only changes reran documentation/checklist contracts and the complete backend suite.
+- [ ] G-010 [status:in_progress] Requalify the October security refresh; prior PostgreSQL/browser/fresh-review evidence is explicitly historical.
+- [ ] G-011 [status:in_progress] Complete the full patched-runtime/current-SHA repository validation pass after the October changes.
 
 ## Audit Queue
 - [x] Q-001 [status:verified] Create checklist and baseline scope.
@@ -38,8 +39,8 @@ Source of truth for the full pre-deployment production-readiness program. Update
 - [x] Q-005 [status:verified] Implement Gate C findings-to-action-to-learning product loop.
 - [x] Q-006 [status:verified] Implement Gate D commercial and recurring operation.
 - [ ] Q-007 [status:in_progress] Implement Gate E engineering and production assurance.
-- [x] Q-008 [status:verified] Run final validation suite after the final code change.
-- [x] Q-009 [status:verified] Complete fresh-context adversarial review of current-source release blockers.
+- [ ] Q-008 [status:in_progress] Run final validation suite after the final code change, including patched PostgreSQL/browser CI for the October refresh.
+- [ ] Q-009 [status:in_progress] Requalify fresh-context adversarial review of the October candidate; previous review remains evidence only for its source revision.
 
 ## Audit Ticket Queue
 
@@ -176,16 +177,18 @@ Source of truth for the full pre-deployment production-readiness program. Update
 - [x] V-001 [status:verified] Focused Gate A security, tenant, survey, wave, billing, and negative tests.
   - Evidence: all focused slices pass, including privacy, delivery, entitlement, action/Pulse, and process-readiness tests.
 - [x] V-002 [status:verified] `composer test`
-  - Evidence: 200 tests/1,121 assertions pass independently on SQLite and PostgreSQL 14 after the final implementation edits.
+  - Evidence: October 22 full SQLite and disposable PostgreSQL 16.15 suites each pass 225 tests/1,343 assertions on PHP 8.5.12, including inactive/pending-session, fail-closed Stripe and TLS-CA compatibility regressions. Current local PostgreSQL qualification is V-005; exact-candidate GitHub CI remains SA-005.
 - [x] V-003 [status:verified] `npm run lint`
-  - Evidence: ESLint passes on frontend, unit, E2E, and load sources.
+  - Evidence: ESLint passes on frontend, unit, E2E, load, `.mjs` build scripts and Playwright configuration sources.
 - [x] V-004 [status:verified] `npm run build`
-  - Evidence: Vite 8.1.5 production build passes with 200 transformed modules, including self-hosted OFL fonts and MIT Bootstrap Icons.
-- [x] V-005 [status:verified] PostgreSQL clean-install, migration, and integration journey.
-  - Evidence: clean PostgreSQL 14 migration/canonical 62-item seed and full 200-test/1,121-assertion suite pass; the four newest evidence/advisor/publication/billing-history migrations roll back and reapply cleanly. PostgreSQL 16 committed-SHA CI passed on `main` candidate `96985c0` in GitHub run `30377166138`.
-- [x] V-006 [status:verified] `npm run test:e2e`
-  - Evidence: all 17 role, failure, respondent-completion, accessibility, admin-governance, and north-star action-loop journeys pass together against a fresh PostgreSQL database with real web and queue-worker processes.
-- [x] V-007 [status:verified] Static analysis, dependency, secret, security, and license gates.
+  - Evidence: October 22 Node 22.23.4 / isolated npm 11.21.1 / Vite 8.3.5 build passes with 203 transformed modules; Vitest 4.1.12 passes twelve tests, including explicit Vite host-policy and Node-runtime-floor regressions.
+- [x] V-005 [status:verified] Local PostgreSQL clean-install, migration, and integration journey on the October candidate.
+  - Current evidence: disposable PostgreSQL 16.15, fresh migration/canonical seed and full 225-test/1,343-assertion suite pass on PHP 8.5.12. Shared PostgreSQL 14.21 was not modified or used. Test-harness SQLite assumptions were corrected without weakening production guards.
+  - Boundary: current committed-SHA CI and provider/staging qualification remain SA-005. July migration rollback/backup and CI results are historical, not newly repeated provider evidence.
+- [x] V-006 [status:verified] Local `npm run test:e2e` with current Chrome and patched PHP on the October candidate.
+  - Evidence: all 17 role, failure, respondent-completion, accessibility, admin-governance, and north-star action-loop journeys pass together on PHP 8.5.12, actual Chrome 156.0.8078.48 in a fresh profile, disposable PostgreSQL 16.15, and real loopback web/queue-worker processes. Audit processes were stopped afterward. Provider/CI and independent human approval remain separate gates.
+- [ ] V-007 [status:in_progress] Static analysis, dependency, secret, security, and license gates.
+  - October evidence: Pint/scoped static analysis and Composer/npm all-dependency rescans pass; strict source/bundle and exact-three-fingerprint history-policy scans pass. A wider ignored-cache scan found a separate possible OpenAI credential, and container native findings remain open (SA-003/004); this gate is not silently green.
   - Evidence: full-tree Pint is clean; scoped critical-path Larastan passes without a baseline; Composer and npm report zero advisories; PHP and direct JavaScript licenses were inventoried with no unknown direct licenses. Direct runtime additions are MIT Bootstrap Icons and OFL-1.1 DM Sans, Outfit, and Inter; the unused PHPMailer dependency was removed. Current-source and proposed-change Gitleaks scans are strict and clean. The mail administrator confirmed that the historical Sendinblue/Brevo credential was revoked and deactivated; the owner declined history rewriting and approved only the three exact root `.gitleaksignore` fingerprints. The CI-pinned 8.24.3 policy check proves the unignored baseline is exactly those three findings, the approved full-history scan passes, and a new unrecognized finding fails.
 - [ ] V-008 [status:in_progress] Accessibility component/browser and manual review.
   - Evidence: clean implementation `070447da2ec42379da52509b9b6b9d860fbbb7f0` adds a Tier 2 original-design respondent brief plus component contracts for slider/error/group semantics. Axe reports no serious/critical WCAG A/AA violations on public, login, manager, action, employee, respondent-promise, and actual survey states. The real Chromium journey proves keyboard privacy entry, first-error focus/recovery, slider operation, page-heading focus, reduced motion, saved-state visibility, empty consoles, 44px primary controls, and no horizontal overflow at five representative widths. Independent keyboard/screen-reader review remains.
@@ -193,7 +196,8 @@ Source of truth for the full pre-deployment production-readiness program. Update
   - Evidence: local PostgreSQL k6 smoke passes 7,504 iterations/22,512 requests with zero failures, p95 182.82 ms, and p99 191.15 ms at 20 VUs. Source-bound local evidence also passes a 500-row roster stage/parse/commit in 12.21/150.3/4,820.07 ms with exact idempotent counts, 508-invite analytics at p95 1,087.80 ms, and 500-person full-wave dispatch in 1,685.88 ms. Wave-job replay and report-first recovery remain duplicate-safe. A paired-process PostgreSQL race produces one autosave success/one conflict and one final submission/one conflict, with exactly one 62-answer response and usage event. Provider-backed queue-age, mail, Stripe, durable shared-service, alert, and worker-failure drills remain.
 - [ ] V-010 [status:in_progress] Backup/restore, migration rollback, readiness, and incident drills.
   - Evidence: final-state PostgreSQL custom backup restored into a new database; six critical row counts match (1 company, 9 users, 10 assignments, 8 responses, 496 answers, 17 audit events) and restored platform/company audit chains verify. The governed-roster migration and the final four evidence/advisor/publication/billing-history migrations roll back and reapply cleanly. Production config now refuses disabled/stale heartbeat policy or missing release/environment identity, and `app:verify-deployment` rejects wrong/stale externally served runtime surfaces. Provider backup/PITR, full application rollback, and alert drills remain.
-- [x] V-011 [status:verified] Fresh-context adversarial review against product, privacy, methodology, security, accessibility, and commercial invariants.
+- [ ] V-011 [status:in_progress] Fresh-context adversarial review against product, privacy, methodology, security, accessibility, and commercial invariants for the October candidate.
+  - Current boundary: the following fresh-context review applies to July only; no new independent reviewer was invoked for this audit.
   - Evidence: two independent fresh-context passes found eleven initial and five late current-source blockers. A verification pass found one remaining subgroup-threshold defect. All reported issues now have focused fixes and regression coverage; the reviewer confirmed no P0/P1 remains in the late review scope. Independent human security/privacy, methodology/legal, and accessibility approvals remain external launch gates.
 - [x] V-012 [status:verified] Checklist validator with `--require-signoff`.
   - Evidence: `php artisan readiness:checklist` validates item syntax, unique identifiers, supported states, checkbox/state consistency, and accountable accepted-risk records; CI runs this structural gate. The full 200-test/1,121-assertion suite passes on SQLite and PostgreSQL. `--require-signoff` correctly refuses this current checklist while genuine production gates remain open.
@@ -215,7 +219,27 @@ Source of truth for the full pre-deployment production-readiness program. Update
   - Follow-up trigger/date: reassess if revocation status is disputed, a provider or regulator requires physical history removal, a new finding appears, or the risk owner withdraws acceptance.
   - Control: `.github/verify-gitleaks-history-policy.sh` pins the exact approved set, checks the unignored baseline, and runs a synthetic negative control with Gitleaks 8.24.3. `docs/GIT_HISTORY_SECRET_REMEDIATION_RUNBOOK.md` records the declined rewrite and retains its rehearsal only as a future contingency.
 
+## October Security Refresh Gates
+
+- [x] SA-007 [status:verified] Complete the authorized October 21–22 applicability audit, history/gateway/log review, safe repository follow-up fixes and local patched-runtime qualification.
+  - Evidence: [October 22 audit](SECURITY_AUDIT_2026-10-22.md) assesses all A–N items, explicit coverage gaps and owner actions. Both full backend suites pass 225 tests/1,343 assertions, twelve JS tests and all 17 real browser journeys pass. Isolated integrity-pinned npm, direct web/production runtime guards, environment-harvesting removal, TLS compatibility and new fail-closed container CI are implemented. No Railway connector, shared-service restart, global update, credential rotation, push or deployment was performed. This closes the bounded local task, not SA-002 through SA-006 or launch sign-off.
+
+- [x] SA-001 [status:verified] Locally repair active-account/session and Stripe missing-secret fail-open paths, patch compatible locked packages, and tighten build/CI/development defaults.
+  - Evidence: [October audit](SECURITY_AUDIT_2026-10-21.md); regression failures reproduced before fixes and passing after; 224 backend tests/1,340 assertions, ten frontend tests, lint/build/static/source/history checks pass. This is local-source verification only.
+- [ ] SA-002 [status:open] Device/service owner verifies intended PHP-FPM service state and patches running PostgreSQL 14.21, installed Bun 1.3.11 and affected/unverified bundled trust stores.
+  - Owner: device and database administrators. October 22 CLI and initially observed FPM use PHP 8.5.12 after an external host change; FPM later disappeared without an audit restart/stop. Close with intended actual serving-process state, DB/tool patches and per-consumer trust evidence, not installed-package presence or a passing disposable test database.
+- [ ] SA-003 [status:open] Issuing-account owner identifies and assesses the possible OpenAI credential in an ignored 2023 Python spreadsheet cache.
+  - Owner: account owner; preserve private evidence, revoke at issuer if genuine/live, inspect usage/permissions/consumers. No secret printed or tested; no new ignore exception or accepted-risk status.
+- [ ] SA-004 [status:open] Qualify final container images and native/bundled-tool findings against vendor fixes and actual reachability.
+  - Owner: release/security reviewer; fresh PHP-base native findings remain unresolved; Node OS and Postgres gosu findings still require final-image disposition. Bundled npm source remediation now uses integrity-pinned isolated 11.21.1 and its 142-package advisory check passes, but the build-stage scan is pending. Worker/scheduler users are explicit; Apache default-root warning remains bounded but open. New CI builds/scans actual images and exports SBOMs; it has not run. No final image build or blanket suppression; see audit for distribution-specific caveats.
+- [ ] SA-005 [status:in_progress] Run exact-candidate patched-PHP/PostgreSQL 16/current-Chromium CI and staging verification before promotion.
+  - Owner: release owner; no current-revision CI, provider/deployment or independent-launch assurance is claimed from local checks.
+- [ ] SA-006 [status:open] Review main branch/ruleset and account-level Actions restrictions without silently changing GitHub settings.
+  - Owner: repository owner; protection/ruleset inventory was empty, workflow pins/read-only permissions help but do not establish account governance.
+
 ## Change Log
+- 2026-10-22: Completed expanded A–N incident refresh and safe local follow-up remediation; [current audit](SECURITY_AUDIT_2026-10-22.md) distinguishes source fixes, observed host drift, historical/cloud gaps and remaining owner actions. Full SQLite/PostgreSQL 16.15 suites each pass 225 tests/1,343 assertions; twelve JS tests, lint/build/style/static and all 17 actual-Chrome process-backed browser journeys pass. Reverified exact-three history policy, strict source/bundle scans and fresh PHP-base native findings; added isolated integrity-pinned npm and actual-image CI/SBOM gate. Local PG/browser validation is current, while container, credential, device/account, exact-SHA CI/provider and independent launch gates remain open. No push, deployment, global update, credential rotation, history rewrite or shared-service interruption occurred.
+- 2026-10-21: Completed source/delivery security audit and safe local remediation in an isolated branch; added [incident applicability and action register](SECURITY_AUDIT_2026-10-21.md). Reopened current-revision PostgreSQL/browser/review gates; preserved historical evidence and the exact Brevo accepted risk. Host patching, cache-key ownership, final-image native/tool dispositions, current-SHA CI, account protections and provider assurance remain open. No push, history rewrite, credential rotation, service interruption or deployment occurred.
 - 2026-07-27T12:30:02: Checklist initialized.
 - 2026-07-27T12:35:00: Rebased the 75-ticket audit into five pre-deployment gates; recorded confirmed findings, fix lanes, validation ladder, and residual owner decisions.
 - 2026-07-27T12:41:01-04:00: Removed arbitrary account/tenant mutation, legacy destructive GET, hard-delete support, direct impersonation, and cross-user avatar paths; added current-password and privilege-field regression coverage; marked F-001 verified.

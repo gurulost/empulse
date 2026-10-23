@@ -8,12 +8,31 @@ use App\Services\OrganizationEntitlementService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Laravel\Cashier\Http\Controllers\WebhookController as CashierWebhookController;
+use Stripe\Exception\SignatureVerificationException;
+use Stripe\WebhookSignature;
 use Symfony\Component\HttpFoundation\Response;
 
 class StripeWebhookController extends CashierWebhookController
 {
     public function handleWebhook(Request $request)
     {
+        // Cashier conditionally installs signature middleware only when a secret
+        // exists. Missing configuration must never enable unsigned processing.
+        $secret = (string) config('cashier.webhook.secret');
+        if (trim($secret) === '') {
+            return new Response('Stripe webhook is not configured.', 503);
+        }
+        try {
+            WebhookSignature::verifyHeader(
+                $request->getContent(),
+                (string) $request->header('Stripe-Signature'),
+                $secret,
+                config('cashier.webhook.tolerance')
+            );
+        } catch (SignatureVerificationException) {
+            return new Response('Invalid webhook signature.', 403);
+        }
+
         $payload = json_decode($request->getContent(), true);
         if (! is_array($payload) || empty($payload['id']) || empty($payload['type'])) {
             return new Response('Invalid webhook payload.', 400);

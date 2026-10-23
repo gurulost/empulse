@@ -43,14 +43,20 @@ class SubmissionConcurrencyRehearsalTest extends TestCase
 
     public function test_concurrency_rehearsal_requires_postgresql(): void
     {
-        $this->artisan('readiness:submission-concurrency', [
-            'autosave_assignment_id' => 1,
-            'submit_assignment_id' => 2,
-            'source_response_id' => 1,
-            '--execute' => true,
-        ])
-            ->expectsOutputToContain('requires PostgreSQL')
-            ->assertFailed();
+        $previous = config('database.default');
+        config(['database.default' => 'sqlite']);
+        try {
+            $this->artisan('readiness:submission-concurrency', [
+                'autosave_assignment_id' => 1,
+                'submit_assignment_id' => 2,
+                'source_response_id' => 1,
+                '--execute' => true,
+            ])
+                ->expectsOutputToContain('requires PostgreSQL')
+                ->assertFailed();
+        } finally {
+            config(['database.default' => $previous]);
+        }
     }
 
     protected function pendingAssignment(): SurveyAssignment

@@ -8,7 +8,7 @@ Empulse has not been deployed or sold. This runbook is a release contract, not e
 
 ## Prerequisites
 - A selected production provider, release owner, database, and domain.
-- PHP 8.2+, Composer, Node 22+, and either:
+- Stable PHP at least 8.2.35 / 8.3.36 / 8.4.27 / 8.5.12 on the corresponding maintained branch, Composer, Node 22.23.4 (or patched 24.22.1+), and either:
   - a Herokuish/buildpack platform that provides `heroku-php-apache2` for the checked-in `Procfile`, or
   - a container runtime that builds the checked-in `Dockerfile`.
 - Stripe production keys and webhook secret.
@@ -17,6 +17,11 @@ Empulse has not been deployed or sold. This runbook is a release contract, not e
 - Persistent/shared avatar storage configured through a Laravel filesystem disk, or avatar upload intentionally disabled until that storage exists.
 
 ## Critical Release Notes
+- Read the [October 22 security refresh](SECURITY_AUDIT_2026-10-22.md) first: native-container findings, host/service identity, and current-revision CI are unresolved release gates. A digest pin is identity evidence, not a clean vulnerability assessment.
+- Builds use SHA-512-verified npm 11.21.1 in an empty build-specific prefix (`node scripts/install-build-npm.mjs <absolute-empty-prefix>`), not the base image's older bundled npm or a global workstation upgrade. Node security floors run before asset/test scripts. Build and scan both frontend toolchain and final runtime images; the application lockfile audit does not cover global build-tool dependencies.
+- Use `PLAYWRIGHT_CHANNEL=chrome npm run test:e2e` with the approved current stable Chrome for the browser gate, recording the actual browser version. Updating Playwright alone does not refresh every browser security patch.
+- Run `php scripts/check-php-runtime.php` before application bootstrap. Inspect the actual Apache/FPM executable/version as well; a patched CLI does not prove the serving SAPI or old workers were replaced.
+- Rebuild with `docker build --pull --no-cache` in trusted CI, scan the final image with a fresh distribution-aware database, and record the final digest and native-package dispositions. Never promote an old vulnerable image as rollback.
 - `public/build` is generated during deployment and is no longer intended to be committed.
 - The app now depends on both a queue worker and the Laravel scheduler for survey wave dispatch and invitation delivery.
 - Image builds and web startup must never run migrations or seed data.
@@ -68,6 +73,7 @@ Empulse has not been deployed or sold. This runbook is a release contract, not e
 Use `.env.production.example` as the variable inventory. Before migration or process start, run:
 
 ```bash
+php scripts/check-php-runtime.php
 php artisan app:production-check
 ```
 
@@ -76,9 +82,9 @@ php artisan app:production-check
 2. Install backend dependencies:
    - `composer install --no-dev --prefer-dist --optimize-autoloader`
 3. Install frontend dependencies and build assets:
-   - `npm ci`
+   - `npm ci --ignore-scripts`
    - `npm run build`
-4. Run `php artisan app:production-check`.
+4. Run `php scripts/check-php-runtime.php` and `php artisan app:production-check`.
 5. Ensure writable directories exist:
    - `storage/`
    - `bootstrap/cache/`
@@ -97,12 +103,17 @@ php artisan app:production-check
    - scheduler
 
 ## Process Requirements
+- The Compose web port is loopback-only. Put an approved HTTPS reverse proxy on the same host, or explicitly configure the selected provider's private ingress; do not expose the HTTP origin/database directly. Trust only that proxy's exact addresses.
+- The Compose `uploads` volume now backs `storage/app/public`, matching Laravel's public disk. Before using an existing volume, inspect its layout and plan a non-destructive data migration; do not blindly mount a legacy `public/upload` volume and assume avatars moved. Run `php artisan storage:link` for this disk. New installs have no existing customer data to migrate.
+- Roster staging persists the CSV encrypted in the database (`roster_imports.source_csv`), then clears it after parsing; workers need the same database and `APP_KEY`, not a shared plaintext upload volume. Verify synthetic cross-process parsing and retention. Keep temporary uploads/private application storage out of public mounts.
 - Web:
   - If deploying with the checked-in `Procfile`, run the Apache/PHP buildpack runtime: `heroku-php-apache2 public/`
   - If your platform does not provide that command, deploy with the checked-in Docker image or the platform's native Apache/nginx + PHP runtime.
 - Queue worker:
+  - In Compose, this process runs as `www-data`; verify shared storage permissions rather than granting root.
   - `php artisan queue:work --tries=3 --backoff=10 --sleep=1 --timeout=120 --max-time=3600`
 - Scheduler:
+  - In Compose, this process also runs as `www-data`.
   - `php artisan schedule:work`
   - If your platform does not support a long-running scheduler process, run cron with:
     - `* * * * * php artisan schedule:run`
@@ -111,6 +122,7 @@ php artisan app:production-check
 - Point Stripe to:
   - `/stripe/webhook`
 - Verify the signing secret matches `STRIPE_WEBHOOK_SECRET`.
+- Prove absent configuration returns 503, an unsigned/incorrectly signed request returns 403, and a real Stripe test-mode delivery succeeds exactly once. The controller now fails closed even when Cashier's signature middleware was not installed.
 - Confirm delivery for at least:
   - `customer.subscription.created`
   - `customer.subscription.updated`

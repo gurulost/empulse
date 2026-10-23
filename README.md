@@ -44,7 +44,7 @@ Qualtrics has been replaced for the active survey and analytics path.
 
 ## Architecture at a glance
 
-- Backend: Laravel 12 on PHP 8.2+
+- Backend: Laravel 12 on a security-patched PHP branch (minimum 8.2.35, 8.3.36, 8.4.27, or 8.5.12)
 - UI: Blade, Bootstrap 5, and conditionally mounted Vue 3 components
 - Assets: Vite
 - Billing: Stripe and Laravel Cashier
@@ -58,9 +58,9 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) before changing survey, analy
 
 Requirements:
 
-- PHP 8.2+
+- PHP 8.2.35+, 8.3.36+, 8.4.27+, or 8.5.12+; verify with `php scripts/check-php-runtime.php`
 - Composer
-- Node 22+
+- Node 22.23.4 (see `.node-version`) or patched Node 24.22.1+
 - a configured database
 
 ```bash
@@ -195,6 +195,8 @@ For the governed 500-row roster path, use `php artisan readiness:roster-rehearsa
 
 ## Production runtime contract
 
+The [October 22 security refresh](docs/SECURITY_AUDIT_2026-10-22.md) extends the [October 21 audit](docs/SECURITY_AUDIT_2026-10-21.md) with current incident guidance, additional local fixes, and fresh PostgreSQL/browser evidence. No deployed environment is verified. Repository runtime pins do not update a running host or provider buildpack.
+
 No production environment is currently selected or deployed. Repository-level production work targets the provider-neutral contract in [`docs/PRODUCTION_DEPLOYMENT_RUNBOOK.md`](docs/PRODUCTION_DEPLOYMENT_RUNBOOK.md):
 
 - PostgreSQL is the only production database;
@@ -213,6 +215,8 @@ The checked-in Docker and Procfile definitions express the same process contract
 
 - [`docs/PRODUCT_VISION_AND_BUSINESS_MODEL.md`](docs/PRODUCT_VISION_AND_BUSINESS_MODEL.md) — authoritative working north star
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — authoritative current-source map
+- [`docs/SECURITY_AUDIT_2026-10-21.md`](docs/SECURITY_AUDIT_2026-10-21.md) — incident applicability, local remediation, evidence boundaries, and remaining actions
+- [`docs/SECURITY_AUDIT_2026-10-22.md`](docs/SECURITY_AUDIT_2026-10-22.md) — expanded A–N baseline, refreshed runtime evidence, further fixes and authorization needs
 - [`docs/LAUNCH_DECISIONS_AND_EXTERNAL_REVIEW_HANDOFF.md`](docs/LAUNCH_DECISIONS_AND_EXTERNAL_REVIEW_HANDOFF.md) — recommended launch boundary, pending owner decisions, independent-review packets, and provider staging acceptance evidence
 - [`docs/AUDIT_BACKLOG_TRACEABILITY_2026-07-27.md`](docs/AUDIT_BACKLOG_TRACEABILITY_2026-07-27.md) — disposition and evidence for every owner-supplied audit ticket
 - [`docs/EMPULSE_PRODUCTION_READINESS_CHECKLIST.md`](docs/EMPULSE_PRODUCTION_READINESS_CHECKLIST.md) — current release gates, evidence, and accountable residual risks

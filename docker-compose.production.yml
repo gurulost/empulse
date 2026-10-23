@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16.15-alpine@sha256:deb28ee471183cb0c303113dac9b2433c51eeeeb678def7af9a9ec5820367815
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_DATABASE}
@@ -19,19 +19,20 @@ services:
     restart: unless-stopped
     env_file: ${ENV_FILE:-.env.production}
     ports:
-      - "${APP_PORT:-8080}:80"
+      - "127.0.0.1:${APP_PORT:-8080}:80"
     volumes:
-      - uploads:/var/www/html/public/upload
+      - uploads:/var/www/html/storage/app/public
     depends_on:
       postgres:
         condition: service_healthy
 
   worker:
     build: .
+    user: www-data
     restart: unless-stopped
     env_file: ${ENV_FILE:-.env.production}
     command: >
-      sh -lc "php artisan app:production-check &&
+      sh -lc "php scripts/check-php-runtime.php && php artisan app:production-check &&
       php artisan queue:work --tries=3 --backoff=10 --sleep=1
       --timeout=120 --max-time=3600"
     depends_on:
@@ -40,9 +41,10 @@ services:
 
   scheduler:
     build: .
+    user: www-data
     restart: unless-stopped
     env_file: ${ENV_FILE:-.env.production}
-    command: sh -lc "php artisan app:production-check && php artisan schedule:work"
+    command: sh -lc "php scripts/check-php-runtime.php && php artisan app:production-check && php artisan schedule:work"
     depends_on:
       postgres:
         condition: service_healthy

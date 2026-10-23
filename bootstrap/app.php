@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\Authenticate;
 use App\Http\Middleware\EnsureEmailBelongsToCompany;
 use App\Http\Middleware\Payment;
 use App\Http\Middleware\RedirectIfAuthenticated;
@@ -46,6 +47,7 @@ return Application::configure(basePath: dirname(__DIR__))
         );
 
         $middleware->alias([
+            'auth' => Authenticate::class,
             'guest' => RedirectIfAuthenticated::class,
             'capability' => RequireCapability::class,
             'welcome' => Welcome::class,

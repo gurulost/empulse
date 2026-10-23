@@ -1,4 +1,4 @@
-modules = ["php-8.2", "web", "nodejs-20", "vue-node-20", "postgresql-16"]
+modules = ["php-8.2", "web", "nodejs-22", "postgresql-16"]
 [agent]
 expertMode = true
 
@@ -26,7 +26,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "APP_DEBUG=false php artisan app:install --seed-if-empty --force && (php artisan queue:work --tries=1 --sleep=3 &) && APP_DEBUG=false php artisan serve --host=0.0.0.0 --port=5000"
+args = "php scripts/check-php-runtime.php && APP_DEBUG=false php artisan app:install --seed-if-empty --force && (php artisan queue:work --tries=1 --sleep=3 &) && APP_DEBUG=false php artisan serve --host=0.0.0.0 --port=5000"
 waitForPort = 5000
 
 [[ports]]

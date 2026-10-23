@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\CapacityRehearsalService;
 use App\Services\SurveyAnalyticsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Mockery;
 use Tests\TestCase;
 
@@ -20,7 +21,7 @@ class CapacityRehearsalTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_report_measures_cohort_and_integrity_but_rejects_unqualified_database(): void
+    public function test_report_measures_cohort_and_integrity_but_rejects_unqualified_checkout(): void
     {
         [$company, $wave] = $this->capacityFixture();
 
@@ -67,8 +68,9 @@ class CapacityRehearsalTest extends TestCase
         $this->assertSame(2, $report['counts']['submitted_responses']);
         $this->assertSame(2, $report['counts']['answers']);
         $this->assertSame(['eligible'], $report['analytics']['availability']);
-        $this->assertFalse($report['checks']['database_engine']['passed']);
-        $this->assertSame('sqlite', $report['checks']['database_engine']['actual']);
+        $driver = DB::connection()->getDriverName();
+        $this->assertSame($driver === 'pgsql', $report['checks']['database_engine']['passed']);
+        $this->assertSame($driver, $report['checks']['database_engine']['actual']);
         $this->assertTrue($report['checks']['minimum_invited_cohort']['passed']);
         $this->assertTrue($report['checks']['eligible_privacy_result']['passed']);
         $this->assertTrue($report['checks']['analytics_p95_budget_ms']['passed']);

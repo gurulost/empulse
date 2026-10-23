@@ -37,6 +37,7 @@ class TeamApiTest extends TestCase
             'email' => 'manager@test.com',
             'password' => bcrypt('password'),
             'role' => 1, // Manager
+            'status' => 'active',
             'company_id' => $this->companyId,
             'company_title' => 'Test Company',
             'tariff' => 1,

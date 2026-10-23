@@ -21,12 +21,18 @@ class RosterCapacityRehearsalTest extends TestCase
 
     public function test_roster_rehearsal_requires_postgresql(): void
     {
-        $this->artisan('readiness:roster-rehearsal', [
-            'company_id' => 1,
-            'actor_id' => 1,
-            '--execute' => true,
-        ])
-            ->expectsOutputToContain('requires PostgreSQL')
-            ->assertFailed();
+        $previous = config('database.default');
+        config(['database.default' => 'sqlite']);
+        try {
+            $this->artisan('readiness:roster-rehearsal', [
+                'company_id' => 1,
+                'actor_id' => 1,
+                '--execute' => true,
+            ])
+                ->expectsOutputToContain('requires PostgreSQL')
+                ->assertFailed();
+        } finally {
+            config(['database.default' => $previous]);
+        }
     }
 }

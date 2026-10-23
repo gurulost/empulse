@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Support\RuntimeSecurityPolicy;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -16,6 +17,9 @@ class CheckProductionConfiguration extends Command
     public function handle(): int
     {
         $failures = array_values(array_filter([
+            RuntimeSecurityPolicy::supportsPhp(PHP_VERSION)
+                ? null
+                : 'PHP_VERSION: a supported security-patched PHP runtime is required.',
             $this->mustEqual('APP_ENV', config('app.env'), 'production'),
             $this->mustEqual('APP_DEBUG', config('app.debug'), false),
             $this->mustBePresent('APP_KEY', config('app.key')),

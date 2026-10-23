@@ -60,7 +60,7 @@ if [[ "${baseline_status}" -ne 1 ]]; then
     exit 1
 fi
 
-python3 -c '
+python3 -I -S -c '
 import json
 import sys
 
@@ -87,7 +87,7 @@ allowed_report="${temp_root}/allowed.json"
         --log-level=error
 )
 
-python3 -c '
+python3 -I -S -c '
 import json
 import sys
 
@@ -129,7 +129,7 @@ if [[ "${negative_status}" -ne 1 ]]; then
     exit 1
 fi
 
-python3 -c '
+python3 -I -S -c '
 import json
 import sys
 

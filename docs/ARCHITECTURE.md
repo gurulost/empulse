@@ -18,10 +18,10 @@ The application has two operating layers:
 
 | Layer | Current implementation |
 | --- | --- |
-| Backend | PHP 8.2+, Laravel 12 |
+| Backend | Laravel 12; patched PHP 8.2.35 / 8.3.36 / 8.4.27 / 8.5.12 minimum on each supported branch |
 | Server-rendered UI | Blade and Bootstrap 5 |
 | Interactive UI | Vue 3 components mounted as page-level islands |
-| Asset build | Vite 8 on Node 22+ |
+| Asset build | Vite 8 on Node 22.23.4 (`.node-version`) or patched 24.22.1+ |
 | Primary production database | PostgreSQL-compatible Laravel schema |
 | Local/test database | SQLite is used by the automated test configuration |
 | Billing | Stripe through Laravel Cashier |
@@ -261,7 +261,7 @@ Primary files:
 
 Cashier's customer model is `Companies`; its legacy `subscriptions.user_id` column stores the durable company ID. `organization_billing_admins` is the sole authorization source for account management: an ordinary manager or chief role does not imply billing access. The active owner can appoint or revoke additional active billing administrators, while owner replacement uses the explicit request/acceptance transfer workflow. Every appointment, revocation, and transfer is tenant-scoped and audited, so manager departure does not orphan billing. `organization_entitlements` is the only current feature-gating authority and stores the active projection of plan, status, features, limits, source, expiry, and Stripe reconciliation state. `billing_catalog_versions` content-hashes each effective catalog/trial/access contract, while append-only `organization_entitlement_versions` preserve every company entitlement’s original catalog, feature, limit, price-reference, lifecycle, and subscription terms. Updating current configuration cannot rewrite historical commercial evidence.
 
-Stripe webhook events are payload-hashed, idempotent, replay-safe, and stale-event guarded in `billing_webhook_events`. Survey scheduling requires an organization entitlement in an allowed state; recurring waves additionally require the `recurring_waves` feature. Expired manual grants and canceled/past-due subscriptions cannot start new dispatches. Existing collected data uses a separate access-state policy.
+Stripe webhook events are payload-hashed, idempotent, replay-safe, and stale-event guarded in `billing_webhook_events`. The controller verifies the exact raw-body signature before any event persistence; an absent signing secret returns 503 and an invalid signature returns 403, independent of Cashier's conditional middleware registration. Survey scheduling requires an organization entitlement in an allowed state; recurring waves additionally require the `recurring_waves` feature. Expired manual grants and canceled/past-due subscriptions cannot start new dispatches. Existing collected data uses a separate access-state policy.
 
 The canonical feature/limit catalog is `config/billing.php`; production Stripe price IDs come from environment configuration. Legacy user `tariff` remains a display/import compatibility field and is not authorization truth. Usage is appended idempotently to `organization_usage_events` and cannot alter collected evidence. The billing page exposes a privacy-safe derivation for each period—event count, summed quantity, unit, definition, and first/last event time—without member IDs or survey content.
 
@@ -279,6 +279,8 @@ Primary files:
 WorkFit admin can inspect companies and subscriptions, operate governed survey publication, review onboarding health, investigate sanitized audit metadata, and work a grant-scoped advisor queue. Direct impersonation and hard user deletion are intentionally unavailable; any future support-access feature must be time-bound, reason-coded, scoped, consent-aware, and audited.
 
 Route and controller access uses named capabilities from `config/capabilities.php`. `RequireCapability` is the enforcement point. The current integer roles are only mapped into this capability vocabulary as a transition toward durable organization memberships; “not an employee” is not an authorization grant.
+
+The `auth` alias explicitly uses `App\Http\Middleware\Authenticate`, which checks current account status on every authenticated request. Pending/inactive accounts are denied even with an existing session; session guards are logged out and their session invalidated. Capability and tenant policies still apply separately.
 
 First-party `onboarding_events` record activation behaviors and durable milestones. The operational stages are:
 
@@ -314,6 +316,12 @@ Application logs and customer-visible errors contain only generic failure langua
 Profile avatars are untrusted uploads. The server validates image type, size, and dimensions, decodes and normalizes the image, writes a generated JPEG through the configured `AVATAR_DISK`, then updates the user record and removes the prior object. Production must provide a persistent/shared storage disk; the local public disk is not durable across ephemeral releases.
 
 ## Runtime processes
+
+`scripts/check-php-runtime.php` checks stable supported-branch security floors before Composer/Laravel startup in Docker/Procfile/Replit entry points. The native `public/index.php` and production-check command enforce that policy too; the web guard returns a generic 503 without exposing the version. This is not a mitigation for an engine-level vulnerability before application bootstrap: patch PHP itself and inspect the actual serving process. The front controller no longer harvests a parent process's entire `/proc` environment into request state; native process environment or the configured application environment file owns configuration.
+
+Docker bases and CI actions are digest/SHA-pinned. Frontend development/build/test scripts enforce patched Node 22.23.4+ / 24.22.1+ through `scripts/check-node-runtime.mjs`. CI and the Docker frontend stage bootstrap npm 11.21.1 from a SHA-512-verified artifact under an explicit empty private prefix, with lifecycle hooks disabled and no machine-global npm update. Container CI builds/scans the actual frontend and final runtime images and exports SBOMs; unresolved high/critical vulnerabilities fail that gate, with no blanket suppressions. Playwright CI installs Chrome stable separately from the Playwright package, and `PLAYWRIGHT_CHANNEL=chrome` selects that browser for local/CI journeys. Record actual browser versions independently of package versions.
+
+Vite binds loopback by default and accepts only explicitly configured remote-development hosts through `VITE_DEV_HOST` / `VITE_DEV_ALLOWED_HOSTS`; production serves built assets, not Vite. See [the October 22 audit](SECURITY_AUDIT_2026-10-22.md) for unresolved native-package and provider checks.
 
 A complete production runtime requires:
 

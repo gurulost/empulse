@@ -1,4 +1,18 @@
-FROM composer:2 AS vendor
+FROM php:8.2.35-apache@sha256:fa8966fbaaa06981e549e7a33eb8a68f4cf677d6a82e1d6350adc5d85fe8f740 AS php-base
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates curl git unzip libfreetype6-dev libicu-dev libjpeg62-turbo-dev \
+    libpng-dev libpq-dev libzip-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install bcmath gd intl opcache pcntl pdo_pgsql zip \
+    && a2enmod rewrite \
+    && rm -rf /var/lib/apt/lists/*
+
+FROM php-base AS vendor
+
+# Copy only Composer's executable; dependency resolution uses patched PHP and
+# the refreshed OS trust store, not the Composer image's runtime.
+COPY --from=composer:2.9.3@sha256:c404e6f07bdebf8a8c605be5b5fab88eef737f6e4acfba3651d39c824ce224d4 /usr/bin/composer /usr/local/bin/composer
 
 WORKDIR /app
 
@@ -12,36 +26,31 @@ RUN composer install \
     --optimize-autoloader
 
 COPY . .
-RUN composer dump-autoload --no-dev --optimize
+RUN mkdir -p storage/framework/cache/data storage/framework/sessions \
+    storage/framework/views storage/logs bootstrap/cache \
+    && composer dump-autoload --no-dev --optimize
 
-FROM node:22 AS frontend
+FROM node:22.23.4-bookworm-slim@sha256:de170b39439eb0e5a3444ad7d60b015614a381e10fecae2e30ec9e735122f38d AS frontend
 
 WORKDIR /app
 
+COPY scripts/check-node-runtime.mjs scripts/install-build-npm.mjs ./scripts/
+RUN node scripts/install-build-npm.mjs /opt/empulse-build-npm \
+    && rm -rf /usr/local/lib/node_modules/npm \
+    && rm -f /usr/local/bin/npm /usr/local/bin/npx
+ENV PATH="/opt/empulse-build-npm/bin:${PATH}"
+
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --ignore-scripts
 
 COPY resources ./resources
 COPY public ./public
 COPY vite.config.js ./
 RUN npm run build
 
-FROM php:8.2-apache
+FROM php-base
 
 WORKDIR /var/www/html
-
-RUN apt-get update && apt-get install -y \
-    curl \
-    libfreetype6-dev \
-    libicu-dev \
-    libjpeg62-turbo-dev \
-    libpng-dev \
-    libpq-dev \
-    libzip-dev \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install bcmath gd intl opcache pcntl pdo_pgsql zip \
-    && a2enmod rewrite \
-    && rm -rf /var/lib/apt/lists/*
 
 ENV APP_ENV=production
 ENV APP_DEBUG=false
@@ -55,11 +64,15 @@ COPY . .
 COPY --from=vendor /app/vendor ./vendor
 COPY --from=frontend /app/public/build ./public/build
 
-RUN chown -R www-data:www-data storage bootstrap/cache
+RUN mkdir -p storage/app/public storage/app/private storage/framework/cache/data \
+    storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
+    && ln -s ../storage/app/public public/storage \
+    && chown -R www-data:www-data storage bootstrap/cache
 
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD curl --fail --silent http://127.0.0.1/api/healthz > /dev/null || exit 1
+    CMD curl --fail --silent --header "Host: $(php -r 'echo parse_url(getenv("APP_URL"), PHP_URL_HOST);')" \
+        http://127.0.0.1/api/healthz > /dev/null || exit 1
 
-CMD ["sh", "-lc", "php artisan app:production-check && exec apache2-foreground"]
+CMD ["sh", "-lc", "php scripts/check-php-runtime.php && php artisan app:production-check && exec apache2-foreground"]

@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Services\OrganizationEntitlementService;
 use App\Support\CompanyBilling;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 class BillingFlowTest extends TestCase
@@ -88,7 +89,10 @@ class BillingFlowTest extends TestCase
 
     public function test_stripe_subscription_webhook_syncs_company_owned_entitlement(): void
     {
-        config(['billing.catalog.pulse.stripe_price' => 'price_pulse']);
+        config([
+            'billing.catalog.pulse.stripe_price' => 'price_pulse',
+            'cashier.webhook.secret' => 'whsec_release_test',
+        ]);
         $company = Companies::create([
             'title' => 'Acme',
             'manager' => 'Manager',
@@ -135,7 +139,7 @@ class BillingFlowTest extends TestCase
             ],
         ];
 
-        $this->postJson(route('stripe.webhook'), $payload)->assertOk();
+        $this->postSignedStripeWebhook($payload)->assertOk();
 
         $this->assertDatabaseHas('subscriptions', [
             'user_id' => $company->id,
@@ -160,7 +164,7 @@ class BillingFlowTest extends TestCase
         $this->assertSame(0, (int) $manager->fresh()->tariff);
         $this->assertSame(0, (int) $employee->fresh()->tariff);
 
-        $this->postJson(route('stripe.webhook'), $payload)->assertOk();
+        $this->postSignedStripeWebhook($payload)->assertOk();
         $this->assertDatabaseCount('billing_webhook_events', 1);
         $this->assertDatabaseCount('subscriptions', 1);
 
@@ -175,7 +179,7 @@ class BillingFlowTest extends TestCase
                 ],
             ],
         ];
-        $this->postJson(route('stripe.webhook'), $staleDeletion)->assertOk();
+        $this->postSignedStripeWebhook($staleDeletion)->assertOk();
         $this->assertDatabaseHas('billing_webhook_events', [
             'stripe_event_id' => 'evt_stale_delete',
             'status' => 'ignored_stale',
@@ -183,6 +187,17 @@ class BillingFlowTest extends TestCase
         $this->assertDatabaseHas('subscriptions', [
             'stripe_id' => 'sub_123',
             'stripe_status' => 'active',
+        ]);
+    }
+
+    private function postSignedStripeWebhook(array $payload): TestResponse
+    {
+        $body = json_encode($payload, JSON_THROW_ON_ERROR);
+        $timestamp = now()->timestamp;
+        $signature = hash_hmac('sha256', $timestamp.'.'.$body, 'whsec_release_test');
+
+        return $this->postJson(route('stripe.webhook'), $payload, [
+            'Stripe-Signature' => "t={$timestamp},v1={$signature}",
         ]);
     }
 

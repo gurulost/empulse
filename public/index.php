@@ -1,39 +1,18 @@
 <?php
 
+use App\Support\RuntimeSecurityPolicy;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
 
-/*
-|--------------------------------------------------------------------------
-| Bootstrap Environment From Parent Process
-|--------------------------------------------------------------------------
-|
-| PHP's built-in web server spawns worker processes that do not inherit
-| the parent's environment variables. We read the parent process environ
-| and copy any missing variables so that Dotenv and config() work correctly
-| for DB, cache, session, and queue settings.
-|
-*/
-if (function_exists('posix_getppid') && ! getenv('DB_HOST')) {
-    $ppidEnvFile = '/proc/'.posix_getppid().'/environ';
-    if (is_readable($ppidEnvFile)) {
-        $parentEnv = @file_get_contents($ppidEnvFile);
-        if ($parentEnv) {
-            foreach (explode("\0", $parentEnv) as $entry) {
-                if ($entry === '' || strpos($entry, '=') === false) {
-                    continue;
-                }
-                [$key, $val] = explode('=', $entry, 2);
-                if ($key && ! getenv($key)) {
-                    putenv($entry);
-                    $_ENV[$key] = $val;
-                    $_SERVER[$key] = $val;
-                }
-            }
-        }
-    }
+// Native Apache/FPM deployments must enforce the same floor as container entrypoints.
+// This is a startup guard, not a mitigation for flaws inside the PHP engine itself.
+require_once __DIR__.'/../app/Support/RuntimeSecurityPolicy.php';
+if (! RuntimeSecurityPolicy::supportsPhp(PHP_VERSION)) {
+    http_response_code(503);
+    header('Content-Type: text/plain; charset=utf-8');
+    exit('Service unavailable.');
 }
 
 /*
