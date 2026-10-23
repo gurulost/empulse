@@ -13,6 +13,7 @@ class ContainerRuntimeContractTest extends TestCase
 
         $this->assertStringContainsString('php:8.5.12-fpm-alpine3.24@sha256:', $docker);
         $this->assertStringContainsString('USER www-data', $docker);
+        $this->assertStringContainsString('STOPSIGNAL SIGTERM', $docker);
         $this->assertStringContainsString('EXPOSE 8080', $docker);
         $this->assertStringContainsString('CMD ["web"]', $docker);
         $this->assertLessThan(

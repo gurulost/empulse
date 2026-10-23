@@ -80,6 +80,10 @@ RUN mkdir -p storage/app/public storage/app/private storage/framework/cache/data
 
 USER www-data
 
+# The FPM base uses SIGQUIT for a standalone master; PID 1 here is Tini and
+# the supervisor converts SIGTERM into graceful SIGQUIT for both servers.
+STOPSIGNAL SIGTERM
+
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \

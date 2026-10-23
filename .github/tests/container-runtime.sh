@@ -22,6 +22,7 @@ cleanup() {
 trap cleanup EXIT
 
 docker network create --internal "$network" >/dev/null
+[[ "$(docker image inspect --format '{{.Config.StopSignal}}' empulse:audit)" == SIGTERM ]]
 docker run -d --name "$database" --network "$network" \
     -e POSTGRES_DB=empulse_smoke -e POSTGRES_USER=empulse \
     -e POSTGRES_PASSWORD=empulse_ci_fixture empulse-postgres:audit >/dev/null
@@ -124,12 +125,14 @@ echo 'PHP/dotfile routing and request-log privacy checks passed.'
 docker exec "$web" nginx -e stderr -s quit
 exit_status="$(timeout 20 docker wait "$web")"
 [[ "$exit_status" != 0 ]]
+echo 'nginx child failure terminates the whole web container.'
 docker rm -v "$web" >/dev/null
 
 start_web
 docker exec "$web" sh -c 'read php_pid < /tmp/php-fpm.pid; kill -TERM "$php_pid"'
 exit_status="$(timeout 20 docker wait "$web")"
 [[ "$exit_status" != 0 ]]
+echo 'FPM child failure terminates the whole web container.'
 docker rm -v "$web" >/dev/null
 
 start_web
