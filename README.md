@@ -217,6 +217,7 @@ The checked-in Docker and Procfile definitions express the same process contract
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — authoritative current-source map
 - [`docs/SECURITY_AUDIT_2026-10-21.md`](docs/SECURITY_AUDIT_2026-10-21.md) — incident applicability, local remediation, evidence boundaries, and remaining actions
 - [`docs/SECURITY_AUDIT_2026-10-22.md`](docs/SECURITY_AUDIT_2026-10-22.md) — expanded A–N baseline, refreshed runtime evidence, further fixes and authorization needs
+- [`docs/SECURITY_CI_FOLLOWUP_2026-10-22.md`](docs/SECURITY_CI_FOLLOWUP_2026-10-22.md) — main push, actual-image CI findings, qualified cleanup, and remaining platform decision
 - [`docs/LAUNCH_DECISIONS_AND_EXTERNAL_REVIEW_HANDOFF.md`](docs/LAUNCH_DECISIONS_AND_EXTERNAL_REVIEW_HANDOFF.md) — recommended launch boundary, pending owner decisions, independent-review packets, and provider staging acceptance evidence
 - [`docs/AUDIT_BACKLOG_TRACEABILITY_2026-07-27.md`](docs/AUDIT_BACKLOG_TRACEABILITY_2026-07-27.md) — disposition and evidence for every owner-supplied audit ticket
 - [`docs/EMPULSE_PRODUCTION_READINESS_CHECKLIST.md`](docs/EMPULSE_PRODUCTION_READINESS_CHECKLIST.md) — current release gates, evidence, and accountable residual risks

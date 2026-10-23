@@ -22,9 +22,22 @@ The runtime image unnecessarily inherited build-only tools, development librarie
 
 CI additionally invokes the actual image's PHP security-floor check, Composer autoloader and required extensions, and Apache's configuration syntax check before scanning. These checks must pass in GitHub; source inspection alone does not qualify a changed image.
 
-Follow-up image build, smoke and vulnerability results are pending at this checkpoint. The full strict scan remains enabled for both frontend and runtime images. No `--ignore-unfixed`, severity reduction, blanket suppression, new secret ignore or accepted-risk record was added.
+The full strict scan remains enabled for both frontend and runtime images. No `--ignore-unfixed`, severity reduction, blanket suppression, new secret ignore or accepted-risk record was added.
 
 Run [39894557555](https://github.com/gurulost/empulse/actions/runs/39894557555) on `96064f2` caught a cleanup defect before runtime publication: the inherited concrete `libc6-dev`/`linux-libc-dev` packages were not removed by purging the virtual `libc-dev` build dependency alone. The compiler was gone but the explicit no-kernel-headers assertion correctly failed. The fix names the concrete build-only packages in the purge list; the assertion remains intact. Another clean image build and scan is required.
+
+Run [39894896681](https://github.com/gurulost/empulse/actions/runs/39894896681) also exposed a flaky synthetic negative control: one randomly generated hex value did not trigger Gitleaks' generic-key heuristic. This is not evidence of an additional exposed credential. The fixture now derives a deterministic, never-issued URL-safe value from a public test label, avoiding random entropy variation. Both the exact-three baseline assertions and the requirement that a new finding fail remain unchanged; local verification uses CI-pinned Gitleaks 8.24.3.
+
+### Qualified runtime cleanup, unresolved scan
+
+That run, on `9b28e689032651994a9eb5d587f32d596c0c004b`, successfully built the cleaned runtime image and passed its actual PHP 8.2.35 guard, autoloader/required-extension smoke, and Apache `Syntax OK` check. The application and browser job passed. The scanner artifacts establish:
+
+| Image | High | Critical | Total | Listed fixed versions |
+| --- | --- | --- | --- | --- |
+| Runtime after cleanup | 58 | 1 | 59 | None |
+| Frontend toolchain | 56 | 1 | 57 | None |
+
+The runtime reduction is 127 to 59 package/CVE matches; `linux-libc-dev` is absent. Installed Composer-vendor and Node-package scan sections have zero reported vulnerabilities. Retained Debian native libraries remain affected or require individual vendor/reachability disposition; this is **not a clean-image result**. The next commit changes only the synthetic secret fixture and evidence documents, not these image definitions. Its full GitHub CI must still run; no scan job is allowed to fail silently.
 
 ## Remaining platform decision
 

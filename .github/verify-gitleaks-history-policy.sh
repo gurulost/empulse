@@ -102,7 +102,10 @@ git init --quiet "${negative_repo}"
 git -C "${negative_repo}" config user.name "Empulse CI"
 git -C "${negative_repo}" config user.email "ci@example.invalid"
 cp "${policy_file}" "${negative_repo}/.gitleaksignore"
-synthetic_token="$(openssl rand -hex 32)"
+# Deterministic, never-issued URL-safe fixture. Random hex can miss generic-key
+# heuristics; the policy test must not depend on probabilistic recognition.
+synthetic_token="$(printf '%s' 'Empulse CI synthetic non-issued negative control v1' \
+    | openssl dgst -sha384 -binary | openssl base64 -A | tr '+/' '-_')"
 printf 'api_key = "%s"\n' "${synthetic_token}" > "${negative_repo}/unrecognized-secret.txt"
 git -C "${negative_repo}" add .gitleaksignore unrecognized-secret.txt
 git -C "${negative_repo}" commit --quiet -m "Add synthetic negative control"
