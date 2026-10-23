@@ -26,10 +26,11 @@ export default defineConfig(({ mode }) => ({
         }),
     ],
     server: {
-        host: '0.0.0.0',
+        host: process.env.VITE_DEV_HOST || '127.0.0.1',
         port: 5173,
         strictPort: false,
-        allowedHosts: true,
+        allowedHosts: (process.env.VITE_DEV_ALLOWED_HOSTS || '')
+            .split(',').map(host => host.trim()).filter(Boolean),
         hmr: mode === 'development' ? {
             clientPort: 443,
             protocol: 'wss',
