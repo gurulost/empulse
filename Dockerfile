@@ -62,7 +62,7 @@ RUN set -eux; \
       | sort -u \
       | xargs -r apt-mark manual; \
     apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
-      $PHPIZE_DEPS git unzip libfreetype6-dev libicu-dev libjpeg62-turbo-dev \
+      $PHPIZE_DEPS libc6-dev linux-libc-dev git unzip libfreetype6-dev libicu-dev libjpeg62-turbo-dev \
       libpng-dev libpq-dev libzip-dev; \
     rm -rf /var/lib/apt/lists/*; \
     if command -v cc >/dev/null || dpkg-query -s linux-libc-dev >/dev/null 2>&1; then \

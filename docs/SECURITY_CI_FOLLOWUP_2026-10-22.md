@@ -24,6 +24,8 @@ CI additionally invokes the actual image's PHP security-floor check, Composer au
 
 Follow-up image build, smoke and vulnerability results are pending at this checkpoint. The full strict scan remains enabled for both frontend and runtime images. No `--ignore-unfixed`, severity reduction, blanket suppression, new secret ignore or accepted-risk record was added.
 
+Run [39894557555](https://github.com/gurulost/empulse/actions/runs/39894557555) on `96064f2` caught a cleanup defect before runtime publication: the inherited concrete `libc6-dev`/`linux-libc-dev` packages were not removed by purging the virtual `libc-dev` build dependency alone. The compiler was gone but the explicit no-kernel-headers assertion correctly failed. The fix names the concrete build-only packages in the purge list; the assertion remains intact. Another clean image build and scan is required.
+
 ## Remaining platform decision
 
 The first image's libxml2 is `2.12.7+dfsg+really2.9.14-2.1+deb13u3`. Debian still lists the relevant stable package as vulnerable for [CVE-2026-6653](https://security-tracker.debian.org/tracker/CVE-2026-6653); its assessment is minor/no-DSA, while the scanner imports a critical rating from another source. Preserve that distinction. Vendor-confirmed non-applicability for [zlib's unbuilt contrib MiniZip code](https://security-tracker.debian.org/tracker/CVE-2023-45853) also cannot justify suppressing unrelated findings.
