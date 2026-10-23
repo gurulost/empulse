@@ -1,6 +1,24 @@
 # Security fixes: main push and GitHub CI follow-up
 
-Date: October 22, 2026, America/New_York. This is Git/CI evidence, not a deployment or launch approval.
+Started October 22; qualified October 23, 2026, America/New_York. This is Git/CI evidence, not a deployment or launch approval.
+
+## Qualified outcome
+
+Code revision `952c5bed41ac7bafffd8c35a4bac44c270800d20` is all-green in [run 39900324906](https://github.com/gurulost/empulse/actions/runs/39900324906). The later evidence-only commit must receive its own routine CI; it does not change this qualified runtime/worker/database implementation.
+
+| Verification | Result |
+| --- | --- |
+| Backend on PHP 8.5.12 / PostgreSQL 16.15 | 229 tests, 1,379 assertions pass |
+| Frontend | Lint, twelve JS tests and production builds pass, including the Alpine asset builder |
+| Actual-image browser journeys | All seventeen pass through rootless nginx/FPM plus the containerized worker; Linux Chrome 156.0.8078.47 |
+| Production runtime | Missing config rejected; authenticated non-root PostgreSQL/migrations, guarded non-root web startup, release identity, PHP/dotfile routing and log privacy pass |
+| Lifecycle | Failure of either child terminates the container; graceful Docker stop exits zero within the unchanged fifteen-second test limit |
+| Trust | Actual PHP/OpenSSL bundle/directory: 118 unique certificates; Node built-in: 116. Named affected emSign roots absent |
+| Strict image scans | Runtime, frontend-builder, PHP-vendor-builder, PostgreSQL: zero high/critical matches in Trivy 0.76.1; SBOMs retained |
+| All-severity cross-check | Local scans of those four exact SBOMs: zero reported matches at check time |
+| Secrets | Proposed/source policy and full history pass; exactly three approved fingerprints, deterministic unrecognized synthetic finding rejected |
+
+The following chronology explains failures and fixes, including the explicitly authorized serving-stack change. Original Debian findings are not accepted-risk exceptions for the replacement. No scanner/source/history control was weakened. No image was published to a deployment registry, no application was deployed, no shared/device service was restarted, and no real credential was rotated. Provider builds must be rebuilt/scanned/qualified and bound to a deployable immutable artifact under a separate approved change. Host-kernel, device/account, ignored-cache credential and independent legal/privacy/methodology/accessibility/commercial gates remain outside this CI completion claim.
 
 ## First pushed candidate
 
@@ -16,7 +34,7 @@ Main was fast-forwarded from `201da05f94109ad59818b64bd9a436121d736cb3` to `0670
 
 The actual first runtime image has Debian 13.7 and 127 high/critical package/CVE matches. The frontend image has Debian 12.15 and 57. No fixed version is listed for those matches in the reports. Counts represent package/CVE matches, not that many remotely exploitable application flaws.
 
-## In-scope follow-up remediation
+## Original Debian cleanup (superseded by the qualified replacement)
 
 The runtime image unnecessarily inherited build-only tools, development libraries and kernel headers from the PHP extension build stage. A separate `php-runtime` stage now retains the linked runtime libraries and removes extension compilers, development packages, git and unzip. The builder stages retain their required tools. Image construction explicitly fails if a compiler or `linux-libc-dev` remains or a required PHP extension is unavailable.
 
@@ -41,7 +59,7 @@ The runtime reduction is 127 to 59 package/CVE matches; `linux-libc-dev` is abse
 
 Run [39895455740](https://github.com/gurulost/empulse/actions/runs/39895455740), on `1db40a9966e2b45278be77df887fb441049ecba6`, verifies the deterministic secret-policy job and the same successful image builds/smokes. Container counts remain 59 runtime/57 frontend, with no listed fixes. The application job passed backend/build/static gates but stalled for over five minutes at Chrome installation; cancellation was requested to obtain the runner logs, not to waive browser testing. That run does not establish a final browser pass. CI now bounds browser installation to five minutes and the application job to twenty minutes; a fresh run is required. The initial installer stall's cause remains unverified while logs are unavailable.
 
-## Remaining platform decision
+## Original platform decision (subsequently authorized below)
 
 The first image's libxml2 is `2.12.7+dfsg+really2.9.14-2.1+deb13u3`. Debian still lists the relevant stable package as vulnerable for [CVE-2026-6653](https://security-tracker.debian.org/tracker/CVE-2026-6653); its assessment is minor/no-DSA, while the scanner imports a critical rating from another source. Preserve that distinction. Vendor-confirmed non-applicability for [zlib's unbuilt contrib MiniZip code](https://security-tracker.debian.org/tracker/CVE-2023-45853) also cannot justify suppressing unrelated findings.
 
