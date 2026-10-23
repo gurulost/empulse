@@ -26,10 +26,12 @@ docker run -d --name "$database" --network "$network" \
     -e POSTGRES_DB=empulse_smoke -e POSTGRES_USER=empulse \
     -e POSTGRES_PASSWORD=empulse_ci_fixture empulse-postgres:audit >/dev/null
 for attempt in {1..40}; do
-    docker exec "$database" pg_isready -U empulse -d empulse_smoke >/dev/null 2>&1 && break
+    docker exec -e PGPASSWORD=empulse_ci_fixture "$database" \
+        psql -h 127.0.0.1 -U empulse -d empulse_smoke -Atc 'select 1' >/dev/null 2>&1 && break
     sleep 1
 done
-docker exec "$database" pg_isready -U empulse -d empulse_smoke
+docker exec -e PGPASSWORD=empulse_ci_fixture "$database" \
+    psql -h 127.0.0.1 -U empulse -d empulse_smoke -Atc 'select 1'
 [[ "$(docker exec "$database" id -u)" != 0 ]]
 docker exec "$database" sh -c 'test ! -e /usr/local/bin/gosu'
 
@@ -113,7 +115,7 @@ if docker logs "$web" 2>&1 | grep -Fq "$canary"; then
 fi
 
 # A child exiting must terminate the whole container, not leave half a server.
-docker exec "$web" nginx -s quit
+docker exec "$web" nginx -e stderr -s quit
 exit_status="$(timeout 20 docker wait "$web")"
 [[ "$exit_status" != 0 ]]
 docker rm -v "$web" >/dev/null

@@ -57,9 +57,9 @@ jobs:
                     echo "DB_DATABASE=empulse_test"
                     echo "DB_USERNAME=empulse"
                     echo "DB_PASSWORD=empulse_test_password"
-                    echo "CACHE_STORE=file"
+                    echo "CACHE_STORE=database"
                     echo "QUEUE_CONNECTION=database"
-                    echo "SESSION_DRIVER=file"
+                    echo "SESSION_DRIVER=database"
                     echo "MAIL_MAILER=array"
                   } >> .env
 
@@ -148,7 +148,7 @@ jobs:
                   docker run -d --name empulse-ci-web --add-host host.docker.internal:host-gateway \
                     --env-file "$RUNNER_TEMP/empulse-journey.env" -e DB_HOST=host.docker.internal \
                     -p 127.0.0.1:8080:8080 empulse:journey \
-                    sh -c 'php-fpm -F & exec nginx -g "daemon off;"'
+                    sh -c 'php-fpm -F & exec nginx -e stderr -g "daemon off;"'
                   for attempt in {1..30}; do
                     curl --fail --silent http://127.0.0.1:8080/api/readyz && break
                     sleep 1
@@ -226,7 +226,7 @@ jobs:
                     echo "Production autoloader and required extensions passed.\n";
                   '
                   docker run --rm --entrypoint php-fpm empulse:audit -t
-                  docker run --rm --entrypoint nginx empulse:audit -t
+                  docker run --rm --entrypoint nginx empulse:audit -e stderr -t
             - name: Qualify guarded rootless startup, routing, privacy and process lifecycle
               run: bash .github/tests/container-runtime.sh
             - name: Scan actual built images and export SBOMs

@@ -10,11 +10,11 @@ fi
 # No environment switch bypasses production validation for the default server.
 php artisan app:production-check
 php-fpm -t
-nginx -t
+nginx -e stderr -t
 
 php-fpm -F &
 php_pid=$!
-nginx -g 'daemon off;' &
+nginx -e stderr -g 'daemon off;' &
 nginx_pid=$!
 
 stop_web() {

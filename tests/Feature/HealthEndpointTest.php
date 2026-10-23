@@ -13,9 +13,21 @@ class HealthEndpointTest extends TestCase
 
     public function test_liveness_does_not_depend_on_backing_services(): void
     {
-        $this->getJson('/api/healthz')
-            ->assertOk()
-            ->assertExactJson(['status' => 'live']);
+        $database = config('database.default');
+        config([
+            'runtime.release_sha' => null,
+            'runtime.deployment_environment_id' => null,
+            'database.default' => 'unavailable_for_liveness',
+            'runtime.required_tables' => ['unavailable_runtime_table'],
+        ]);
+
+        try {
+            $this->getJson('/api/healthz')
+                ->assertOk()
+                ->assertExactJson(['status' => 'live']);
+        } finally {
+            config(['database.default' => $database]);
+        }
     }
 
     public function test_health_surfaces_and_headers_expose_configured_release_identity(): void
