@@ -10,6 +10,7 @@ permissions:
 jobs:
     test:
         runs-on: ubuntu-latest
+        timeout-minutes: 20
         services:
             postgres:
                 image: postgres:16.15-alpine@sha256:deb28ee471183cb0c303113dac9b2433c51eeeeb678def7af9a9ec5820367815
@@ -114,6 +115,7 @@ jobs:
               run: npm run build
 
             - name: Install Playwright browser
+              timeout-minutes: 5
               run: npx playwright install --with-deps chrome
 
             - name: Prepare browser journey database
