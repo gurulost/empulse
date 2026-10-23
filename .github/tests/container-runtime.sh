@@ -34,6 +34,7 @@ docker exec -e PGPASSWORD=empulse_ci_fixture "$database" \
     psql -h 127.0.0.1 -U empulse -d empulse_smoke -Atc 'select 1'
 [[ "$(docker exec "$database" id -u)" != 0 ]]
 docker exec "$database" sh -c 'test ! -e /usr/local/bin/gosu'
+echo 'Non-root PostgreSQL fixture accepts authenticated TCP queries.'
 
 # Never-issued fixtures only, no inherited provider credentials. The internal
 # network also prevents SMTP/Brevo/Stripe connections outside this test estate.
@@ -85,34 +86,38 @@ if docker run --rm --network "$network" empulse:audit web > "${fixture_dir}/reje
     echo 'Unconfigured default web command unexpectedly succeeded.' >&2
     exit 1
 fi
+echo 'Default production web command rejects missing configuration.'
+
+http() {
+    docker exec "$web" curl --max-time 3 -H 'Host: empulse-ci.test' "$@"
+}
 
 start_web() {
     docker run -d --name "$web" --network "$network" --env-file "$env_file" \
-        -p 127.0.0.1::8080 empulse:audit >/dev/null
-    port="$(docker port "$web" 8080/tcp | awk -F: '{print $NF}')"
+        empulse:audit >/dev/null
     for attempt in {1..40}; do
-        curl --fail --silent --max-time 2 -H 'Host: empulse-ci.test' \
-            "http://127.0.0.1:${port}/api/healthz" > "${fixture_dir}/health.json" && break
+        http --fail --silent -i http://127.0.0.1:8080/api/healthz \
+            > "${fixture_dir}/health.http" 2>/dev/null && break
         sleep 1
     done
-    curl --fail --silent --show-error --max-time 3 -D "${fixture_dir}/headers" \
-        -H 'Host: empulse-ci.test' "http://127.0.0.1:${port}/api/healthz" > "${fixture_dir}/health.json"
-    grep -qi "X-Empulse-Release: ${GITHUB_SHA}" "${fixture_dir}/headers"
+    http --fail --silent --show-error -i http://127.0.0.1:8080/api/healthz > "${fixture_dir}/health.http"
+    grep -qi "X-Empulse-Release: ${GITHUB_SHA}" "${fixture_dir}/health.http"
     [[ "$(docker exec "$web" id -u)" != 0 ]]
     docker exec "$web" php scripts/check-php-runtime.php
     docker exec "$web" sh -c '! command -v cc && ! apk info -e linux-headers'
+    echo 'Guarded non-root web startup and HTTP release identity passed.'
 }
 
 start_web
-[[ "$(curl --silent --max-time 3 -o /dev/null -w '%{http_code}' -H 'Host: empulse-ci.test' "http://127.0.0.1:${port}/.env")" == 403 ]]
-[[ "$(curl --silent --max-time 3 -o /dev/null -w '%{http_code}' -H 'Host: empulse-ci.test' "http://127.0.0.1:${port}/storage/untrusted.php")" == 404 ]]
+[[ "$(http --silent -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/.env)" == 403 ]]
+[[ "$(http --silent -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/storage/untrusted.php)" == 404 ]]
 canary="ci-sensitive-route-${fixture_id}"
-curl --silent --max-time 3 -o /dev/null -H 'Host: empulse-ci.test' \
-    "http://127.0.0.1:${port}/survey/${canary}?token=${canary}"
+http --silent -o /dev/null "http://127.0.0.1:8080/survey/${canary}?token=${canary}"
 if docker logs "$web" 2>&1 | grep -Fq "$canary"; then
     echo 'Request token canary appeared in server logs.' >&2
     exit 1
 fi
+echo 'PHP/dotfile routing and request-log privacy checks passed.'
 
 # A child exiting must terminate the whole container, not leave half a server.
 docker exec "$web" nginx -e stderr -s quit
