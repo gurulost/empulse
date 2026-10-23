@@ -48,7 +48,29 @@ COPY public ./public
 COPY vite.config.js ./
 RUN npm run build
 
-FROM php-base
+FROM php-base AS php-runtime
+
+# Keep Composer's git/unzip and extension compilers in build stages only.
+# PHP is not managed by dpkg: retain its linked libraries explicitly before
+# apt removes development dependencies (same approach as the official image).
+RUN set -eux; \
+    find /usr/local -type f -executable -exec ldd '{}' ';' 2>/dev/null \
+      | awk '/=>/ { so = $(NF-1); if (index(so, "/usr/local/") == 1) { next }; gsub("^/(usr/)?", "", so); printf "*%s\n", so }' \
+      | sort -u \
+      | xargs -rt dpkg-query --search \
+      | awk 'sub(":$", "", $1) { print $1 }' \
+      | sort -u \
+      | xargs -r apt-mark manual; \
+    apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
+      $PHPIZE_DEPS git unzip libfreetype6-dev libicu-dev libjpeg62-turbo-dev \
+      libpng-dev libpq-dev libzip-dev; \
+    rm -rf /var/lib/apt/lists/*; \
+    if command -v cc >/dev/null || dpkg-query -s linux-libc-dev >/dev/null 2>&1; then \
+      echo 'Build-only compiler/kernel headers remain in the runtime image.' >&2; exit 1; \
+    fi; \
+    php -r 'foreach (["bcmath", "curl", "dom", "fileinfo", "gd", "intl", "mbstring", "openssl", "pcntl", "pdo_pgsql", "zip"] as $extension) { if (!extension_loaded($extension)) { throw new RuntimeException("Missing required extension: ".$extension); } }'
+
+FROM php-runtime
 
 WORKDIR /var/www/html
 

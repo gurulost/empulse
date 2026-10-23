@@ -321,6 +321,8 @@ Profile avatars are untrusted uploads. The server validates image type, size, an
 
 Docker bases and CI actions are digest/SHA-pinned. Frontend development/build/test scripts enforce patched Node 22.23.4+ / 24.22.1+ through `scripts/check-node-runtime.mjs`. CI and the Docker frontend stage bootstrap npm 11.21.1 from a SHA-512-verified artifact under an explicit empty private prefix, with lifecycle hooks disabled and no machine-global npm update. Container CI builds/scans the actual frontend and final runtime images and exports SBOMs; unresolved high/critical vulnerabilities fail that gate, with no blanket suppressions. Playwright CI installs Chrome stable separately from the Playwright package, and `PLAYWRIGHT_CHANNEL=chrome` selects that browser for local/CI journeys. Record actual browser versions independently of package versions.
 
+The Docker runtime is separated from the PHP/Composer build stages: linked runtime libraries remain, while extension compilers, development headers and Composer-only git/unzip are removed. Required extensions and the actual final PHP/autoloader/Apache configuration are smoke-tested before container vulnerability scanning. This reduces installed tooling; it does not establish that retained native libraries or the host kernel are patched.
+
 Vite binds loopback by default and accepts only explicitly configured remote-development hosts through `VITE_DEV_HOST` / `VITE_DEV_ALLOWED_HOSTS`; production serves built assets, not Vite. See [the October 22 audit](SECURITY_AUDIT_2026-10-22.md) for unresolved native-package and provider checks.
 
 A complete production runtime requires:

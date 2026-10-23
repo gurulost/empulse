@@ -2,6 +2,8 @@
 
 Status: authorized repository remediation and local qualification complete; production, container, credential-owner and infrastructure gates remain open. This is not a deployment or launch approval.
 
+Later owner-authorized push/CI work is recorded in the [main/CI follow-up](SECURITY_CI_FOLLOWUP_2026-10-22.md). Statements below about uncommitted edits and unrun image builds describe the original 13:14 EDT audit checkpoint, not the later GitHub state.
+
 Reference period: October 21–22, 2026, America/New_York. Live checks began October 22 at 12:34 EDT (16:34 UTC); final backend and policy checks completed by 13:14 EDT (17:14 UTC). Source base: `201da05f94109ad59818b64bd9a436121d736cb3`, branch `codex/security-audit-2026-10-21`, with uncommitted October 21–22 audit changes. This report updates, rather than erases, the [October 21 findings and dependency inventory](SECURITY_AUDIT_2026-10-21.md).
 
 ## Urgent findings and next actions

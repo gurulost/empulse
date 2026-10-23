@@ -175,6 +175,17 @@ jobs:
               run: |
                   docker build --pull --no-cache --target frontend -t empulse-frontend:audit .
                   docker build --pull --no-cache -t empulse:audit .
+            - name: Smoke-test the actual production PHP and Apache image
+              run: |
+                  docker run --rm --entrypoint php empulse:audit scripts/check-php-runtime.php
+                  docker run --rm --entrypoint php empulse:audit -r '
+                    require "vendor/autoload.php";
+                    foreach (["bcmath", "curl", "dom", "fileinfo", "gd", "intl", "mbstring", "openssl", "pcntl", "pdo_pgsql", "zip"] as $extension) {
+                      if (!extension_loaded($extension)) throw new RuntimeException("Missing extension: ".$extension);
+                    }
+                    echo "Production autoloader and required extensions passed.\n";
+                  '
+                  docker run --rm --entrypoint apache2ctl empulse:audit -t
             - name: Scan actual built images and export SBOMs
               run: |
                   status=0
